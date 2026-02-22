@@ -18,18 +18,27 @@ public class CleanerSlot<T> {
     }
 
     public void set(T value) {
-        if (value != null){
+        if (this.value != null) {
             cleanup();
         }
+
         this.value = value;
-        cleaner = airdropCleaner.addCleaner(this::cleanup);
+        cleaner = (value != null)
+                ? airdropCleaner.addCleaner(this::cleanup)
+                : null;
     }
 
     public void cleanup() {
-        if (cleaner != null) cleaner.cancel();
-        if (value == null) return;
-        releaser.accept(value);
-        value = null;
+        Cleaner c = cleaner;
         cleaner = null;
+
+        if (c != null) c.cancel();
+
+        T v = value;
+        value = null;
+
+        if (v != null) {
+            releaser.accept(v);
+        }
     }
 }
