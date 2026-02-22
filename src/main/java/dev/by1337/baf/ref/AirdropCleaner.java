@@ -9,13 +9,13 @@ import java.util.Set;
 
 public class AirdropCleaner {
     private static final Logger log = LoggerFactory.getLogger(AirdropCleaner.class);
-    private Set<Cleaner> cleaners = Collections.newSetFromMap(new IdentityHashMap<>());
+    private Set<CleanerTask> cleaners = Collections.newSetFromMap(new IdentityHashMap<>());
 
     public Cleaner addCleaner(Runnable r) {
         if (cleaners == null) {
             throw new IllegalStateException("cleaner is closed!");
         }
-        var v = new Cleaner() {
+        var v = new CleanerTask() {
 
             @Override
             public void run() {
@@ -35,12 +35,15 @@ public class AirdropCleaner {
     public void cleanup() {
         var set = cleaners;
         cleaners = null;
-        for (Cleaner cleaner : set) {
+        for (CleanerTask cleaner : set) {
             try {
                 cleaner.run();
-            }catch (Exception e){
+            } catch (Exception e) {
                 log.error("Failed to run cleaner", e);
             }
         }
+    }
+    private interface CleanerTask extends Cleaner, Runnable{
+
     }
 }
