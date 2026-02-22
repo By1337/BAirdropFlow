@@ -42,7 +42,7 @@ public class InitComponent extends AbstractComponent {
     public static class Config implements ComponentFactory {
         public static final YamlCodec<Config> CODEC = RecordYamlCodecBuilder.mapOf(
                 Config::new,
-                ComponentHandler.CODEC.fieldOf("on_init", v -> v.init)
+                ComponentHandler.CODEC.fieldOf("on_init", v -> v.init, ComponentHandler.EMPTY)
         );
         private final ComponentHandler init;
 

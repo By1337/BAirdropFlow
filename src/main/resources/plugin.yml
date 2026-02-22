@@ -1,6 +1,12 @@
 name: BAirdropFlow
 main: dev.by1337.baf.BAirdropFlow
 version: '${version}'
+api-version: '1.16'
+depend:
+  - BLib
+
+softdepend:
+  - DecentHolograms
 
 commands:
   baf:

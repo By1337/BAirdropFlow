@@ -47,7 +47,7 @@ public class DestroyComponent extends AbstractComponent {
 
         public static final YamlCodec<Config> CODEC = RecordYamlCodecBuilder.mapOf(
                 Config::new,
-                ComponentHandler.CODEC.fieldOf("on_destroy", v -> v.destroy)
+                ComponentHandler.CODEC.fieldOf("on_destroy", v -> v.destroy, ComponentHandler.EMPTY)
         );
         private final ComponentHandler destroy;
 

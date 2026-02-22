@@ -4,12 +4,14 @@ import dev.by1337.baf.command.AirdropCommands;
 import dev.by1337.baf.command.AirdropContext;
 import dev.by1337.baf.component.ComponentHolder;
 import dev.by1337.cmd.Command;
+import dev.by1337.plc.PapiResolver;
 import dev.by1337.plc.PlaceholderApplier;
+import dev.by1337.plc.PlaceholderResolver;
 import dev.by1337.plc.Placeholders;
 import org.bukkit.World;
 
 public class Airdrop implements PlaceholderApplier {
-    private static final Placeholders<Airdrop> PLACEHOLDERS = Placeholders.<Airdrop>create()
+    private static final PlaceholderResolver<Airdrop> PLACEHOLDERS = Placeholders.<Airdrop>create()
             .withContext("x", ctx -> ctx.x)
             .withContext("y", ctx -> ctx.y)
             .withContext("z", ctx -> ctx.z)
@@ -22,7 +24,7 @@ public class Airdrop implements PlaceholderApplier {
                 var obj = v.getPlaceholder(arr[1]);
                 if (obj == null) return "unknown key " + arr[1];
                 return String.valueOf(obj);
-            });
+            }).and(PapiResolver.get().map(v -> null));
     private final AirdropConfig config;
     private final AirdropManager manager;
     private final World world;

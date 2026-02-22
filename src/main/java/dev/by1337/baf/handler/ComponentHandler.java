@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ComponentHandler implements EventHandler<AirdropContext> {
+    public static final ComponentHandler EMPTY = new ComponentHandler(EventHandler.nop());
     public static final YamlCodec<ComponentHandler> CODEC;
     private static final Logger log = LoggerFactory.getLogger(ComponentHandler.class);
 

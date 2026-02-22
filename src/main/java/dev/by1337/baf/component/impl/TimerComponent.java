@@ -51,9 +51,9 @@ public class TimerComponent extends AbstractComponent {
         public static final YamlCodec<Config> CODEC = RecordYamlCodecBuilder.mapOf(
                 Config::new,
                 YamlCodec.INT.fieldOf("timer", v -> v.timer),
-                ComponentHandler.CODEC.fieldOf("on_create", v -> v.create),
-                ComponentHandler.CODEC.fieldOf("on_tick", v -> v.tick),
-                ComponentHandler.CODEC.fieldOf("on_remove", v -> v.remove)
+                ComponentHandler.CODEC.fieldOf("on_create", v -> v.create, ComponentHandler.EMPTY),
+                ComponentHandler.CODEC.fieldOf("on_tick", v -> v.tick, ComponentHandler.EMPTY),
+                ComponentHandler.CODEC.fieldOf("on_remove", v -> v.remove, ComponentHandler.EMPTY)
         );
         private final int timer;
         private final ComponentHandler create;

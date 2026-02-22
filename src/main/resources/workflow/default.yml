@@ -5,23 +5,22 @@ nodes:
       setblock: '{x} {y} {z} minecraft:respawn_anchor[charges=4]'
       create: 'tto'
 
- # time to open timer
+  # time to open timer
   tto:
     type: timer
     # in: create, remove
     timer: 30
-    on_create: {}
-     # - create: tto_holo
+    on_create:
+      - create: tto_holo
     on_tick:
-      - broadcast: 'tto {ctx:tto.timer}'
-   #   - call: update tto_holo
+      - call: update tto_holo
     on_remove:
+      - remove: tto_holo
       - destroy: ''
-      #- remove: tto_holo
 
   # time to open hologram
   tto_holo:
-    type: hologram
+    type: dh:hologram
     # in: create, remove, update
     offsets: "0.5;1.7;0.5"
     lines:
