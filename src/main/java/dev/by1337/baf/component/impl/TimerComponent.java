@@ -9,16 +9,13 @@ import dev.by1337.baf.component.ComponentHolder;
 import dev.by1337.baf.handler.ComponentHandler;
 import dev.by1337.yaml.codec.RecordYamlCodecBuilder;
 import dev.by1337.yaml.codec.YamlCodec;
-import org.bukkit.NamespacedKey;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 public class TimerComponent extends AbstractComponent {
 
     private final Config config;
     private int timer;
 
-    private TimerComponent(Config config, String name,  ComponentHolder owner) {
+    private TimerComponent(Config config, String name, ComponentHolder owner) {
         super(name, owner);
         timer = config.timer;
         this.config = config;
@@ -40,9 +37,10 @@ public class TimerComponent extends AbstractComponent {
 
     public void onTick(AirdropContext ctx) {
         System.out.println("TimerComponent.onTick");
-        config.tick.handle(ctx);
         if (--timer <= 0) {
             markRemoved();
+        } else {
+            config.tick.handle(ctx);
         }
     }
 

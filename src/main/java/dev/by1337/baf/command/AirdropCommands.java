@@ -1,5 +1,7 @@
 package dev.by1337.baf.command;
 
+import dev.by1337.baf.command.argument.OptionsArgument;
+import dev.by1337.baf.util.OptionsHolder;
 import dev.by1337.cmd.Command;
 import dev.by1337.cmd.CommandMsgError;
 import dev.by1337.cmd.argument.ArgumentString;
@@ -15,6 +17,8 @@ import net.kyori.adventure.util.Ticks;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
+
+import java.util.UUID;
 
 public class AirdropCommands {
     private static final Command<AirdropContext> COMMANDS;
@@ -37,17 +41,29 @@ public class AirdropCommands {
         return new Command<AirdropContext>("root")
                 .sub(new Command<AirdropContext>("[create]")
                         .argument(new ArgumentString<>("node"))
+                        .argument(new OptionsArgument<>("flags"))
                         .executor((ctx, args) -> {
+                            OptionsHolder flags = (OptionsHolder) args.getOrDefault("flags", new OptionsHolder());
                             String node = (String) args.getOrThrow("node", "Use: [create] <node>");
                             var drop = ctx.airdrop();
-                            if (drop.components().get(node) != null) {
-                                throw new CommandMsgError("Node " + node + " already exist!");
+                            if (drop.isRemoved()) {
+                                throw new CommandMsgError("Airdrop is removed!");
                             }
                             var factory = drop.config().nodes().get(node);
                             if (factory == null) {
                                 throw new CommandMsgError("Unknown node " + node);
                             }
-                            drop.components().add(factory.create(drop, node));
+                            String name;
+                            if (flags.getOrDefault("anon", "false").equals("true")) {
+                                name = UUID.randomUUID() + "$" + node;
+                            } else {
+                                name = flags.getOrDefault("name", node);
+                            }
+                            if (drop.components().get(name) != null) {
+                                throw new CommandMsgError("Node " + name + " already exist!");
+                            }
+
+                            drop.components().add(factory.create(drop, name));
                         })
                 )
                 .sub(new Command<AirdropContext>("[remove]")
@@ -109,6 +125,7 @@ public class AirdropCommands {
         return new Command<Void>("root")
                 .sub(new Command<Void>("[BROADCAST]")
                         .aliases("[broadcast]")
+                        .aliases("[bc]")
                         .argument(new ArgumentComponents<>("msg"))
                         .executor((v, args) -> {
                                     Component msg = (Component) args.getOrDefault("msg", Component.empty());

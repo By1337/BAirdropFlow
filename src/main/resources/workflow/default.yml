@@ -3,6 +3,9 @@ nodes:
     type: __init__
     on_init:
       setblock: '{x} {y} {z} minecraft:respawn_anchor[charges=4]'
+      # create имеет флаги '-anon true' '-name name'
+      # create: 'tto -anon true' # создаст компонент tto со случайным именем
+      # create: 'tto -name new_name' # создаст компонент tto с именем new_name
       create: 'tto'
 
   # time to open timer
@@ -24,7 +27,7 @@ nodes:
     # in: create, remove, update
     offsets: "0.5;1.7;0.5"
     lines:
-      - '&aAirDrop'
+      - '&aAirdrop'
       - '&fДо открытия: {ctx:tto.timer}'
 
   __destroy__:
