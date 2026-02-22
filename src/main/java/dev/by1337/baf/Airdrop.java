@@ -3,12 +3,15 @@ package dev.by1337.baf;
 import dev.by1337.baf.command.AirdropCommands;
 import dev.by1337.baf.command.AirdropContext;
 import dev.by1337.baf.component.ComponentHolder;
+import dev.by1337.baf.ref.AirdropCleaner;
 import dev.by1337.cmd.Command;
 import dev.by1337.plc.PapiResolver;
 import dev.by1337.plc.PlaceholderApplier;
 import dev.by1337.plc.PlaceholderResolver;
 import dev.by1337.plc.Placeholders;
 import org.bukkit.World;
+
+import java.lang.ref.Cleaner;
 
 public class Airdrop implements PlaceholderApplier {
     private static final PlaceholderResolver<Airdrop> PLACEHOLDERS = Placeholders.<Airdrop>create()
@@ -33,8 +36,10 @@ public class Airdrop implements PlaceholderApplier {
     private final int z;
     private boolean removed;
     private final ComponentHolder components = new ComponentHolder(this);
+    private final AirdropCleaner cleaner;
 
     public Airdrop(AirdropConfig config, AirdropManager manager, World world, int x, int y, int z) {
+        cleaner = new AirdropCleaner();
         this.config = config;
         this.manager = manager;
         this.world = world;
@@ -84,5 +89,9 @@ public class Airdrop implements PlaceholderApplier {
 
     public int z() {
         return z;
+    }
+
+    public AirdropCleaner cleaner() {
+        return cleaner;
     }
 }

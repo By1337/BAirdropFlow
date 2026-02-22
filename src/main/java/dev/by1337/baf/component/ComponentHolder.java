@@ -3,10 +3,13 @@ package dev.by1337.baf.component;
 import dev.by1337.baf.Airdrop;
 import dev.by1337.baf.command.AirdropContext;
 import org.bukkit.Bukkit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
 public class ComponentHolder {
+    private static final Logger log = LoggerFactory.getLogger(ComponentHolder.class);
     private final Map<String, AirdropComponent> byName = new HashMap<>();
     private final Map<Class<? extends AirdropComponent>, Set<AirdropComponent>> byType = new HashMap<>();
     private final Airdrop airdrop;
@@ -47,7 +50,12 @@ public class ComponentHolder {
         byName.put(component.name(), component);
         byType.computeIfAbsent(component.getClass(), k -> Collections.newSetFromMap(new IdentityHashMap<>()))
                 .add(component);
-        component.onCreate(defaultContext);
+        try {
+            component.onCreate(defaultContext);
+        } catch (Exception e) {
+            log.error("Failed to run create", e);
+            component.markRemoved();
+        }
     }
 
     public void remove(AirdropComponent component) {
@@ -57,7 +65,11 @@ public class ComponentHolder {
         if (set != null) {
             set.remove(component);
         }
-        component.onRemove(defaultContext);
+        try {
+            component.onRemove(defaultContext);
+        } catch (Exception e) {
+            log.error("Failed to run remove", e);
+        }
     }
 
     private void reqMain(String msg) {

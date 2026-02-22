@@ -6,6 +6,7 @@ import dev.by1337.baf.component.AbstractComponent;
 import dev.by1337.baf.component.AirdropComponent;
 import dev.by1337.baf.component.ComponentFactory;
 import dev.by1337.baf.handler.ComponentHandler;
+import dev.by1337.baf.ref.Cleaner;
 import dev.by1337.baf.util.Vec3d;
 import dev.by1337.yaml.codec.RecordYamlCodecBuilder;
 import dev.by1337.yaml.codec.YamlCodec;
@@ -23,12 +24,18 @@ public class DHHologramComponent extends AbstractComponent {
     private final Config config;
     private final Airdrop airdrop;
     private Hologram hologram;
+    private final Cleaner cleaner;
 
     private DHHologramComponent(Config config, String name, Airdrop airdrop) {
         super(name, airdrop.components());
         this.airdrop = airdrop;
         this.config = config;
         uid = UUID.randomUUID().toString();
+        cleaner = airdrop.cleaner().addCleaner(() -> {
+            if (hologram == null) return;
+            DHAPI.removeHologram(hologram.getName());
+            hologram = null;
+        });
         exportEvent("update", this::onUpdate);
     }
 
@@ -63,6 +70,7 @@ public class DHHologramComponent extends AbstractComponent {
     public void onRemove(AirdropContext ctx) {
         System.out.println("DHHologramComponent.onRemove");
         Objects.requireNonNull(hologram, "hologram is not created!");
+        cleaner.cancel();
         DHAPI.removeHologram(hologram.getName());
         hologram = null;
         config.remove.handle(ctx);

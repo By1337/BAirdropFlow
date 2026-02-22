@@ -49,6 +49,7 @@ public class AirdropManager {
         for (AirdropComponent component : airdrop.components().all()) {
             component.markRemoved();
         }
+        airdrop.cleaner().cleanup();
     }
 
     void start() {
