@@ -42,7 +42,7 @@ public class ComponentHolder {
         return result;
     }
 
-    public void add(AirdropComponent component) {
+    public void add(AirdropComponent component, AirdropContext ctx) {
         reqMain("async add");
         if (byName.containsKey(component.name())) {
             throw new IllegalArgumentException("component " + component.name() + " already exist!");
@@ -50,26 +50,19 @@ public class ComponentHolder {
         byName.put(component.name(), component);
         byType.computeIfAbsent(component.getClass(), k -> Collections.newSetFromMap(new IdentityHashMap<>()))
                 .add(component);
-        try {
-            component.onCreate(defaultContext);
-        } catch (Exception e) {
-            log.error("Failed to run create", e);
-            component.markRemoved();
+        if (!ctx.call(component, AirdropComponent::onCreate)){
+            component.markRemoved(ctx);
         }
     }
 
-    public void remove(AirdropComponent component) {
+    public void remove(AirdropComponent component, AirdropContext ctx) {
         reqMain("async remove");
         byName.remove(component.name());
         var set = byType.get(component.getClass());
         if (set != null) {
             set.remove(component);
         }
-        try {
-            component.onRemove(defaultContext);
-        } catch (Exception e) {
-            log.error("Failed to run remove", e);
-        }
+        ctx.call(component, AirdropComponent::onRemove);
     }
 
     private void reqMain(String msg) {

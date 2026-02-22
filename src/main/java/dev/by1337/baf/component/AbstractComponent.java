@@ -2,7 +2,6 @@ package dev.by1337.baf.component;
 
 import dev.by1337.baf.command.AirdropContext;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,13 +22,23 @@ public abstract class AbstractComponent implements AirdropComponent {
         this.name = name;
         this.owner = owner;
         listeners = new HashMap<>();
-       // exportEvent("create", this::onCreate);
-       // exportEvent("remove", this::onRemove);
+        // exportEvent("create", this::onCreate);
+        // exportEvent("remove", this::onRemove);
     }
 
     public abstract void onCreate(AirdropContext ctx);
 
     public abstract void onRemove(AirdropContext ctx);
+
+    @Override
+    public boolean call(String event, AirdropContext ctx) {
+        var v = listeners.get(event);
+        if (v != null) {
+            ctx.call(v);
+            return true;
+        }
+        return false;
+    }
 
     protected void exportEvent(String name, Consumer<AirdropContext> c) {
         listeners.put(name, c);
@@ -46,23 +55,13 @@ public abstract class AbstractComponent implements AirdropComponent {
     }
 
     @Override
-    public boolean call(String event, AirdropContext ctx) {
-        var v = listeners.get(event);
-        if (v != null) {
-            v.accept(ctx);
-            return true;
-        }
-        return false;
-    }
-
-    @Override
-    public void markRemoved() {
+    public void markRemoved(AirdropContext ctx) {
         if (removed) {
             log.warn("duplicate markRemoved! {}", name);
             return;
         }
         removed = true;
-        owner.remove(this);
+        owner.remove(this, ctx);
     }
 
     @Override

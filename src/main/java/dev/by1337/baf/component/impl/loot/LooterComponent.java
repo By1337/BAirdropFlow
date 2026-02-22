@@ -47,11 +47,13 @@ public class LooterComponent extends AbstractComponent {
         }
         pl.openInventory(inv.getInventory());
         AirdropContext ctx = new AirdropContext(airdrop, pl);
+        ctx.log(name + " open");
         config.open.handle(ctx);
     }
 
     @Override
     public void onCreate(AirdropContext ctx) {
+        ctx.log(name + " create");
         clickHolder.set(airdrop.manager().interactManager().registerBlockClick(
                 airdrop.world(),
                 airdrop.x() + config.offsets.x(),
@@ -78,6 +80,7 @@ public class LooterComponent extends AbstractComponent {
 
     @Override
     public void onRemove(AirdropContext ctx) {
+        ctx.log(name + " remove");
         config.remove.handle(ctx);
         clickHolder.cleanup();
         inventoryHolder.cleanup();

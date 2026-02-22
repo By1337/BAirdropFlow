@@ -6,7 +6,7 @@ public interface AirdropComponent {
     ComponentRegistry REGISTRY = new ComponentRegistry();
 
     boolean call(String event, AirdropContext ctx);
-    void markRemoved();
+    void markRemoved(AirdropContext ctx);
 
     boolean isRemoved();
     String name();

@@ -9,9 +9,6 @@ import dev.by1337.baf.component.ComponentHolder;
 import dev.by1337.baf.handler.ComponentHandler;
 import dev.by1337.yaml.codec.RecordYamlCodecBuilder;
 import dev.by1337.yaml.codec.YamlCodec;
-import org.bukkit.NamespacedKey;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 public class InitComponent extends AbstractComponent {
     private final Config config;
@@ -23,20 +20,20 @@ public class InitComponent extends AbstractComponent {
     }
 
     public void onInit(AirdropContext ctx) {
-        System.out.println("InitComponent.onInit");
+        ctx.log(name + " init");
         config.init.handle(ctx);
-        markRemoved();
+        markRemoved(ctx);
     }
 
     @Override
     public void onCreate(AirdropContext ctx) {
-        System.out.println("InitComponent.onCreate");
+        ctx.log(name + " create");
         onInit(ctx); //proxy
     }
 
     @Override
     public void onRemove(AirdropContext ctx) {
-        System.out.println("InitComponent.onRemove");
+        ctx.log(name + " remove");
     }
 
     public static class Config implements ComponentFactory {

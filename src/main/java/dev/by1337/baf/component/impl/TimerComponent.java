@@ -25,25 +25,24 @@ public class TimerComponent extends AbstractComponent {
 
     @Override
     public void onCreate(AirdropContext ctx) {
-        System.out.println("TimerComponent.onCreate");
+        ctx.log(name + " create");
         config.create.handle(ctx);
     }
 
     @Override
     public void onRemove(AirdropContext ctx) {
-        System.out.println("TimerComponent.onRemove");
+        ctx.log(name + " remove");
         config.remove.handle(ctx);
     }
 
     public void onTick(AirdropContext ctx) {
-        System.out.println("TimerComponent.onTick");
+        ctx.log(name + " tick");
         if (--timer <= 0) {
-            markRemoved();
+            markRemoved(ctx);
         } else {
             config.tick.handle(ctx);
         }
     }
-
 
     public static class Config implements ComponentFactory {
         public static final YamlCodec<Config> CODEC = RecordYamlCodecBuilder.mapOf(

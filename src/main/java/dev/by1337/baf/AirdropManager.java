@@ -1,5 +1,6 @@
 package dev.by1337.baf;
 
+import dev.by1337.baf.command.AirdropContext;
 import dev.by1337.baf.component.AirdropComponent;
 import dev.by1337.baf.interact.InteractManager;
 import dev.by1337.baf.loot.LootTables;
@@ -74,14 +75,14 @@ public class AirdropManager {
         var init = airdrop.config().nodes().get("__init__");
         if (init == null) {
             log.error("Airdrop {} has no __init__ node!", airdrop);
-            airdrop.markRemoved();
+            airdrop.markRemoved(new AirdropContext(airdrop));
             return;
         }
         var c = init.create(airdrop, "__init__");
-        airdrop.components().add(c);
+        airdrop.components().add(c, new AirdropContext(airdrop));
     }
 
-    public void removeAirdrop(Airdrop airdrop) {
+    public void removeAirdrop(Airdrop airdrop, AirdropContext ctx) {
         if (!airdrops.remove(airdrop)) {
             throw new IllegalArgumentException("Airdrop " + airdrop + " is not registered!");
         }
@@ -90,10 +91,10 @@ public class AirdropManager {
             log.error("Airdrop {} has no __destroy__ node!", airdrop);
         } else {
             var c = destroy.create(airdrop, "__destroy__");
-            airdrop.components().add(c);
+            airdrop.components().add(c, ctx);
         }
         for (AirdropComponent component : airdrop.components().all()) {
-            component.markRemoved();
+            component.markRemoved(ctx);
         }
         airdrop.cleaner().cleanup();
     }

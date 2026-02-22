@@ -9,10 +9,6 @@ import dev.by1337.baf.component.ComponentHolder;
 import dev.by1337.baf.handler.ComponentHandler;
 import dev.by1337.yaml.codec.RecordYamlCodecBuilder;
 import dev.by1337.yaml.codec.YamlCodec;
-import org.bukkit.NamespacedKey;
-import org.checkerframework.checker.units.qual.N;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,19 +24,19 @@ public class DestroyComponent extends AbstractComponent {
 
     @Override
     public void onCreate(AirdropContext ctx) {
-        System.out.println("DestroyComponent.onCreate");
+        ctx.log(name + " create");
         onDestroy(ctx); //proxy
     }
 
     @Override
     public void onRemove(AirdropContext ctx) {
-        System.out.println("DestroyComponent.onRemove");
+        ctx.log(name + " remove");
     }
 
     public void onDestroy(AirdropContext ctx) {
-        System.out.println("DestroyComponent.onDestroy");
+        ctx.log(name + " destroy");
         config.destroy.handle(ctx);
-        markRemoved();
+        markRemoved(ctx);
     }
 
     public static class Config implements ComponentFactory {

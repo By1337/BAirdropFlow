@@ -33,7 +33,7 @@ public class DHHologramComponent extends AbstractComponent {
     }
 
     public void onUpdate(AirdropContext ctx) {
-        System.out.println("DHHologramComponent.onUpdate");
+        ctx.log(name + " update");
         var holo = hologram.get();
         Objects.requireNonNull(holo, "hologram is not created!");
         DHAPI.setHologramLines(holo, lines());
@@ -42,7 +42,7 @@ public class DHHologramComponent extends AbstractComponent {
 
     @Override
     public void onCreate(AirdropContext ctx) {
-        System.out.println("DHHologramComponent.onCreate");
+        ctx.log(name + " create");
         hologram.set(DHAPI.createHologram(UUID.randomUUID().toString(), new Location(
                 airdrop.world(),
                 airdrop.x() + config.offsets.x(),
@@ -62,7 +62,7 @@ public class DHHologramComponent extends AbstractComponent {
 
     @Override
     public void onRemove(AirdropContext ctx) {
-        System.out.println("DHHologramComponent.onRemove");
+        ctx.log(name + " remove");
         hologram.cleanup();
         config.remove.handle(ctx);
     }

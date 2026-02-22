@@ -63,10 +63,11 @@ public class AirdropCommands {
                                 throw new CommandMsgError("Node " + name + " already exist!");
                             }
 
-                            drop.components().add(factory.create(drop, name));
+                            drop.components().add(factory.create(drop, name), ctx);
                         })
                 )
                 .sub(new Command<AirdropContext>("[remove]")
+                        .aliases("[rm]")
                         .argument(new ArgumentString<>("node"))
                         .executor((ctx, args) -> {
                             String node = (String) args.getOrThrow("node", "Use: [remove] <node>");
@@ -75,7 +76,19 @@ public class AirdropCommands {
                             if (c == null) {
                                 throw new CommandMsgError("Unknown node " + node);
                             }
-                            c.markRemoved();
+                            c.markRemoved(ctx);
+                        })
+                )
+                .sub(new Command<AirdropContext>("[remove?]")
+                        .aliases("[rm?]")
+                        .argument(new ArgumentString<>("node"))
+                        .executor((ctx, args) -> {
+                            String node = (String) args.getOrThrow("node", "Use: [remove?] <node>");
+                            var drop = ctx.airdrop();
+                            var c = drop.components().get(node);
+                            if (c != null) {
+                                c.markRemoved(ctx);
+                            }
                         })
                 )
                 .sub(new Command<AirdropContext>("[call]")
@@ -95,7 +108,7 @@ public class AirdropCommands {
                         })
                 ).sub(new Command<AirdropContext>("[destroy]")
                         .executor((ctx, args) -> {
-                            ctx.airdrop().markRemoved();
+                            ctx.airdrop().markRemoved(ctx);
                         })
                 )
                 ;

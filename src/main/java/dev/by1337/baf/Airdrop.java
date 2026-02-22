@@ -11,7 +11,6 @@ import dev.by1337.plc.PlaceholderResolver;
 import dev.by1337.plc.Placeholders;
 import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.entity.Player;
 
 import java.util.Random;
 
@@ -61,15 +60,16 @@ public class Airdrop implements PlaceholderApplier {
     public static String setPlaceholders(String s, AirdropContext context) {
         return PLACEHOLDERS.setPlaceholders(s, context);
     }
+
     @Override
     public String setPlaceholders(String s) {
         return PLACEHOLDERS.setPlaceholders(s, selfContext);
     }
 
-    public void markRemoved() {
+    public void markRemoved(AirdropContext ctx) {
         if (removed) return;
         removed = true;
-        manager.removeAirdrop(this);
+        manager.removeAirdrop(this, ctx);
     }
 
     public boolean isRemoved() {
