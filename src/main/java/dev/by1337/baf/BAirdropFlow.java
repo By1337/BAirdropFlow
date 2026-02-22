@@ -5,6 +5,7 @@ import dev.by1337.baf.component.impl.DestroyComponent;
 import dev.by1337.baf.component.impl.InitComponent;
 import dev.by1337.baf.component.impl.TimerComponent;
 import dev.by1337.baf.component.impl.dh.DHHologramComponent;
+import dev.by1337.baf.component.impl.loot.LooterComponent;
 import dev.by1337.baf.component.system.TimerSystem;
 import dev.by1337.core.util.io.ResourceUtil;
 import dev.by1337.yaml.YamlMap;
@@ -23,7 +24,8 @@ public class BAirdropFlow extends JavaPlugin {
         AirdropComponent.REGISTRY.register("default:__init__", InitComponent.Config.CODEC);
         AirdropComponent.REGISTRY.register("default:__destroy__", DestroyComponent.Config.CODEC);
         AirdropComponent.REGISTRY.register("default:timer", TimerComponent.Config.CODEC);
-        if (hasClass("eu.decentsoftware.holograms.api.DHAPI")){
+        AirdropComponent.REGISTRY.register("default:looter", LooterComponent.Config.CODEC);
+        if (hasClass("eu.decentsoftware.holograms.api.DHAPI")) {
             AirdropComponent.REGISTRY.register("dh:hologram", DHHologramComponent.Config.CODEC);
         }
         manager = new AirdropManager(this);
@@ -32,11 +34,13 @@ public class BAirdropFlow extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        manager.enable();
         timerSystem.start();
     }
 
     @Override
     public void onDisable() {
+        manager.disable();
         timerSystem.close();
     }
 
@@ -48,8 +52,7 @@ public class BAirdropFlow extends JavaPlugin {
         var loc = player.getLocation();
         Airdrop airdrop = new Airdrop(
                 cfg, manager,
-                loc.getWorld(),
-                loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()
+                loc
         );
         manager.addAirdrop(airdrop);
         return true;

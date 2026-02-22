@@ -16,8 +16,9 @@ public class AirdropCleaner {
             throw new IllegalStateException("cleaner is closed!");
         }
         var v = new Cleaner() {
+
             @Override
-            public void clean() {
+            public void run() {
                 r.run();
             }
 
@@ -36,7 +37,7 @@ public class AirdropCleaner {
         cleaners = null;
         for (Cleaner cleaner : set) {
             try {
-                cleaner.clean();
+                cleaner.run();
             }catch (Exception e){
                 log.error("Failed to run cleaner", e);
             }

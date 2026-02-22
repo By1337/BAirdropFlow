@@ -19,16 +19,49 @@ nodes:
       - call: update tto_holo
     on_remove:
       - remove: tto_holo
-      - destroy: ''
+      - create: tte
 
   # time to open hologram
   tto_holo:
     type: dh:hologram
     # in: create, remove, update
-    offsets: "0.5;1.7;0.5"
+    offsets: "0.5;1.8;0.5"
+    lines:
+      - '&cAirdrop'
+      - '&fДо открытия: {ctx:tto.timer}'
+
+  # time to end timer
+  tte:
+    type: timer
+    # in: create, remove
+    timer: 30
+    on_create:
+      - create: tte_holo
+      - create: looter
+    on_tick:
+      - call: update tte_holo
+    on_remove:
+      - remove: tte_holo
+      - remove: looter
+      - destroy: ''
+
+  # time to end hologram
+  tte_holo:
+    type: dh:hologram
+    # in: create, remove, update
+    offsets: "0.5;1.8;0.5"
     lines:
       - '&aAirdrop'
-      - '&fДо открытия: {ctx:tto.timer}'
+      - '&fДо удаления: {ctx:tte.timer}'
+
+  looter:
+    type: looter
+    offsets: '0;0;0'
+    loot_table: 'loot/default'
+    title: '&aAirdrop!'
+    on_open:
+      - message: '&7Личное сообщение для %player_name%'
+
 
   __destroy__:
     type: __destroy__

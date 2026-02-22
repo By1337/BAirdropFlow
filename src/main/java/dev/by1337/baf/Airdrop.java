@@ -9,52 +9,61 @@ import dev.by1337.plc.PapiResolver;
 import dev.by1337.plc.PlaceholderApplier;
 import dev.by1337.plc.PlaceholderResolver;
 import dev.by1337.plc.Placeholders;
+import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.entity.Player;
 
-import java.lang.ref.Cleaner;
+import java.util.Random;
 
 public class Airdrop implements PlaceholderApplier {
-    private static final PlaceholderResolver<Airdrop> PLACEHOLDERS = Placeholders.<Airdrop>create()
-            .withContext("x", ctx -> ctx.x)
-            .withContext("y", ctx -> ctx.y)
-            .withContext("z", ctx -> ctx.z)
-            .withContext("world", ctx -> ctx.world.getName())
+    private static final Random RANDOM = new Random();
+    public static final PlaceholderResolver<AirdropContext> PLACEHOLDERS = Placeholders.<AirdropContext>create()
+            .withContext("x", ctx -> ctx.airdrop().x)
+            .withContext("y", ctx -> ctx.airdrop().y)
+            .withContext("z", ctx -> ctx.airdrop().z)
+            .withContext("world", ctx -> ctx.airdrop().world.getName())
             .of("ctx", (key, ctx) -> {
                 var arr = key.replace(" ", "").split("\\.", 2);
                 if (arr.length != 2) return "<name>.<key>";
-                var v = ctx.components.get(arr[0]);
+                var v = ctx.airdrop().components.get(arr[0]);
                 if (v == null) return "unknown node " + arr[0];
                 var obj = v.getPlaceholder(arr[1]);
                 if (obj == null) return "unknown key " + arr[1];
                 return String.valueOf(obj);
-            }).and(PapiResolver.get().map(v -> null));
+            }).and(PapiResolver.get().map(AirdropContext::player));
+    private final AirdropContext selfContext = new AirdropContext(this);
     private final AirdropConfig config;
     private final AirdropManager manager;
     private final World world;
     private final int x;
     private final int y;
     private final int z;
+    private final Location location;
     private boolean removed;
     private final ComponentHolder components = new ComponentHolder(this);
     private final AirdropCleaner cleaner;
 
-    public Airdrop(AirdropConfig config, AirdropManager manager, World world, int x, int y, int z) {
+    public Airdrop(AirdropConfig config, AirdropManager manager, Location location) {
         cleaner = new AirdropCleaner();
         this.config = config;
         this.manager = manager;
-        this.world = world;
-        this.x = x;
-        this.y = y;
-        this.z = z;
+        this.location = location;
+        this.world = location.getWorld();
+        this.x = location.getBlockX();
+        this.y = location.getBlockY();
+        this.z = location.getBlockZ();
     }
 
     public Command<AirdropContext> getCommands() {
         return AirdropCommands.getCommands();
     }
 
+    public static String setPlaceholders(String s, AirdropContext context) {
+        return PLACEHOLDERS.setPlaceholders(s, context);
+    }
     @Override
     public String setPlaceholders(String s) {
-        return PLACEHOLDERS.setPlaceholders(s, this);
+        return PLACEHOLDERS.setPlaceholders(s, selfContext);
     }
 
     public void markRemoved() {
@@ -93,5 +102,17 @@ public class Airdrop implements PlaceholderApplier {
 
     public AirdropCleaner cleaner() {
         return cleaner;
+    }
+
+    public AirdropManager manager() {
+        return manager;
+    }
+
+    public Location location() {
+        return location.clone();
+    }
+
+    public static Random random() {
+        return RANDOM;
     }
 }

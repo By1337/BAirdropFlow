@@ -70,9 +70,8 @@ public class DHHologramComponent extends AbstractComponent {
     public void onRemove(AirdropContext ctx) {
         System.out.println("DHHologramComponent.onRemove");
         Objects.requireNonNull(hologram, "hologram is not created!");
+        cleaner.run();
         cleaner.cancel();
-        DHAPI.removeHologram(hologram.getName());
-        hologram = null;
         config.remove.handle(ctx);
     }
 

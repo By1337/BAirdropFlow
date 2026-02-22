@@ -23,8 +23,8 @@ public class ComponentHandler implements EventHandler<AirdropContext> {
     }
 
 
-    public boolean handle(AirdropContext entity) {
-        return handle(entity, entity.airdrop(), entity.airdrop().getCommands());
+    public boolean handle(AirdropContext ctx) {
+        return handle(ctx, ctx, ctx.airdrop().getCommands());
     }
 
     @Override
