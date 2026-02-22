@@ -1,0 +1,35 @@
+nodes:
+  __init__:
+    type: __init__
+    on_init:
+      setblock: '{x} {y} {z} minecraft:respawn_anchor[charges=4]'
+      create: 'tto'
+
+ # time to open timer
+  tto:
+    type: timer
+    # in: create, remove
+    timer: 30
+    on_create: {}
+     # - create: tto_holo
+    on_tick:
+      - broadcast: 'tto {ctx:tto.timer}'
+   #   - call: update tto_holo
+    on_remove:
+      - destroy: ''
+      #- remove: tto_holo
+
+  # time to open hologram
+  tto_holo:
+    type: hologram
+    # in: create, remove, update
+    offsets: "0.5;1.7;0.5"
+    lines:
+      - '&aAirDrop'
+      - '&fДо открытия: {ctx:tto.timer}'
+
+  __destroy__:
+    type: __destroy__
+    # in: destroy
+    on_destroy:
+      - setblock: '{x} {y} {z} air'

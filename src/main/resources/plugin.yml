@@ -1,0 +1,7 @@
+name: BAirdropFlow
+main: dev.by1337.baf.BAirdropFlow
+version: '${version}'
+
+commands:
+  baf:
+    aliases: []
