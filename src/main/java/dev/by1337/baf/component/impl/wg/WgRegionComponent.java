@@ -39,31 +39,33 @@ public class WgRegionComponent extends AbstractComponent {
 
     @Override
     public void onCreate(AirdropContext ctx) {
-        ctx.log(name + " create");
-        WGUtil.setRegion(
-                ctx.airdrop().world(),
-                config.flags,
-                new ProtectedCuboidRegion(
-                        randName,
-                        BlockVector3.at(
-                                ctx.airdrop().x() - config.size.x(),
-                                ctx.airdrop().y() - config.size.y(),
-                                ctx.airdrop().z() - config.size.z()
-                        ),
-                        BlockVector3.at(
-                                ctx.airdrop().x() + config.size.x(),
-                                ctx.airdrop().y() + config.size.y(),
-                                ctx.airdrop().z() + config.size.z()
-                        )
-                )
-        );
-        regionRemover.set(ctx.airdrop().world());
+        try (var ignored = ctx.tracer().enter(name + " create {", "}")){
+            WGUtil.setRegion(
+                    ctx.airdrop().world(),
+                    config.flags,
+                    new ProtectedCuboidRegion(
+                            randName,
+                            BlockVector3.at(
+                                    ctx.airdrop().x() - config.size.x(),
+                                    ctx.airdrop().y() - config.size.y(),
+                                    ctx.airdrop().z() - config.size.z()
+                            ),
+                            BlockVector3.at(
+                                    ctx.airdrop().x() + config.size.x(),
+                                    ctx.airdrop().y() + config.size.y(),
+                                    ctx.airdrop().z() + config.size.z()
+                            )
+                    )
+            );
+            regionRemover.set(ctx.airdrop().world());
+        }
     }
 
     @Override
     public void onRemove(AirdropContext ctx) {
-        ctx.log(name + " remove");
-        regionRemover.cleanup();
+        try (var ignored = ctx.tracer().enter(name + " remove {", "}")){
+            regionRemover.cleanup();
+        }
     }
 
     private void removeRegion(World world) {

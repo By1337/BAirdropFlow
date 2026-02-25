@@ -24,19 +24,20 @@ public class DestroyComponent extends AbstractComponent {
 
     @Override
     public void onCreate(AirdropContext ctx) {
-        ctx.log(name + " create");
-        onDestroy(ctx); //proxy
+        try (var ignored = ctx.tracer().enter(name + " create {", "}")){
+            onDestroy(ctx); //proxy
+        }
     }
 
     @Override
     public void onRemove(AirdropContext ctx) {
-        ctx.log(name + " remove");
     }
 
     public void onDestroy(AirdropContext ctx) {
-        ctx.log(name + " destroy");
-        config.destroy.handle(ctx);
-        markRemoved(ctx);
+        try (var ignored = ctx.tracer().enter(name + " destroy {", "}")){
+            config.destroy.handle(ctx);
+            markRemoved(ctx);
+        }
     }
 
     public static class Config implements ComponentFactory {

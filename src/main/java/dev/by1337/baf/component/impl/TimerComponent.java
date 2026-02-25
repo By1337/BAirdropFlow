@@ -25,22 +25,25 @@ public class TimerComponent extends AbstractComponent {
 
     @Override
     public void onCreate(AirdropContext ctx) {
-        ctx.log(name + " create");
-        config.create.handle(ctx);
+        try (var ignored = ctx.tracer().enter(name + " create {", "}")){
+            config.create.handle(ctx);
+        }
     }
 
     @Override
     public void onRemove(AirdropContext ctx) {
-        ctx.log(name + " remove");
-        config.remove.handle(ctx);
+        try (var ignored = ctx.tracer().enter(name + " remove {", "}")){
+            config.remove.handle(ctx);
+        }
     }
 
     public void onTick(AirdropContext ctx) {
-        ctx.log(name + " tick");
-        if (--timer <= 0) {
-            markRemoved(ctx);
-        } else {
-            config.tick.handle(ctx);
+        try (var ignored = ctx.tracer().enter(name + " tick {", "}")){
+            if (--timer <= 0) {
+                markRemoved(ctx);
+            } else {
+                config.tick.handle(ctx);
+            }
         }
     }
 

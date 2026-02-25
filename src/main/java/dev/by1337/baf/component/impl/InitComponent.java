@@ -20,20 +20,21 @@ public class InitComponent extends AbstractComponent {
     }
 
     public void onInit(AirdropContext ctx) {
-        ctx.log(name + " init");
-        config.init.handle(ctx);
-        markRemoved(ctx);
+        try (var ignored = ctx.tracer().enter(name + " init {", "}")){
+            config.init.handle(ctx);
+            markRemoved(ctx);
+        }
     }
 
     @Override
     public void onCreate(AirdropContext ctx) {
-        ctx.log(name + " create");
-        onInit(ctx); //proxy
+        try (var ignored = ctx.tracer().enter(name + " create {", "}")){
+            onInit(ctx); //proxy
+        }
     }
 
     @Override
     public void onRemove(AirdropContext ctx) {
-        ctx.log(name + " remove");
     }
 
     public static class Config implements ComponentFactory {

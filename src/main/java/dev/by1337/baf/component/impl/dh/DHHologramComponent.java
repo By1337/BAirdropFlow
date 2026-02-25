@@ -33,23 +33,25 @@ public class DHHologramComponent extends AbstractComponent {
     }
 
     public void onUpdate(AirdropContext ctx) {
-        ctx.log(name + " update");
-        var holo = hologram.get();
-        Objects.requireNonNull(holo, "hologram is not created!");
-        DHAPI.setHologramLines(holo, lines());
-        config.update.handle(ctx);
+        try (var ignored = ctx.tracer().enter(name + " update {", "}")){
+            var holo = hologram.get();
+            Objects.requireNonNull(holo, "hologram is not created!");
+            DHAPI.setHologramLines(holo, lines());
+            config.update.handle(ctx);
+        }
     }
 
     @Override
     public void onCreate(AirdropContext ctx) {
-        ctx.log(name + " create");
-        hologram.set(DHAPI.createHologram(UUID.randomUUID().toString(), new Location(
-                airdrop.world(),
-                airdrop.x() + config.offsets.x(),
-                airdrop.y() + config.offsets.y(),
-                airdrop.z() + config.offsets.z()
-        ), lines()));
-        config.create.handle(ctx);
+        try (var ignored = ctx.tracer().enter(name + " create {", "}")){
+            hologram.set(DHAPI.createHologram(UUID.randomUUID().toString(), new Location(
+                    airdrop.world(),
+                    airdrop.x() + config.offsets.x(),
+                    airdrop.y() + config.offsets.y(),
+                    airdrop.z() + config.offsets.z()
+            ), lines()));
+            config.create.handle(ctx);
+        }
     }
 
     private List<String> lines() {
@@ -62,9 +64,10 @@ public class DHHologramComponent extends AbstractComponent {
 
     @Override
     public void onRemove(AirdropContext ctx) {
-        ctx.log(name + " remove");
-        hologram.cleanup();
-        config.remove.handle(ctx);
+        try (var ignored = ctx.tracer().enter(name + " remove {", "}")){
+            hologram.cleanup();
+            config.remove.handle(ctx);
+        }
     }
 
     public static class Config implements ComponentFactory {

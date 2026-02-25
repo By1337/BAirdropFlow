@@ -32,7 +32,9 @@ public class TimerSystem implements Closeable {
     private void tick() {
         manager.forEachComponents(TimerComponent.class, ((airdrop, components) -> {
             for (TimerComponent c : components) {
-                new AirdropContext(airdrop).call(c, TimerComponent::onTick);
+                try (var ctx = new AirdropContext(airdrop)){
+                    ctx.call(c, TimerComponent::onTick);
+                }
             }
         }));
     }

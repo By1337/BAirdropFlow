@@ -75,11 +75,15 @@ public class AirdropManager {
         var init = airdrop.config().nodes().get("__init__");
         if (init == null) {
             log.error("Airdrop {} has no __init__ node!", airdrop);
-            airdrop.markRemoved(new AirdropContext(airdrop));
+            try (var ctx = new AirdropContext(airdrop)){
+                airdrop.markRemoved(ctx);
+            }
             return;
         }
         var c = init.create(airdrop, "__init__");
-        airdrop.components().add(c, new AirdropContext(airdrop));
+        try (var ctx = new AirdropContext(airdrop)){
+            airdrop.components().add(c, ctx);
+        }
     }
 
     public void removeAirdrop(Airdrop airdrop, AirdropContext ctx) {

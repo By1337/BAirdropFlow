@@ -46,44 +46,49 @@ public class LooterComponent extends AbstractComponent {
             return;
         }
         pl.openInventory(inv.getInventory());
-        AirdropContext ctx = new AirdropContext(airdrop, pl);
-        ctx.log(name + " open");
-        config.open.handle(ctx);
+        try (
+                AirdropContext ctx = new AirdropContext(airdrop, pl);
+                var ignored = ctx.tracer().enter(name + " open {", "}")
+        ){
+            config.open.handle(ctx);
+        }
     }
 
     @Override
     public void onCreate(AirdropContext ctx) {
-        ctx.log(name + " create");
-        clickHolder.set(airdrop.manager().interactManager().registerBlockClick(
-                airdrop.world(),
-                airdrop.x() + config.offsets.x(),
-                airdrop.y() + config.offsets.y(),
-                airdrop.z() + config.offsets.z(),
-                LooterComponent.this::on
-        ));
-        inventoryHolder.set(new LootingInventory(
-                54,
-                MiniMessage.deserialize(airdrop.setPlaceholders(config.title)),
-                airdrop.location().add(config.offsets.x(), config.offsets.y(), config.offsets.z()),
-                airdrop.manager().plugin()
-        ));
-        LootTable lootTable = airdrop.manager().lootTables().get(config.lootTable);
-        if (lootTable == null) {
-            log.error("Unknown loot table {}", config.lootTable);
-        } else {
-            var inv = inventoryHolder.get();
-            if (inv == null) return;
-            inv.fill(lootTable.generate());
+        try (var ignored = ctx.tracer().enter(name + " create {", "}")){
+            clickHolder.set(airdrop.manager().interactManager().registerBlockClick(
+                    airdrop.world(),
+                    airdrop.x() + config.offsets.x(),
+                    airdrop.y() + config.offsets.y(),
+                    airdrop.z() + config.offsets.z(),
+                    LooterComponent.this::on
+            ));
+            inventoryHolder.set(new LootingInventory(
+                    54,
+                    MiniMessage.deserialize(airdrop.setPlaceholders(config.title)),
+                    airdrop.location().add(config.offsets.x(), config.offsets.y(), config.offsets.z()),
+                    airdrop.manager().plugin()
+            ));
+            LootTable lootTable = airdrop.manager().lootTables().get(config.lootTable);
+            if (lootTable == null) {
+                log.error("Unknown loot table {}", config.lootTable);
+            } else {
+                var inv = inventoryHolder.get();
+                if (inv == null) return;
+                inv.fill(lootTable.generate());
+            }
+            config.create.handle(ctx);
         }
-        config.create.handle(ctx);
     }
 
     @Override
     public void onRemove(AirdropContext ctx) {
-        ctx.log(name + " remove");
-        config.remove.handle(ctx);
-        clickHolder.cleanup();
-        inventoryHolder.cleanup();
+        try (var ignored = ctx.tracer().enter(name + " remove {", "}")){
+            config.remove.handle(ctx);
+            clickHolder.cleanup();
+            inventoryHolder.cleanup();
+        }
     }
 
 
