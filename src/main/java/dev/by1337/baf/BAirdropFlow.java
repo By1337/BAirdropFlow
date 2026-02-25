@@ -6,6 +6,7 @@ import dev.by1337.baf.component.impl.InitComponent;
 import dev.by1337.baf.component.impl.TimerComponent;
 import dev.by1337.baf.component.impl.dh.DHHologramComponent;
 import dev.by1337.baf.component.impl.loot.LooterComponent;
+import dev.by1337.baf.component.impl.wg.WgRegionComponent;
 import dev.by1337.baf.component.system.TimerSystem;
 import dev.by1337.core.util.io.ResourceUtil;
 import dev.by1337.yaml.YamlMap;
@@ -28,6 +29,8 @@ public class BAirdropFlow extends JavaPlugin {
         if (hasClass("eu.decentsoftware.holograms.api.DHAPI")) {
             AirdropComponent.REGISTRY.register("dh:hologram", DHHologramComponent.Config.CODEC);
         }
+        AirdropComponent.REGISTRY.register("wg:region", WgRegionComponent.Config.CODEC);
+
         manager = new AirdropManager(this);
         timerSystem = new TimerSystem(this, manager);
     }

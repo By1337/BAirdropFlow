@@ -3,7 +3,6 @@ package dev.by1337.baf.handler;
 import dev.by1337.baf.command.AirdropContext;
 import dev.by1337.cmd.Command;
 import dev.by1337.edsl.EventHandler;
-import dev.by1337.edsl.HandlerCodecBuilder;
 import dev.by1337.plc.PlaceholderApplier;
 import dev.by1337.yaml.YamlValue;
 import dev.by1337.yaml.codec.YamlCodec;
@@ -43,8 +42,8 @@ public class ComponentHandler implements EventHandler<AirdropContext> {
     }
 
     static {
-        HandlerCodecBuilder<AirdropContext> builder = new HandlerCodecBuilder<>();
-        CODEC = builder.handlerCodec().map(
+
+        CODEC = EventHandler.<AirdropContext>codec().map(
                 ComponentHandler::new,
                 c -> c.source
         );

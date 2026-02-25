@@ -3,16 +3,18 @@ package dev.by1337.baf.command;
 import dev.by1337.baf.Airdrop;
 import dev.by1337.baf.component.AirdropComponent;
 import dev.by1337.cmd.CommandMsgError;
+import dev.by1337.edsl.trace.EventTracer;
 import dev.by1337.plc.PlaceholderApplier;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import dev.by1337.edsl.EventContext;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-public record AirdropContext(Airdrop airdrop, @Nullable Player player) implements PlaceholderApplier {
+public record AirdropContext(Airdrop airdrop, @Nullable Player player) implements PlaceholderApplier, EventContext {
     private static final Logger log = LoggerFactory.getLogger(AirdropContext.class);
 
     public AirdropContext(Airdrop airdrop) {
@@ -49,6 +51,11 @@ public record AirdropContext(Airdrop airdrop, @Nullable Player player) implement
             return false;
         }
         return true;
+    }
+
+    @Override
+    public EventTracer tracer() {
+        return EventTracer.NOP;
     }
 
     public void log(String s) {

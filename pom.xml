@@ -86,6 +86,10 @@
             <id>codemc</id>
             <url>https://repo.codemc.io/repository/maven-public/</url>
         </repository>
+        <repository>
+            <id>sk89q-repo</id>
+            <url>https://maven.enginehub.org/repo/</url>
+        </repository>
     </repositories>
 
     <dependencies>
@@ -128,6 +132,20 @@
             <scope>provided</scope>
         </dependency>
         <!--/DH-->
+        <!--WG-->
+        <dependency>
+            <groupId>com.sk89q.worldedit</groupId>
+            <artifactId>worldedit-bukkit</artifactId>
+            <version>7.2.15</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.sk89q.worldguard</groupId>
+            <artifactId>worldguard-bukkit</artifactId>
+            <version>7.0.5</version>
+            <scope>provided</scope>
+        </dependency>
+        <!--/WG-->
 
         <dependency>
             <groupId>com.google.guava</groupId>

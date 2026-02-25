@@ -2,11 +2,31 @@ nodes:
   __init__:
     type: __init__
     on_init:
-      setblock: '{x} {y} {z} minecraft:respawn_anchor[charges=4]'
-      # create имеет флаги '-anon true' '-name name'
-      # create: 'tto -anon true' # создаст компонент tto со случайным именем
-      # create: 'tto -name new_name' # создаст компонент tto с именем new_name
-      create: 'tto'
+      - create: region
+      - setblock: '{x} {y} {z} minecraft:respawn_anchor[charges=4]'
+       # create имеет флаги '-anon true' '-name name'
+       # create: 'tto -anon true' # создаст компонент tto со случайным именем
+       # create: 'tto -name new_name' # создаст компонент tto с именем new_name
+      - create: 'tto'
+
+  region:
+    type: wg:region
+    size: '15;15;15'
+    flags:
+      - 'use deny'
+      - 'other-explosion deny'
+      - 'mob-damage allow'
+      - 'pvp allow'
+      - 'tnt deny'
+      - 'ghast-fireball deny'
+      - 'wither-damage deny'
+      - 'creeper-explosion deny'
+      - 'vehicle-destroy allow'
+      - 'interact deny'
+      - 'entry-deny-message -e'
+      - 'deny-message -e'
+      - 'exit-deny-message -e'
+
 
   # time to open timer
   tto:
@@ -67,4 +87,5 @@ nodes:
     type: __destroy__
     # in: destroy
     on_destroy:
+      - remove: region
       - setblock: '{x} {y} {z} air'

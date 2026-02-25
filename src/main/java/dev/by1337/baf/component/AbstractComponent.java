@@ -22,8 +22,6 @@ public abstract class AbstractComponent implements AirdropComponent {
         this.name = name;
         this.owner = owner;
         listeners = new HashMap<>();
-        // exportEvent("create", this::onCreate);
-        // exportEvent("remove", this::onRemove);
     }
 
     public abstract void onCreate(AirdropContext ctx);

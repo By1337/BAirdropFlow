@@ -39,7 +39,7 @@ public class Airdrop implements PlaceholderApplier {
     private final int z;
     private final Location location;
     private boolean removed;
-    private final ComponentHolder components = new ComponentHolder(this);
+    private final ComponentHolder components = new ComponentHolder();
     private final AirdropCleaner cleaner;
 
     public Airdrop(AirdropConfig config, AirdropManager manager, Location location) {

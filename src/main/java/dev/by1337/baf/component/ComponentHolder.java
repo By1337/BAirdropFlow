@@ -12,12 +12,8 @@ public class ComponentHolder {
     private static final Logger log = LoggerFactory.getLogger(ComponentHolder.class);
     private final Map<String, AirdropComponent> byName = new HashMap<>();
     private final Map<Class<? extends AirdropComponent>, Set<AirdropComponent>> byType = new HashMap<>();
-    private final Airdrop airdrop;
-    private final AirdropContext defaultContext;
 
-    public ComponentHolder(Airdrop airdrop) {
-        this.airdrop = airdrop;
-        defaultContext = new AirdropContext(airdrop);
+    public ComponentHolder() {
     }
 
     public AirdropComponent get(String name) {
