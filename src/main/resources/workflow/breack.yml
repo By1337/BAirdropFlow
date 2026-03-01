@@ -1,0 +1,77 @@
+nodes:
+  __init__:
+    type: __init__
+    on_init:
+      - create: region
+      - setblock: '{x} {y} {z} minecraft:chest'
+      - create: 'tte'
+      - create: 'break'
+
+  region:
+    type: wg:region
+    size: '15;15;15'
+    flags:
+      - 'use deny'
+      - 'other-explosion deny'
+      - 'mob-damage allow'
+      - 'pvp allow'
+      - 'tnt deny'
+      - 'ghast-fireball deny'
+      - 'wither-damage deny'
+      - 'creeper-explosion deny'
+      - 'vehicle-destroy allow'
+      - 'interact deny'
+      - 'entry-deny-message -e'
+      - 'deny-message -e'
+      - 'exit-deny-message -e'
+
+  tte:
+    type: tick:timer
+    timer: 30
+    on_tick:
+      - call: update hologram
+    on_timer_end:
+      - remove: break
+      - destroy: ''
+    on_remove:
+      - remove: hologram
+
+  break:
+    type: block:break
+    offsets: '0;0;0'
+    count: 10
+    on_break:
+      - call: update hologram
+    on_broken:
+      - remove: tte
+      - create: next_state #todo
+    on_remove: []
+
+  hologram:
+    type: dh:hologram
+    offsets: "0.5;1.8;0.5"
+    lines:
+      - '&7Аирдроп'
+      - '&7Осталось времени {ctx:tte.timer}'
+      - '&7Осталось сломать {ctx:break.count}'
+
+  __destroy__:
+    type: __destroy__
+    on_destroy:
+      - remove: region
+      - setblock: '{x} {y} {z} air'
+
+
+  block_end:
+    type: static:commands
+    on_run:
+      - if: "!{values:phase_2}"
+        do:
+          - set_value: phase_2 true
+          - remove?: tte
+          - remove?: break
+          - if: '{values:is_broken}'
+            do:
+              - create: next_state
+            else:
+              - destroy: ''

@@ -30,7 +30,7 @@ public interface ComponentFactory {
 
         @Override
         public YamlValue encode(ComponentFactory component) {
-            var codec = component.codec();
+            YamlCodec<? extends ComponentFactory> codec = component.codec();
             NamespacedKey key = AirdropComponent.REGISTRY.getKey(codec);
             // noinspection all
             YamlValue val = ((YamlCodec) codec).encode(component);

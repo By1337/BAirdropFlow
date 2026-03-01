@@ -106,6 +106,21 @@ public class AirdropCommands {
                                 throw new CommandMsgError("Unknown event " + event + " for node " + node);
                             }
                         })
+                )
+                .sub(new Command<AirdropContext>("[call?]")
+                        .argument(new ArgumentString<>("event"))
+                        .argument(new ArgumentString<>("node"))
+                        .executor((ctx, args) -> {
+                            String event = (String) args.getOrThrow("event", "Use: [call] <event> <node>");
+                            String node = (String) args.getOrThrow("node", "Use: [call] <event> <node>");
+                            var drop = ctx.airdrop();
+                            var c = drop.components().get(node);
+                            if (c != null) {
+                                if (!c.call(event, ctx)) {
+                                    throw new CommandMsgError("Unknown event " + event + " for node " + node);
+                                }
+                            }
+                        })
                 ).sub(new Command<AirdropContext>("[destroy]")
                         .executor((ctx, args) -> {
                             ctx.airdrop().markRemoved(ctx);

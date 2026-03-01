@@ -4,17 +4,21 @@ import dev.by1337.baf.component.AirdropComponent;
 import dev.by1337.baf.component.impl.DestroyComponent;
 import dev.by1337.baf.component.impl.InitComponent;
 import dev.by1337.baf.component.impl.TimerComponent;
+import dev.by1337.baf.component.impl.block.BreakBlockComponent;
 import dev.by1337.baf.component.impl.dh.DHHologramComponent;
 import dev.by1337.baf.component.impl.loot.LooterComponent;
 import dev.by1337.baf.component.impl.wg.WgRegionComponent;
 import dev.by1337.baf.component.system.TimerSystem;
 import dev.by1337.core.util.io.ResourceUtil;
 import dev.by1337.yaml.YamlMap;
+import org.bukkit.Particle;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class BAirdropFlow extends JavaPlugin {
     private AirdropManager manager;
@@ -24,8 +28,9 @@ public class BAirdropFlow extends JavaPlugin {
     public void onLoad() {
         AirdropComponent.REGISTRY.register("default:__init__", InitComponent.Config.CODEC);
         AirdropComponent.REGISTRY.register("default:__destroy__", DestroyComponent.Config.CODEC);
-        AirdropComponent.REGISTRY.register("default:timer", TimerComponent.Config.CODEC);
-        AirdropComponent.REGISTRY.register("default:looter", LooterComponent.Config.CODEC);
+        AirdropComponent.REGISTRY.register("tick:timer", TimerComponent.Config.CODEC);
+        AirdropComponent.REGISTRY.register("loot:looter", LooterComponent.Config.CODEC);
+        AirdropComponent.REGISTRY.register("block:break", BreakBlockComponent.Config.CODEC);
         if (hasClass("eu.decentsoftware.holograms.api.DHAPI")) {
             AirdropComponent.REGISTRY.register("dh:hologram", DHHologramComponent.Config.CODEC);
         }

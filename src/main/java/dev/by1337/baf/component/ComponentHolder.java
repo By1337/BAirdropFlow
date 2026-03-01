@@ -53,12 +53,12 @@ public class ComponentHolder {
 
     public void remove(AirdropComponent component, AirdropContext ctx) {
         reqMain("async remove");
+        ctx.call(component, AirdropComponent::onRemove);
         byName.remove(component.name());
         var set = byType.get(component.getClass());
         if (set != null) {
             set.remove(component);
         }
-        ctx.call(component, AirdropComponent::onRemove);
     }
 
     private void reqMain(String msg) {

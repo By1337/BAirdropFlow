@@ -19,30 +19,35 @@ public class TimerComponent extends AbstractComponent {
         super(name, owner);
         timer = config.timer;
         this.config = config;
-        exportEvent("tick", this::onTick);
         exportPlaceholder("timer", () -> timer);
     }
 
     @Override
     public void onCreate(AirdropContext ctx) {
-        try (var ignored = ctx.tracer().enter(name + " create {", "}")){
-            config.create.handle(ctx);
+        try (var ignored = ctx.tracer().enter(name + " on_create {", "}")){
+            config.on_create.handle(ctx);
         }
     }
 
     @Override
     public void onRemove(AirdropContext ctx) {
-        try (var ignored = ctx.tracer().enter(name + " remove {", "}")){
-            config.remove.handle(ctx);
+        try (var ignored = ctx.tracer().enter(name + " on_remove {", "}")){
+            config.on_remove.handle(ctx);
+        }
+    }
+    public void onTimerEnd(AirdropContext ctx){
+        try (var ignored2 = ctx.tracer().enter(name + " on_timer_end {", "}")){
+            config.on_timer_end.handle(ctx);
+            markRemoved(ctx);
         }
     }
 
     public void onTick(AirdropContext ctx) {
-        try (var ignored = ctx.tracer().enter(name + " tick {", "}")){
-            if (--timer <= 0) {
-                markRemoved(ctx);
+        try (var ignored = ctx.tracer().enter(name + " on_tick {", "}")){
+            if (--timer == 0) {
+                onTimerEnd(ctx);
             } else {
-                config.tick.handle(ctx);
+                config.on_tick.handle(ctx);
             }
         }
     }
@@ -51,20 +56,23 @@ public class TimerComponent extends AbstractComponent {
         public static final YamlCodec<Config> CODEC = RecordYamlCodecBuilder.mapOf(
                 Config::new,
                 YamlCodec.INT.fieldOf("timer", v -> v.timer),
-                ComponentHandler.CODEC.fieldOf("on_create", v -> v.create, ComponentHandler.EMPTY),
-                ComponentHandler.CODEC.fieldOf("on_tick", v -> v.tick, ComponentHandler.EMPTY),
-                ComponentHandler.CODEC.fieldOf("on_remove", v -> v.remove, ComponentHandler.EMPTY)
+                ComponentHandler.CODEC.fieldOf("on_create", v -> v.on_create, ComponentHandler.EMPTY),
+                ComponentHandler.CODEC.fieldOf("on_tick", v -> v.on_tick, ComponentHandler.EMPTY),
+                ComponentHandler.CODEC.fieldOf("on_remove", v -> v.on_remove, ComponentHandler.EMPTY),
+                ComponentHandler.CODEC.fieldOf("on_timer_end", v -> v.on_timer_end, ComponentHandler.EMPTY)
         );
         private final int timer;
-        private final ComponentHandler create;
-        private final ComponentHandler tick;
-        private final ComponentHandler remove;
+        private final ComponentHandler on_create;
+        private final ComponentHandler on_tick;
+        private final ComponentHandler on_remove;
+        private final ComponentHandler on_timer_end;
 
-        public Config(int timer, ComponentHandler create, ComponentHandler tick, ComponentHandler remove) {
+        public Config(int timer, ComponentHandler on_create, ComponentHandler on_tick, ComponentHandler remove, ComponentHandler onTimerEnd) {
             this.timer = timer;
-            this.create = create;
-            this.tick = tick;
-            this.remove = remove;
+            this.on_create = on_create;
+            this.on_tick = on_tick;
+            this.on_remove = remove;
+            on_timer_end = onTimerEnd;
         }
 
         @Override
