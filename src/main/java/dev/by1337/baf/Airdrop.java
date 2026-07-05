@@ -1,37 +1,37 @@
 package dev.by1337.baf;
 
 import dev.by1337.baf.command.AirdropCommands;
-import dev.by1337.baf.command.AirdropContext;
 import dev.by1337.baf.component.ComponentHolder;
 import dev.by1337.baf.ref.AirdropCleaner;
 import dev.by1337.cmd.Command;
-import dev.by1337.plc.PapiResolver;
-import dev.by1337.plc.PlaceholderApplier;
+import dev.by1337.edsl.context.EventContext;
 import dev.by1337.plc.PlaceholderResolver;
 import dev.by1337.plc.Placeholders;
 import org.bukkit.Location;
 import org.bukkit.World;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
-public class Airdrop implements PlaceholderApplier {
+public class Airdrop {
     private static final Random RANDOM = new Random();
-    public static final PlaceholderResolver<AirdropContext> PLACEHOLDERS = Placeholders.<AirdropContext>create()
-            .withContext("x", ctx -> ctx.airdrop().x)
-            .withContext("y", ctx -> ctx.airdrop().y)
-            .withContext("z", ctx -> ctx.airdrop().z)
-            .withContext("world", ctx -> ctx.airdrop().world.getName())
-            .of("ctx", (key, ctx) -> {
+    public static final PlaceholderResolver<Airdrop> PLACEHOLDERS = Placeholders.<Airdrop>create()
+            .withContext("x", air -> air.x)
+            .withContext("y", air -> air.y)
+            .withContext("z", air -> air.z)
+            .withContext("world", air -> air.world.getName())
+            .of("ctx", (key, air) -> {
                 var arr = key.replace(" ", "").split("\\.", 2);
                 if (arr.length != 2) return "<name>.<key>";
-                var v = ctx.airdrop().components.get(arr[0]);
+                var v = air.components.get(arr[0]);
                 if (v == null) return "unknown node " + arr[0];
                 var obj = v.getPlaceholder(arr[1]);
                 if (obj == null) return "unknown key " + arr[1];
                 return String.valueOf(obj);
-            }).and(PapiResolver.get().map(AirdropContext::player));
-    private final AirdropContext selfContext = new AirdropContext(this);
-    private final AirdropConfig config;
+            })
+            .of("args", (key, air) -> String.valueOf(air.args.get(key)));
+    private final Workflow config;
     private final AirdropManager manager;
     private final World world;
     private final int x;
@@ -41,8 +41,9 @@ public class Airdrop implements PlaceholderApplier {
     private boolean removed;
     private final ComponentHolder components = new ComponentHolder();
     private final AirdropCleaner cleaner;
+    private final Map<String, String> args = new HashMap<>();
 
-    public Airdrop(AirdropConfig config, AirdropManager manager, Location location) {
+    public Airdrop(Workflow config, AirdropManager manager, Location location) {
         cleaner = new AirdropCleaner();
         this.config = config;
         this.manager = manager;
@@ -53,20 +54,20 @@ public class Airdrop implements PlaceholderApplier {
         this.z = location.getBlockZ();
     }
 
-    public Command<AirdropContext> getCommands() {
+    public Map<String, String> args() {
+        return args;
+    }
+
+    public Command<EventContext> getCommands() {
         return AirdropCommands.getCommands();
     }
 
-    public static String setPlaceholders(String s, AirdropContext context) {
-        return PLACEHOLDERS.setPlaceholders(s, context);
-    }
 
-    @Override
     public String setPlaceholders(String s) {
-        return PLACEHOLDERS.setPlaceholders(s, selfContext);
+        return PLACEHOLDERS.setPlaceholders(s, this);
     }
 
-    public void markRemoved(AirdropContext ctx) {
+    public void markRemoved(EventContext ctx) {
         if (removed) return;
         removed = true;
         manager.removeAirdrop(this, ctx);
@@ -80,7 +81,7 @@ public class Airdrop implements PlaceholderApplier {
         return components;
     }
 
-    public AirdropConfig config() {
+    public Workflow config() {
         return config;
     }
 

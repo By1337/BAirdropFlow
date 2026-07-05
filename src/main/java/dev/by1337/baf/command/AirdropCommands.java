@@ -1,5 +1,6 @@
 package dev.by1337.baf.command;
 
+import dev.by1337.baf.Airdrop;
 import dev.by1337.baf.command.argument.OptionsArgument;
 import dev.by1337.baf.util.OptionsHolder;
 import dev.by1337.cmd.Command;
@@ -7,45 +8,43 @@ import dev.by1337.cmd.CommandMsgError;
 import dev.by1337.cmd.argument.ArgumentString;
 import dev.by1337.cmd.argument.ArgumentStrings;
 import dev.by1337.core.command.bcmd.argument.ArgumentComponents;
-import dev.by1337.core.command.bcmd.argument.ArgumentDouble;
 import dev.by1337.core.command.bcmd.argument.ArgumentInt;
-import dev.by1337.core.command.bcmd.argument.ArgumentSound;
 import dev.by1337.core.util.text.minimessage.MiniMessage;
+import dev.by1337.edsl.command.DefaultEventCommands;
+import dev.by1337.edsl.context.EventContext;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
 import net.kyori.adventure.util.Ticks;
 import org.bukkit.Bukkit;
-import org.bukkit.Sound;
-import org.bukkit.entity.Player;
 
 import java.util.UUID;
 
 public class AirdropCommands {
-    private static final Command<AirdropContext> COMMANDS;
+    private static Command<EventContext> COMMANDS;
 
 
-    public static Command<AirdropContext> getCommands() {
+    public static Command<EventContext> getCommands() {
+        if (COMMANDS == null) resetCommands();
         return COMMANDS;
     }
-
-    static {
-        COMMANDS = new Command<AirdropContext>("root")
-                .and(voidOutput().map(v -> null))
-                .and(playerOutput().map(AirdropContext::player))
+    public static void resetCommands(){
+        COMMANDS = new Command<EventContext>("root")
+                .and(DefaultEventCommands.createCommands())
                 .and(nodeControl())
                 .and(world())
         ;
     }
 
-    private static Command<AirdropContext> nodeControl() {
-        return new Command<AirdropContext>("root")
-                .sub(new Command<AirdropContext>("[create]")
+
+    private static Command<EventContext> nodeControl() {
+        return new Command<EventContext>("root")
+                .sub(new Command<EventContext>("[create]")
                         .argument(new ArgumentString<>("node"))
                         .argument(new OptionsArgument<>("flags"))
                         .executor((ctx, args) -> {
                             OptionsHolder flags = (OptionsHolder) args.getOrDefault("flags", new OptionsHolder());
                             String node = (String) args.getOrThrow("node", "Use: [create] <node>");
-                            var drop = ctx.airdrop();
+                            var drop = ctx.get(Airdrop.class);
                             if (drop.isRemoved()) {
                                 throw new CommandMsgError("Airdrop is removed!");
                             }
@@ -66,12 +65,12 @@ public class AirdropCommands {
                             drop.components().add(factory.create(drop, name), ctx);
                         })
                 )
-                .sub(new Command<AirdropContext>("[remove]")
+                .sub(new Command<EventContext>("[remove]")
                         .aliases("[rm]")
                         .argument(new ArgumentString<>("node"))
                         .executor((ctx, args) -> {
                             String node = (String) args.getOrThrow("node", "Use: [remove] <node>");
-                            var drop = ctx.airdrop();
+                            var drop = ctx.get(Airdrop.class);
                             var c = drop.components().get(node);
                             if (c == null) {
                                 throw new CommandMsgError("Unknown node " + node);
@@ -79,25 +78,25 @@ public class AirdropCommands {
                             c.markRemoved(ctx);
                         })
                 )
-                .sub(new Command<AirdropContext>("[remove?]")
+                .sub(new Command<EventContext>("[remove?]")
                         .aliases("[rm?]")
                         .argument(new ArgumentString<>("node"))
                         .executor((ctx, args) -> {
                             String node = (String) args.getOrThrow("node", "Use: [remove?] <node>");
-                            var drop = ctx.airdrop();
+                            var drop = ctx.get(Airdrop.class);
                             var c = drop.components().get(node);
                             if (c != null) {
                                 c.markRemoved(ctx);
                             }
                         })
                 )
-                .sub(new Command<AirdropContext>("[call]")
+                .sub(new Command<EventContext>("[call]")
                         .argument(new ArgumentString<>("event"))
                         .argument(new ArgumentString<>("node"))
                         .executor((ctx, args) -> {
                             String event = (String) args.getOrThrow("event", "Use: [call] <event> <node>");
                             String node = (String) args.getOrThrow("node", "Use: [call] <event> <node>");
-                            var drop = ctx.airdrop();
+                            var drop = ctx.get(Airdrop.class);
                             var c = drop.components().get(node);
                             if (c == null) {
                                 throw new CommandMsgError("Unknown node " + node);
@@ -107,13 +106,13 @@ public class AirdropCommands {
                             }
                         })
                 )
-                .sub(new Command<AirdropContext>("[call?]")
+                .sub(new Command<EventContext>("[call?]")
                         .argument(new ArgumentString<>("event"))
                         .argument(new ArgumentString<>("node"))
                         .executor((ctx, args) -> {
                             String event = (String) args.getOrThrow("event", "Use: [call] <event> <node>");
                             String node = (String) args.getOrThrow("node", "Use: [call] <event> <node>");
-                            var drop = ctx.airdrop();
+                            var drop = ctx.get(Airdrop.class);
                             var c = drop.components().get(node);
                             if (c != null) {
                                 if (!c.call(event, ctx)) {
@@ -121,17 +120,17 @@ public class AirdropCommands {
                                 }
                             }
                         })
-                ).sub(new Command<AirdropContext>("[destroy]")
+                ).sub(new Command<EventContext>("[destroy]")
                         .executor((ctx, args) -> {
-                            ctx.airdrop().markRemoved(ctx);
+                            ctx.get(Airdrop.class).markRemoved(ctx);
                         })
                 )
                 ;
     }
 
-    private static Command<AirdropContext> world() {
-        return new Command<AirdropContext>("root")
-                .sub(new Command<AirdropContext>("[setblock]")
+    private static Command<EventContext> world() {
+        return new Command<EventContext>("root")
+                .sub(new Command<EventContext>("[setblock]")
                         .argument(new ArgumentInt<>("x"))
                         .argument(new ArgumentInt<>("y"))
                         .argument(new ArgumentInt<>("z"))
@@ -141,7 +140,7 @@ public class AirdropCommands {
                             int y = (int) args.getOrThrow("y", "Use: [setblock] <x> <y> <z> <block>");
                             int z = (int) args.getOrThrow("z", "Use: [setblock] <x> <y> <z> <block>");
                             String block = (String) args.getOrThrow("block", "Use: [setblock] <x> <y> <z> <block>");
-                            ctx.airdrop().world().getBlockAt(
+                            ctx.get(Airdrop.class).world().getBlockAt(
                                     x, y, z
                             ).setBlockData(Bukkit.createBlockData(block), false);
                         })
@@ -188,7 +187,7 @@ public class AirdropCommands {
                                     Title title = Title.title(
                                             MiniMessage.deserialize(arr[0]),
                                             arr.length == 2 ? MiniMessage.deserialize(arr[1]) : Component.empty(),
-                                            Title.Times.of(
+                                            Title.Times.times(
                                                     Ticks.duration(fadeIn),
                                                     Ticks.duration(stay),
                                                     Ticks.duration(fadeOut)
@@ -201,102 +200,5 @@ public class AirdropCommands {
                 )
                 ;
 
-    }
-
-    private static Command<Player> playerOutput() {
-        return new Command<Player>("root")
-                .sub(new Command<Player>("[PLAYER]")
-                        .aliases("[player]")
-                        .argument(new ArgumentStrings<>("cmd"))
-                        .executor((v, args) -> {
-                                    if (v == null) throw new CommandMsgError("only with player");
-                                    String cmd = (String) args.getOrThrow("cmd", "use: [player] <cmd>");
-                                    v.performCommand(cmd);
-                                }
-                        )
-                )
-                .sub(new Command<Player>("[CHAT]")
-                        .aliases("[chat]")
-                        .argument(new ArgumentStrings<>("cmd"))
-                        .executor((v, args) -> {
-                                    if (v == null) throw new CommandMsgError("only with player");
-                                    String cmd = (String) args.getOrThrow("cmd", "use: [chat] <cmd>");
-                                    v.chat(cmd);
-                                }
-                        )
-                )
-                .sub(new Command<Player>("[sound]")
-                        .aliases("[SOUND]")
-                        .argument(new ArgumentSound<>("sound"))
-                        .argument(new ArgumentDouble<>("volume"))
-                        .argument(new ArgumentDouble<>("pitch"))
-                        .executor((v, args) -> {
-                                    if (v == null) throw new CommandMsgError("only with player");
-                                    float volume = ((Number) args.getOrDefault("volume", 1F)).floatValue();
-                                    float pitch = ((Number) args.getOrDefault("pitch", 1F)).floatValue();
-                                    Sound sound = (Sound) args.getOrThrow("sound", "use [sound] <sound> <?volume> <?pitch>");
-                                    v.playSound(v.getLocation(), sound, volume, pitch);
-                                }
-                        )
-                )
-                .sub(new Command<Player>("[MESSAGE]")
-                        .aliases("[message]")
-                        .argument(new ArgumentComponents<>("msg"))
-                        .executor((v, args) -> {
-                                    if (v == null) throw new CommandMsgError("only with player");
-                                    v.sendMessage((Component) args.getOrDefault("msg", Component.empty()));
-                                }
-                        )
-                )
-                .sub(new Command<Player>("[ACTION_BAR]")
-                        .aliases("[action_bar]")
-                        .argument(new ArgumentComponents<>("msg"))
-                        .executor((v, args) -> {
-                                    if (v == null) throw new CommandMsgError("only with player");
-                                    Component msg = (Component) args.getOrDefault("msg", Component.empty());
-                                    v.sendActionBar(msg);
-                                }
-                        )
-
-                )
-                .sub(new Command<Player>("[ACTION_BAR_ALL]")
-                        .aliases("[action_bar_all]")
-                        .argument(new ArgumentComponents<>("msg"))
-                        .executor((v, args) -> {
-                                    if (v == null) throw new CommandMsgError("only with player");
-                                    Component msg = (Component) args.getOrDefault("msg", Component.empty());
-                                    Bukkit.getOnlinePlayers().forEach(player -> player.sendActionBar(msg));
-                                }
-                        )
-                )
-                .sub(new Command<Player>("[TITLE]")
-                        .aliases("[title]")
-                        .argument(new ArgumentString<>("msg"))
-                        .argument(new ArgumentInt<>("fadeIn"))
-                        .argument(new ArgumentInt<>("stay"))
-                        .argument(new ArgumentInt<>("fadeOut"))
-
-                        .executor((v, args) -> {
-                                    if (v == null) throw new CommandMsgError("only with player");
-                                    //todo хочу ArgumentComponent а тут \n
-                                    String msg = (String) args.getOrThrow("msg", "Use [TITLE] <\"Title\\nSubTitle\"> <?fadeIn> <?stay> <?fadeOut>");
-                                    int fadeIn = (int) args.getOrDefault("fadeIn", 10);
-                                    int stay = (int) args.getOrDefault("stay", 70);
-                                    int fadeOut = (int) args.getOrDefault("fadeOut", 20);
-
-                                    String[] arr = msg.split("\\\\n", 2);
-                                    v.showTitle(Title.title(
-                                            MiniMessage.deserialize(arr[0]),
-                                            arr.length == 2 ? MiniMessage.deserialize(arr[1]) : Component.empty(),
-                                            Title.Times.of(
-                                                    Ticks.duration(fadeIn),
-                                                    Ticks.duration(stay),
-                                                    Ticks.duration(fadeOut)
-                                            )
-                                    ));
-                                }
-                        )
-                )
-                ;
     }
 }

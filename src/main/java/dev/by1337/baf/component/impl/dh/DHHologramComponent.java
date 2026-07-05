@@ -1,15 +1,16 @@
 package dev.by1337.baf.component.impl.dh;
 
 import dev.by1337.baf.Airdrop;
-import dev.by1337.baf.command.AirdropContext;
 import dev.by1337.baf.component.AbstractComponent;
 import dev.by1337.baf.component.AirdropComponent;
+import dev.by1337.baf.component.ComponentEvent;
 import dev.by1337.baf.component.ComponentFactory;
-import dev.by1337.baf.handler.ComponentHandler;
 import dev.by1337.baf.ref.CleanerSlot;
 import dev.by1337.baf.util.Vec3d;
-import dev.by1337.yaml.codec.RecordYamlCodecBuilder;
-import dev.by1337.yaml.codec.YamlCodec;
+import dev.by1337.edsl.EventHandler;
+import dev.by1337.edsl.context.EventContext;
+import dev.by1337.yaml.decoder.RecordYamlDecoder;
+import dev.by1337.yaml.decoder.YamlDecoder;
 import eu.decentsoftware.holograms.api.DHAPI;
 import eu.decentsoftware.holograms.api.holograms.Hologram;
 import org.bukkit.Location;
@@ -32,60 +33,63 @@ public class DHHologramComponent extends AbstractComponent {
         exportEvent("update", this::onUpdate);
     }
 
-    public void onUpdate(AirdropContext ctx) {
-        try (var ignored = ctx.tracer().enter(name + " update {", "}")){
+    @ComponentEvent("update")
+    public void onUpdate(EventContext ctx) {
+        try (var ignored = ctx.tracer().enter(name + " update {", "}")) {
             var holo = hologram.get();
             Objects.requireNonNull(holo, "hologram is not created!");
-            DHAPI.setHologramLines(holo, lines());
+            DHAPI.setHologramLines(holo, lines(ctx));
             config.update.handle(ctx);
         }
     }
 
     @Override
-    public void onCreate(AirdropContext ctx) {
-        try (var ignored = ctx.tracer().enter(name + " create {", "}")){
+    @ComponentEvent("create")
+    public void onCreate(EventContext ctx) {
+        try (var ignored = ctx.tracer().enter(name + " create {", "}")) {
             hologram.set(DHAPI.createHologram(UUID.randomUUID().toString(), new Location(
                     airdrop.world(),
                     airdrop.x() + config.offsets.x(),
                     airdrop.y() + config.offsets.y(),
                     airdrop.z() + config.offsets.z()
-            ), lines()));
+            ), lines(ctx)));
             config.create.handle(ctx);
         }
     }
 
-    private List<String> lines() {
-        List<String> result = new ArrayList<>();
-        for (String line : config.lines) {
-            result.add(airdrop.setPlaceholders(line));
-        }
-        return result;
-    }
-
     @Override
-    public void onRemove(AirdropContext ctx) {
-        try (var ignored = ctx.tracer().enter(name + " remove {", "}")){
+    @ComponentEvent("remove")
+    public void onRemove(EventContext ctx) {
+        try (var ignored = ctx.tracer().enter(name + " remove {", "}")) {
             hologram.cleanup();
             config.remove.handle(ctx);
         }
     }
 
+    private List<String> lines(EventContext ctx) {
+        List<String> result = new ArrayList<>();
+        for (String line : config.lines) {
+            result.add(ctx.setPlaceholders(line));
+        }
+        return result;
+    }
+
     public static class Config implements ComponentFactory {
-        public static final YamlCodec<Config> CODEC = RecordYamlCodecBuilder.mapOf(
+        public static final YamlDecoder<Config> DECODER = RecordYamlDecoder.mapOf(
                 Config::new,
-                Vec3d.CODEC.fieldOf("offsets", v -> v.offsets, new Vec3d(0, 0, 0)),
-                YamlCodec.STRINGS.fieldOf("lines", v -> v.lines, List.of()),
-                ComponentHandler.CODEC.fieldOf("on_create", v -> v.create, ComponentHandler.EMPTY),
-                ComponentHandler.CODEC.fieldOf("on_update", v -> v.update, ComponentHandler.EMPTY),
-                ComponentHandler.CODEC.fieldOf("on_remove", v -> v.remove, ComponentHandler.EMPTY)
+                Vec3d.DECODER.fieldOf("offsets", new Vec3d(0, 0, 0)),
+                YamlDecoder.STRINGS.fieldOf("lines", List.of()),
+                HANDLER.fieldOf("on_create", EMPTY_HANDLER),
+                HANDLER.fieldOf("on_update", EMPTY_HANDLER),
+                HANDLER.fieldOf("on_remove", EMPTY_HANDLER)
         );
         private final Vec3d offsets;
         private final List<String> lines;
-        private final ComponentHandler create;
-        private final ComponentHandler update;
-        private final ComponentHandler remove;
+        private final EventHandler create;
+        private final EventHandler update;
+        private final EventHandler remove;
 
-        public Config(Vec3d offsets, List<String> lines, ComponentHandler create, ComponentHandler update, ComponentHandler remove) {
+        public Config(Vec3d offsets, List<String> lines, EventHandler create, EventHandler update, EventHandler remove) {
             this.offsets = offsets;
             this.lines = lines;
             this.create = create;
@@ -99,8 +103,8 @@ public class DHHologramComponent extends AbstractComponent {
         }
 
         @Override
-        public YamlCodec<? extends ComponentFactory> codec() {
-            return CODEC;
+        public YamlDecoder<? extends ComponentFactory> codec() {
+            return DECODER;
         }
 
     }

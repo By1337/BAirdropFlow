@@ -1,18 +1,21 @@
 package dev.by1337.baf.component;
 
-import dev.by1337.baf.command.AirdropContext;
+
+import dev.by1337.baf.registry.DecoderRegistry;
+import dev.by1337.edsl.context.EventContext;
+import dev.by1337.yaml.decoder.YamlDecoder;
 
 public interface AirdropComponent {
-    ComponentRegistry REGISTRY = new ComponentRegistry();
+    DecoderRegistry<ComponentFactory> REGISTRY = new DecoderRegistry<>();
 
-    boolean call(String event, AirdropContext ctx);
-    void markRemoved(AirdropContext ctx);
+    boolean call(String event, EventContext ctx);
+    void markRemoved(EventContext ctx);
 
     boolean isRemoved();
     String name();
     Object getPlaceholder(String key);
 
-    void onCreate(AirdropContext ctx);
+    void onCreate(EventContext ctx);
 
-    void onRemove(AirdropContext ctx);
+    void onRemove(EventContext ctx);
 }

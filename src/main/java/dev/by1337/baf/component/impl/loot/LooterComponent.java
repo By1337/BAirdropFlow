@@ -1,19 +1,20 @@
 package dev.by1337.baf.component.impl.loot;
 
 import dev.by1337.baf.Airdrop;
-import dev.by1337.baf.command.AirdropContext;
+import dev.by1337.baf.BAF;
 import dev.by1337.baf.component.AbstractComponent;
 import dev.by1337.baf.component.AirdropComponent;
 import dev.by1337.baf.component.ComponentFactory;
-import dev.by1337.baf.handler.ComponentHandler;
 import dev.by1337.baf.interact.InteractListener;
 import dev.by1337.baf.loot.LootTable;
 import dev.by1337.baf.loot.inventory.LootingInventory;
 import dev.by1337.baf.ref.CleanerSlot;
 import dev.by1337.baf.util.Vec3i;
 import dev.by1337.core.util.text.minimessage.MiniMessage;
-import dev.by1337.yaml.codec.RecordYamlCodecBuilder;
-import dev.by1337.yaml.codec.YamlCodec;
+import dev.by1337.edsl.EventHandler;
+import dev.by1337.edsl.context.EventContext;
+import dev.by1337.yaml.decoder.RecordYamlDecoder;
+import dev.by1337.yaml.decoder.YamlDecoder;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -47,17 +48,17 @@ public class LooterComponent extends AbstractComponent {
         }
         pl.openInventory(inv.getInventory());
         try (
-                AirdropContext ctx = new AirdropContext(airdrop, pl);
+                var ctx = BAF.newContext(airdrop, pl);
                 var ignored = ctx.tracer().enter(name + " open {", "}")
-        ){
+        ) {
             config.open.handle(ctx);
         }
     }
 
     @Override
-    public void onCreate(AirdropContext ctx) {
-        try (var ignored = ctx.tracer().enter(name + " create {", "}")){
-            clickHolder.set(airdrop.manager().interactManager().registerBlockClick(
+    public void onCreate(EventContext ctx) {
+        try (var ignored = ctx.tracer().enter(name + " create {", "}")) {
+            clickHolder.set(BAF.blockInteract().registerBlockClick(
                     airdrop.world(),
                     airdrop.x() + config.offsets.x(),
                     airdrop.y() + config.offsets.y(),
@@ -66,13 +67,13 @@ public class LooterComponent extends AbstractComponent {
             ));
             inventoryHolder.set(new LootingInventory(
                     54,
-                    MiniMessage.deserialize(airdrop.setPlaceholders(config.title)),
+                    MiniMessage.deserialize(ctx.setPlaceholders(config.title)),
                     airdrop.location().add(config.offsets.x(), config.offsets.y(), config.offsets.z()),
                     airdrop.manager().plugin()
             ));
-            LootTable lootTable = airdrop.manager().lootTables().get(config.lootTable);
+            LootTable lootTable = airdrop.manager().lootTables().get(ctx.setPlaceholders(config.lootTable));
             if (lootTable == null) {
-                log.error("Unknown loot table {}", config.lootTable);
+                log.error("Unknown loot table {}", ctx.setPlaceholders(config.lootTable));
             } else {
                 var inv = inventoryHolder.get();
                 if (inv == null) return;
@@ -83,8 +84,8 @@ public class LooterComponent extends AbstractComponent {
     }
 
     @Override
-    public void onRemove(AirdropContext ctx) {
-        try (var ignored = ctx.tracer().enter(name + " remove {", "}")){
+    public void onRemove(EventContext ctx) {
+        try (var ignored = ctx.tracer().enter(name + " remove {", "}")) {
             config.remove.handle(ctx);
             clickHolder.cleanup();
             inventoryHolder.cleanup();
@@ -93,23 +94,23 @@ public class LooterComponent extends AbstractComponent {
 
 
     public static class Config implements ComponentFactory {
-        public static final YamlCodec<Config> CODEC = RecordYamlCodecBuilder.mapOf(
+        public static final YamlDecoder<Config> DECODER = RecordYamlDecoder.mapOf(
                 Config::new,
-                Vec3i.CODEC.fieldOf("offsets", v -> v.offsets, new Vec3i(0, 0, 0)),
-                YamlCodec.STRING.fieldOf("loot_table", v -> v.lootTable),
-                ComponentHandler.CODEC.fieldOf("on_create", v -> v.create, ComponentHandler.EMPTY),
-                ComponentHandler.CODEC.fieldOf("on_open", v -> v.open, ComponentHandler.EMPTY),
-                ComponentHandler.CODEC.fieldOf("on_remove", v -> v.remove, ComponentHandler.EMPTY),
-                YamlCodec.STRING.fieldOf("title", v -> v.title, "&7Title")
+                Vec3i.DECODER.fieldOf("offsets", new Vec3i(0, 0, 0)),
+                YamlDecoder.STRING.fieldOf("loot_table"),
+                HANDLER.fieldOf("on_create", EMPTY_HANDLER),
+                HANDLER.fieldOf("on_open", EMPTY_HANDLER),
+                HANDLER.fieldOf("on_remove", EMPTY_HANDLER),
+                YamlDecoder.STRING.fieldOf("title", "&7Title")
         );
         private final Vec3i offsets;
         private final String lootTable;
-        private final ComponentHandler create;
-        private final ComponentHandler open;
-        private final ComponentHandler remove;
+        private final EventHandler create;
+        private final EventHandler open;
+        private final EventHandler remove;
         private final String title;
 
-        public Config(Vec3i offsets, String lootTable, ComponentHandler create, ComponentHandler open, ComponentHandler remove, String title) {
+        public Config(Vec3i offsets, String lootTable, EventHandler create, EventHandler open, EventHandler remove, String title) {
             this.offsets = offsets;
             this.lootTable = lootTable;
             this.create = create;
@@ -124,8 +125,8 @@ public class LooterComponent extends AbstractComponent {
         }
 
         @Override
-        public YamlCodec<? extends ComponentFactory> codec() {
-            return CODEC;
+        public YamlDecoder<? extends ComponentFactory> codec() {
+            return DECODER;
         }
     }
 }

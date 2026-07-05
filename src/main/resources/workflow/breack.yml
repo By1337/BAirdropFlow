@@ -44,7 +44,7 @@ nodes:
       - call: update hologram
     on_broken:
       - remove: tte
-      - create: next_state #todo
+      - create: next_state
     on_remove: []
 
   hologram:
@@ -60,18 +60,3 @@ nodes:
     on_destroy:
       - remove: region
       - setblock: '{x} {y} {z} air'
-
-
-  block_end:
-    type: static:commands
-    on_run:
-      - if: "!{values:phase_2}"
-        do:
-          - set_value: phase_2 true
-          - remove?: tte
-          - remove?: break
-          - if: '{values:is_broken}'
-            do:
-              - create: next_state
-            else:
-              - destroy: ''

@@ -1,6 +1,6 @@
 package dev.by1337.baf.component;
 
-import dev.by1337.baf.command.AirdropContext;
+import dev.by1337.edsl.context.EventContext;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,7 +12,7 @@ import java.util.function.Supplier;
 
 public abstract class AbstractComponent implements AirdropComponent {
     private static final Logger log = LoggerFactory.getLogger(AbstractComponent.class);
-    private final Map<String, Consumer<AirdropContext>> listeners;
+    private final Map<String, Consumer<EventContext>> listeners;
     protected final Map<String, Supplier<Object>> placeholders = new HashMap<>();
     protected final String name;
     private boolean removed;
@@ -24,21 +24,21 @@ public abstract class AbstractComponent implements AirdropComponent {
         listeners = new HashMap<>();
     }
 
-    public abstract void onCreate(AirdropContext ctx);
+    public abstract void onCreate(EventContext ctx);
 
-    public abstract void onRemove(AirdropContext ctx);
+    public abstract void onRemove(EventContext ctx);
 
     @Override
-    public boolean call(String event, AirdropContext ctx) {
+    public boolean call(String event, EventContext ctx) {
         var v = listeners.get(event);
         if (v != null) {
-            ctx.call(v);
+            v.accept(ctx);
             return true;
         }
         return false;
     }
 
-    protected void exportEvent(String name, Consumer<AirdropContext> c) {
+    protected void exportEvent(String name, Consumer<EventContext> c) {
         listeners.put(name, c);
     }
 
@@ -53,7 +53,7 @@ public abstract class AbstractComponent implements AirdropComponent {
     }
 
     @Override
-    public void markRemoved(AirdropContext ctx) {
+    public void markRemoved(EventContext ctx) {
         if (removed) {
             log.warn("duplicate markRemoved! {}", name);
             return;

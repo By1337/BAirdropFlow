@@ -1,12 +1,73 @@
+id: example:default
+
+world: 'world'
+
+generator:
+  type: generator:fixed
+  at: '0;100;0'
+generator_EXAMPLE:
+  type: generator:random
+  radius: '2500'
+
+
+args:
+  loot_table: 'example/default'
+  type: 'обычный'
+
+spawner:
+  type: spawner:timer
+  time: 5m
+  on_create:
+    - weights:
+        20:
+          - set_value: loot_table example/epic
+          - set_value: type элитный
+        50:
+          - set_value: loot_table example/rare
+          - set_value: type редкий
+        100:
+          - set_value: loot_table example/default
+          - set_value: type обычный
+    - bc: |
+        <white> 
+        <center><white>Аирдроп {value:type}
+        <center><white>появится через 5 минут!
+        <white>
+  when:
+    2m:
+      - bc: |
+          <white>
+          <center><white>Аирдроп {value:type}
+          <center><white>появится через 2 минуты!
+          <white>
+    1m:
+      - bc: |
+          <white>
+          <center><white>Аирдроп {value:type}
+          <center><white>появится через 1 минуту!
+          <white>
+    5s-1s:
+      - bc: |
+          <white>
+          <center><white>Аирдроп {value:type}
+          <center><white>появится через {time} сек.
+          <white>
+  on_timer_end:
+    - bc: |
+        <white>
+        <center><white>Аирдроп {value:type}
+        <center><white>появился на [{x}, {y}, {z}]
+        <white>
+    - make:
+        loot_table: '{value:loot_table}'
+        type: '{value:type}'
+
 nodes:
   __init__:
     type: __init__
     on_init:
       - create: region
       - setblock: '{x} {y} {z} minecraft:respawn_anchor[charges=4]'
-       # create имеет флаги '-anon true' '-name name'
-       # create: 'tto -anon true' # создаст компонент tto со случайным именем
-       # create: 'tto -name new_name' # создаст компонент tto с именем new_name
       - create: 'tto'
 
   region:
@@ -61,7 +122,7 @@ nodes:
       - create: looter
     on_tick:
       - call: update tte_holo
-    on_timer_end: []
+    on_timer_end: [ ]
     on_remove:
       - remove: tte_holo
       - remove: looter
@@ -79,11 +140,10 @@ nodes:
   looter:
     type: loot:looter
     offsets: '0;0;0'
-    loot_table: 'loot/default'
+    loot_table: '{args:loot_table}'
     title: '&aAirdrop!'
     on_open:
       - message: '&7Личное сообщение для %player_name%'
-
 
   __destroy__:
     type: __destroy__

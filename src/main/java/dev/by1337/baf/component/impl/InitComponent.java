@@ -1,14 +1,14 @@
 package dev.by1337.baf.component.impl;
 
 import dev.by1337.baf.Airdrop;
-import dev.by1337.baf.command.AirdropContext;
 import dev.by1337.baf.component.AbstractComponent;
 import dev.by1337.baf.component.AirdropComponent;
 import dev.by1337.baf.component.ComponentFactory;
 import dev.by1337.baf.component.ComponentHolder;
-import dev.by1337.baf.handler.ComponentHandler;
-import dev.by1337.yaml.codec.RecordYamlCodecBuilder;
-import dev.by1337.yaml.codec.YamlCodec;
+import dev.by1337.edsl.EventHandler;
+import dev.by1337.edsl.context.EventContext;
+import dev.by1337.yaml.decoder.RecordYamlDecoder;
+import dev.by1337.yaml.decoder.YamlDecoder;
 
 public class InitComponent extends AbstractComponent {
     private final Config config;
@@ -16,35 +16,34 @@ public class InitComponent extends AbstractComponent {
     private InitComponent(Config config, String name, ComponentHolder owner) {
         super(name, owner);
         this.config = config;
-       // exportEvent("init", this::onInit);
     }
 
-    public void onInit(AirdropContext ctx) {
-        try (var ignored = ctx.tracer().enter(name + " init {", "}")){
+    public void onInit(EventContext ctx) {
+        try (var ignored = ctx.tracer().enter(name + " init {", "}")) {
             config.init.handle(ctx);
             markRemoved(ctx);
         }
     }
 
     @Override
-    public void onCreate(AirdropContext ctx) {
-        try (var ignored = ctx.tracer().enter(name + " create {", "}")){
+    public void onCreate(EventContext ctx) {
+        try (var ignored = ctx.tracer().enter(name + " create {", "}")) {
             onInit(ctx); //proxy
         }
     }
 
     @Override
-    public void onRemove(AirdropContext ctx) {
+    public void onRemove(EventContext ctx) {
     }
 
     public static class Config implements ComponentFactory {
-        public static final YamlCodec<Config> CODEC = RecordYamlCodecBuilder.mapOf(
+        public static final YamlDecoder<Config> DECODER = RecordYamlDecoder.mapOf(
                 Config::new,
-                ComponentHandler.CODEC.fieldOf("on_init", v -> v.init, ComponentHandler.EMPTY)
+                HANDLER.fieldOf("on_init", EMPTY_HANDLER)
         );
-        private final ComponentHandler init;
+        private final EventHandler init;
 
-        public Config(ComponentHandler init) {
+        public Config(EventHandler init) {
             this.init = init;
         }
 
@@ -54,8 +53,8 @@ public class InitComponent extends AbstractComponent {
         }
 
         @Override
-        public YamlCodec<? extends ComponentFactory> codec() {
-            return CODEC;
+        public YamlDecoder<? extends ComponentFactory> codec() {
+            return DECODER;
         }
     }
 }

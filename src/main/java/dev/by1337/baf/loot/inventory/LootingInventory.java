@@ -83,8 +83,8 @@ public class LootingInventory implements Listener, InventoryHolder {
     }
 
     public void close() {
-        new ArrayList<>(inventory.getViewers()).forEach(HumanEntity::closeInventory);
         HandlerList.unregisterAll(this);
+        new ArrayList<>(inventory.getViewers()).forEach(HumanEntity::closeInventory);
     }
 
     @Override

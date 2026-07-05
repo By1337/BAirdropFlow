@@ -1,8 +1,7 @@
 package dev.by1337.baf.component.system;
 
 import dev.by1337.baf.AirdropManager;
-import dev.by1337.baf.command.AirdropContext;
-import dev.by1337.baf.component.AbstractComponent;
+import dev.by1337.baf.BAF;
 import dev.by1337.baf.component.impl.TimerComponent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
@@ -30,10 +29,10 @@ public class TimerSystem implements Closeable {
     }
 
     private void tick() {
-        manager.forEachComponents(TimerComponent.class, ((airdrop, components) -> {
-            for (TimerComponent c : components) {
-                try (var ctx = new AirdropContext(airdrop)){
-                    ctx.call(c, TimerComponent::onTick);
+        manager.forEachAirdrops(airdrop -> airdrop.components().forEach(c -> {
+            if (c instanceof TimerComponent t) {
+                try (var ctx = BAF.newContext(airdrop)) {
+                    t.onTick(ctx);
                 }
             }
         }));

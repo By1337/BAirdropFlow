@@ -1,3 +1,4 @@
+/*
 package dev.by1337.baf.component;
 
 import dev.by1337.baf.command.AirdropContext;
@@ -58,3 +59,4 @@ public class StaticAirdropComponent implements AirdropComponent {
         //nop
     }
 }
+*/

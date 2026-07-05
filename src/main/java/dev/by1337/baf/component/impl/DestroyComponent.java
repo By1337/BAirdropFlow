@@ -1,14 +1,14 @@
 package dev.by1337.baf.component.impl;
 
 import dev.by1337.baf.Airdrop;
-import dev.by1337.baf.command.AirdropContext;
 import dev.by1337.baf.component.AbstractComponent;
 import dev.by1337.baf.component.AirdropComponent;
 import dev.by1337.baf.component.ComponentFactory;
 import dev.by1337.baf.component.ComponentHolder;
-import dev.by1337.baf.handler.ComponentHandler;
-import dev.by1337.yaml.codec.RecordYamlCodecBuilder;
-import dev.by1337.yaml.codec.YamlCodec;
+import dev.by1337.edsl.EventHandler;
+import dev.by1337.edsl.context.EventContext;
+import dev.by1337.yaml.decoder.RecordYamlDecoder;
+import dev.by1337.yaml.decoder.YamlDecoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,22 +19,22 @@ public class DestroyComponent extends AbstractComponent {
     private DestroyComponent(Config config, String name, ComponentHolder owner) {
         super(name, owner);
         this.config = config;
-       // exportEvent("destroy", this::onDestroy);
+        // exportEvent("destroy", this::onDestroy);
     }
 
     @Override
-    public void onCreate(AirdropContext ctx) {
-        try (var ignored = ctx.tracer().enter(name + " create {", "}")){
+    public void onCreate(EventContext ctx) {
+        try (var ignored = ctx.tracer().enter(name + " create {", "}")) {
             onDestroy(ctx); //proxy
         }
     }
 
     @Override
-    public void onRemove(AirdropContext ctx) {
+    public void onRemove(EventContext ctx) {
     }
 
-    public void onDestroy(AirdropContext ctx) {
-        try (var ignored = ctx.tracer().enter(name + " destroy {", "}")){
+    public void onDestroy(EventContext ctx) {
+        try (var ignored = ctx.tracer().enter(name + " destroy {", "}")) {
             config.destroy.handle(ctx);
             markRemoved(ctx);
         }
@@ -42,13 +42,13 @@ public class DestroyComponent extends AbstractComponent {
 
     public static class Config implements ComponentFactory {
 
-        public static final YamlCodec<Config> CODEC = RecordYamlCodecBuilder.mapOf(
+        public static final YamlDecoder<Config> DECODER = RecordYamlDecoder.mapOf(
                 Config::new,
-                ComponentHandler.CODEC.fieldOf("on_destroy", v -> v.destroy, ComponentHandler.EMPTY)
+                HANDLER.fieldOf("on_destroy", EMPTY_HANDLER)
         );
-        private final ComponentHandler destroy;
+        private final EventHandler destroy;
 
-        public Config(ComponentHandler destroy) {
+        public Config(EventHandler destroy) {
             this.destroy = destroy;
         }
 
@@ -58,8 +58,8 @@ public class DestroyComponent extends AbstractComponent {
         }
 
         @Override
-        public YamlCodec<? extends ComponentFactory> codec() {
-            return CODEC;
+        public YamlDecoder<? extends ComponentFactory> codec() {
+            return DECODER;
         }
     }
 }

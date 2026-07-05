@@ -1,0 +1,49 @@
+package dev.by1337.baf;
+
+import dev.by1337.baf.interact.InteractManager;
+import dev.by1337.baf.loot.LootTables;
+import dev.by1337.edsl.EventContextFactory;
+import dev.by1337.edsl.context.EventContext;
+import dev.by1337.plc.PlaceholderResolver;
+import org.bukkit.entity.Player;
+import org.jetbrains.annotations.Nullable;
+
+public class BAF {
+    static AirdropManager manager;
+
+    public static AirdropManager manager() {
+        return manager;
+    }
+
+    public static LootTables lootTables() {
+        return manager.lootTables();
+    }
+
+    public static InteractManager blockInteract() {
+        return manager.interactManager();
+    }
+
+    public static EventContext newContext(PlaceholderResolver<EventContext> p) {
+        return manager.newContext(p);
+    }
+
+    public static EventContextFactory.Builder newContextBuilder(final Object... args) {
+        return manager.newContextBuilder(args);
+    }
+
+    public static EventContext newContext() {
+        return manager.newContext();
+    }
+
+    public static EventContext newContext(@Nullable Player player) {
+        return manager.newContext(player);
+    }
+
+    public static EventContext newContext(Airdrop airdrop) {
+        return manager.newContext(airdrop);
+    }
+
+    public static EventContext newContext(Airdrop airdrop, @Nullable Player player) {
+        return manager.newContext(airdrop, player);
+    }
+}

@@ -10,14 +10,14 @@ import com.sk89q.worldguard.protection.regions.ProtectedCuboidRegion;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 import com.sk89q.worldguard.protection.regions.RegionContainer;
 import dev.by1337.baf.Airdrop;
-import dev.by1337.baf.command.AirdropContext;
 import dev.by1337.baf.component.AbstractComponent;
 import dev.by1337.baf.component.AirdropComponent;
 import dev.by1337.baf.component.ComponentFactory;
 import dev.by1337.baf.ref.CleanerSlot;
 import dev.by1337.baf.util.Vec3i;
-import dev.by1337.yaml.codec.RecordYamlCodecBuilder;
-import dev.by1337.yaml.codec.YamlCodec;
+import dev.by1337.edsl.context.EventContext;
+import dev.by1337.yaml.decoder.RecordYamlDecoder;
+import dev.by1337.yaml.decoder.YamlDecoder;
 import org.bukkit.World;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,40 +30,42 @@ public class WgRegionComponent extends AbstractComponent {
     private final Config config;
     private final String randName = UUID.randomUUID().toString();
     private final CleanerSlot<World> regionRemover;
+    private final Airdrop airdrop;
 
     private WgRegionComponent(Config config, String name, Airdrop airdrop) {
         super(name, airdrop.components());
+        this.airdrop = airdrop;
         this.config = config;
         regionRemover = new CleanerSlot<>(this::removeRegion, airdrop.cleaner());
     }
 
     @Override
-    public void onCreate(AirdropContext ctx) {
-        try (var ignored = ctx.tracer().enter(name + " create {", "}")){
+    public void onCreate(EventContext ctx) {
+        try (var ignored = ctx.tracer().enter(name + " create {", "}")) {
             WGUtil.setRegion(
-                    ctx.airdrop().world(),
+                    airdrop.world(),
                     config.flags,
                     new ProtectedCuboidRegion(
                             randName,
                             BlockVector3.at(
-                                    ctx.airdrop().x() - config.size.x(),
-                                    ctx.airdrop().y() - config.size.y(),
-                                    ctx.airdrop().z() - config.size.z()
+                                    airdrop.x() - config.size.x(),
+                                    airdrop.y() - config.size.y(),
+                                    airdrop.z() - config.size.z()
                             ),
                             BlockVector3.at(
-                                    ctx.airdrop().x() + config.size.x(),
-                                    ctx.airdrop().y() + config.size.y(),
-                                    ctx.airdrop().z() + config.size.z()
+                                    airdrop.x() + config.size.x(),
+                                    airdrop.y() + config.size.y(),
+                                    airdrop.z() + config.size.z()
                             )
                     )
             );
-            regionRemover.set(ctx.airdrop().world());
+            regionRemover.set(airdrop.world());
         }
     }
 
     @Override
-    public void onRemove(AirdropContext ctx) {
-        try (var ignored = ctx.tracer().enter(name + " remove {", "}")){
+    public void onRemove(EventContext ctx) {
+        try (var ignored = ctx.tracer().enter(name + " remove {", "}")) {
             regionRemover.cleanup();
         }
     }
@@ -73,10 +75,10 @@ public class WgRegionComponent extends AbstractComponent {
     }
 
     public static class Config implements ComponentFactory {
-        public static final YamlCodec<Config> CODEC = RecordYamlCodecBuilder.mapOf(
+        public static final YamlDecoder<Config> DECODER = RecordYamlDecoder.mapOf(
                 Config::new,
-                Vec3i.CODEC.fieldOf("size", v -> v.size, new Vec3i(1, 1, 1)),
-                YamlCodec.STRINGS.fieldOf("flags", v -> v.flags, List.of())
+                Vec3i.DECODER.fieldOf("size", new Vec3i(1, 1, 1)),
+                YamlDecoder.STRINGS.fieldOf("flags", List.of())
         );
         private final Vec3i size;
         private final List<String> flags;
@@ -92,8 +94,8 @@ public class WgRegionComponent extends AbstractComponent {
         }
 
         @Override
-        public YamlCodec<? extends ComponentFactory> codec() {
-            return CODEC;
+        public YamlDecoder<? extends ComponentFactory> codec() {
+            return DECODER;
         }
     }
 
