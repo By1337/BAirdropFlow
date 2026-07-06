@@ -2,6 +2,7 @@ package dev.by1337.baf;
 
 import dev.by1337.baf.interact.InteractManager;
 import dev.by1337.baf.loot.LootTables;
+import dev.by1337.baf.world.WorldDataContainer;
 import dev.by1337.edsl.EventContextFactory;
 import dev.by1337.edsl.context.EventContext;
 import dev.by1337.plc.PlaceholderResolver;
@@ -10,6 +11,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class BAF {
     static AirdropManager manager;
+    static BAirdropFlow plugin;
 
     public static AirdropManager manager() {
         return manager;
@@ -45,5 +47,9 @@ public class BAF {
 
     public static EventContext newContext(Airdrop airdrop, @Nullable Player player) {
         return manager.newContext(airdrop, player);
+    }
+
+    public static WorldDataContainer worldData() {
+        return plugin.worldData;
     }
 }

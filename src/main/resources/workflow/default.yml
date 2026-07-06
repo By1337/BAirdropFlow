@@ -2,12 +2,22 @@ id: example:default
 
 world: 'world'
 
-generator:
+generator1:
   type: generator:fixed
   at: '0;100;0'
-generator_EXAMPLE:
+
+generator:
   type: generator:random
   radius: '2500'
+  min_y: 50
+  max_y: 100
+  clear_zone: 4 # -4 <-> +4
+  clear_y: 3
+  air_tester: '!solid & !water & !lava'
+  solid_tester: 'solid & !ice'
+  # (air|cave_air)&!solid
+  # !solid&air|!solid&cave_air
+
 
 
 args:

@@ -1,0 +1,83 @@
+package dev.by1337.baf.generator.impl;
+
+import dev.by1337.baf.BAF;
+import dev.by1337.baf.generator.Generator;
+import dev.by1337.baf.util.Vec3i;
+import dev.by1337.baf.util.material.MaterialTester;
+import dev.by1337.baf.world.WorldData;
+import dev.by1337.yaml.decoder.RecordYamlDecoder;
+import dev.by1337.yaml.decoder.YamlDecoder;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.World;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.BitSet;
+import java.util.Random;
+
+public class RandomGenerator implements Generator {
+    private final Random random = new Random();
+    public static final YamlDecoder<RandomGenerator> DECODER = RecordYamlDecoder.mapOf(
+            RandomGenerator::new,
+            YamlDecoder.INT.fieldOf("radius", 2500),
+            YamlDecoder.INT.fieldOf("min_y", 50),
+            YamlDecoder.INT.fieldOf("max_y", 100),
+            YamlDecoder.INT.fieldOf("clear_zone", 4),
+            YamlDecoder.INT.fieldOf("clear_y", 3),
+            MaterialTester.DECODER.fieldOf("air_tester", m -> true),
+            MaterialTester.DECODER.fieldOf("solid_tester", m -> true)
+    );
+
+    private final int radius;
+    private final int min_y;
+    private final int max_y;
+    private final int clear_zone;
+    private final int clear_y;
+    private final BitSet air_tester;
+    private final BitSet solid_tester;
+
+    public RandomGenerator(int radius, int minY, int maxY, int clearZone, int clearY, MaterialTester.Tester airTester, MaterialTester.Tester solidTester) {
+        this.radius = radius;
+        min_y = minY;
+        max_y = maxY;
+        clear_zone = clearZone;
+        clear_y = clearY;
+        air_tester = airTester.compile();
+        solid_tester = solidTester.compile();
+    }
+
+    @Override
+    public @Nullable Location tryGenerate(World world) {
+        WorldData data = BAF.worldData().getWorldData(world);
+
+        int x = radius - random.nextInt(radius);
+        int z = radius - random.nextInt(radius);
+
+        int layersSize = square(clear_zone * 2);
+        int reqBlocks = layersSize - 3;
+        int minX = x - clear_zone;
+        int maxX = x + clear_zone;
+        int minZ = z - clear_zone;
+        int maxZ = z + clear_zone;
+
+        WorldData.LayerResult layer = new WorldData.LayerResult(air_tester, solid_tester);
+
+
+        int freeLayers = 0;
+        for (int y = max_y; y > min_y; y--) {
+            data.countOfBlocks(y, minX, minZ, maxX, maxZ, layer);
+            if (layer.airs >= reqBlocks) {
+                freeLayers++;
+            } else if (layer.solid >= reqBlocks && freeLayers >= clear_y) {
+                return new Location(world, x, y + 1, z);
+            } else {
+                freeLayers = 0;
+            }
+        }
+        return null;
+    }
+
+    public static int square(int num) {
+        return num * num;
+    }
+}
