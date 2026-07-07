@@ -62,7 +62,7 @@ public class BAirdropFlow extends JavaPlugin {
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         YamlMap map = ResourceUtil.load("workflow/default.yml", this);
         Workflow workflow = Workflow.CODEC.decode(map.get()).getOrThrow();
-        BAF.manager().addTicking(workflow.createSpawner());
+       // BAF.manager().addTicking(workflow.createSpawner());
         var testGenerator = workflow.generator();
         Player player = (Player) sender;
         Location loc;

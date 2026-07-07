@@ -2,12 +2,9 @@ package dev.by1337.baf.world;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import dev.by1337.baf.generator.ChunkData;
-import dev.by1337.baf.util.material.MaterialTester;
-import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -15,25 +12,22 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.plugin.Plugin;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.time.Duration;
 import java.util.BitSet;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-import java.util.function.Predicate;
 
 public class WorldData implements Listener {
     private static final Executor CHUNK_IO_EXECUTOR = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("baf-chunk-io-%d").build());
     private static final Logger log = LoggerFactory.getLogger(WorldData.class);
     private final World world;
-    //private final Long2ObjectOpenHashMap<RegionFile> regions = new Long2ObjectOpenHashMap<>();
     private final Cache<Long, RegionFile> regions;
-    private final Object[] locks;
+    private final Cache<Long, ChunkData> chunks;
     private final File dataFolder;
     private volatile boolean closing = false;
 
@@ -41,25 +35,21 @@ public class WorldData implements Listener {
         this.world = bukkit;
         dataFolder = new File(world.getWorldFolder(), "baf_chunks");
         regions = Caffeine.newBuilder()
-                .removalListener(new RemovalListener<Long, RegionFile>() {
-                    @Override
-                    public void onRemoval(@Nullable Long key, @Nullable RegionFile value, RemovalCause cause) {
-                        if (value != null) {
-                            try {
-                                value.close();
-                            } catch (IOException e) {
-                                log.error("Failed to close region file", e);
-                            }
+                .removalListener((RemovalListener<Long, RegionFile>) (key, value, cause) -> {
+                    if (value != null) {
+                        try {
+                            value.close();
+                        } catch (IOException e) {
+                            log.error("Failed to close region file", e);
                         }
                     }
                 })
-                //.maximumSize(32)
-                .expireAfterAccess(Duration.ofMinutes(5))
+                .maximumSize(128)
                 .build();
-        locks = new Object[512];
-        for (int i = 0; i < locks.length; i++) {
-            locks[i] = new Object();
-        }
+        chunks = Caffeine.newBuilder()
+                .maximumWeight(256 * 1024 * 1024)
+                .weigher((Long key, ChunkData value) -> value.blocks.length * 2)
+                .build();
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
@@ -67,6 +57,7 @@ public class WorldData implements Listener {
         closing = true;
         HandlerList.unregisterAll(this);
         regions.invalidateAll();
+        chunks.invalidateAll();
     }
 
     public static class LayerResult {
@@ -116,7 +107,7 @@ public class WorldData implements Listener {
 
                 for (int localX = localMinX; localX <= localMaxX; localX++) {
                     for (int localZ = localMinZ; localZ <= localMaxZ; localZ++) {
-                        var type = chunk.getType(localX, y, localZ);
+                        short type = chunk.getType(localX, y, localZ);
                         if (result.airTester.get(type)) {
                             result.airs++;
                         } else if (result.solidTester.get(type)) {
@@ -129,13 +120,15 @@ public class WorldData implements Listener {
     }
 
     private ChunkData loadChunkData(int x, int z) {
-        ChunkData chunk = getRegionFile(x, z).getChunkData(x, z);
+        ChunkData chunk = getChunk(x, z);
         if (chunk != null) return chunk;
         System.out.println("miss " + x + " " + z);
         var v = world.getChunkAt(x, z);
         chunk = new ChunkData();
         chunk.load(v);
-        getRegionFile(x, z).storeMem(chunk); //no write
+        chunks.put(asLong(x, z), chunk);
+        ChunkData finalChunk = chunk;
+        CHUNK_IO_EXECUTOR.execute(() -> saveChunk(finalChunk));
         return chunk;
     }
 
@@ -148,9 +141,9 @@ public class WorldData implements Listener {
         CHUNK_IO_EXECUTOR.execute(() -> saveChunk(data));
     }
 
-    private RegionFile getRegionFile(int x, int z) {
-        int regionX = x >> 4;
-        int regionZ = z >> 4;
+    private RegionFile getRegionFile(int chunkX, int chunkZ) {
+        int regionX = chunkX >> 4;
+        int regionZ = chunkZ >> 4;
         return regions.get(asLong(regionX, regionZ), k -> {
             try {
                 return new RegionFile(regionX, regionZ, dataFolder);
@@ -160,20 +153,24 @@ public class WorldData implements Listener {
         });
     }
 
-    public void saveChunk(ChunkData chunk) {
-        if (closing) return;
-        synchronized (route(chunk.x >> 4, chunk.z >> 4)) {
-            var file = getRegionFile(chunk.x, chunk.z);
+    public @Nullable ChunkData getChunk(int x, int z) {
+        return chunks.get(asLong(x, z), k -> {
             try {
-                file.write(chunk);
+                return getRegionFile(x, z).read(x, z);
             } catch (IOException e) {
-                log.error("Failed to store chunk", e);
+                log.error("Failed to read chunk {} {}", x, z, e);
+                return null;
             }
-        }
+        });
     }
 
-    private Object route(int x, int z) {
-        return locks[Math.floorMod(x ^ z, locks.length)];
+    public void saveChunk(ChunkData chunk) {
+        if (closing) return;
+        try {
+            getRegionFile(chunk.x, chunk.z).write(chunk);
+        } catch (IOException e) {
+            log.error("Failed to store chunk", e);
+        }
     }
 
     public static long asLong(int x, int z) {
