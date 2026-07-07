@@ -5,6 +5,8 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import dev.by1337.baf.generator.ChunkData;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import org.bukkit.World;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -18,12 +20,17 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 public class WorldData implements Listener {
-    private static final Executor CHUNK_IO_EXECUTOR = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("baf-chunk-io-%d").build());
+    public static final Executor CHUNK_IO_EXECUTOR = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder()
+            .setNameFormat("baf-chunk-io-%d")
+            .build());
     private static final Logger log = LoggerFactory.getLogger(WorldData.class);
     private final World world;
     private final Cache<Long, RegionFile> regions;
@@ -86,7 +93,28 @@ public class WorldData implements Listener {
         return true;
     }
 
-    public void countOfBlocks(int y, int minX, int minZ, int maxX, int maxZ, LayerResult result) {
+    public CompletableFuture<Long2ObjectMap<ChunkData>> collectChunks(int minX, int minZ, int maxX, int maxZ) {
+        int startChunkX = minX >> 4;
+        int startChunkZ = minZ >> 4;
+        int endChunkX = maxX >> 4;
+        int endChunkZ = maxZ >> 4;
+        List<CompletableFuture<ChunkData>> futures = new ArrayList<>();
+        for (int cx = startChunkX; cx <= endChunkX; cx++) {
+            for (int cz = startChunkZ; cz <= endChunkZ; cz++) {
+                futures.add(loadChunkData(cx, cz));
+            }
+        }
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenApply(v -> {
+            Long2ObjectMap<ChunkData> map = new Long2ObjectOpenHashMap<>();
+            for (CompletableFuture<ChunkData> future : futures) {
+                var chunk = future.join();
+                map.put(asLong(chunk.x, chunk.z), chunk);
+            }
+            return map;
+        });
+    }
+
+    public void countOfBlocks(int y, int minX, int minZ, int maxX, int maxZ, LayerResult result, Long2ObjectMap<ChunkData> chunkMap) {
         result.airs = 0;
         result.solid = 0;
 
@@ -98,7 +126,8 @@ public class WorldData implements Listener {
         for (int cx = startChunkX; cx <= endChunkX; cx++) {
             for (int cz = startChunkZ; cz <= endChunkZ; cz++) {
 
-                ChunkData chunk = loadChunkData(cx, cz);
+                ChunkData chunk = chunkMap.get(asLong(cx, cz));
+                if (chunk == null) continue;
 
                 int localMinX = (cx == startChunkX) ? (minX & 15) : 0;
                 int localMaxX = (cx == endChunkX) ? (maxX & 15) : 15;
@@ -119,17 +148,31 @@ public class WorldData implements Listener {
         }
     }
 
-    private ChunkData loadChunkData(int x, int z) {
-        ChunkData chunk = getChunk(x, z);
-        if (chunk != null) return chunk;
-        System.out.println("miss " + x + " " + z);
-        var v = world.getChunkAt(x, z);
-        chunk = new ChunkData();
-        chunk.load(v);
-        chunks.put(asLong(x, z), chunk);
-        ChunkData finalChunk = chunk;
-        CHUNK_IO_EXECUTOR.execute(() -> saveChunk(finalChunk));
-        return chunk;
+    private CompletableFuture<ChunkData> loadChunkData(int x, int z) {
+        long key = asLong(x, z);
+        ChunkData chunk = chunks.getIfPresent(key);
+        if (chunk != null)
+            return CompletableFuture.completedFuture(chunk);
+
+        return CompletableFuture.supplyAsync(() -> {
+            ChunkData fromDisk = getChunk(x, z);
+            if (fromDisk != null) {
+                chunks.put(key, fromDisk);
+                return fromDisk;
+            }
+            return null;
+        }, CHUNK_IO_EXECUTOR).thenCompose(data -> {
+            if (data != null)
+                return CompletableFuture.completedFuture(data);
+            return world.getChunkAtAsync(x, z).thenApply(v -> {
+                System.out.println("miss " + x + " " + z);
+                ChunkData result = new ChunkData();
+                result.load(v);
+                chunks.put(asLong(x, z), result);
+                CHUNK_IO_EXECUTOR.execute(() -> saveChunk(result));
+                return result;
+            });
+        });
     }
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)

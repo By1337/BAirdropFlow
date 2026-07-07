@@ -26,7 +26,7 @@ public class BAirdropFlow extends JavaPlugin {
     public void onLoad() {
         BAF.plugin = this;
         getDataFolder().mkdirs();
-        //AirdropCommands.resetCommands(); TimerSpawner в static блоки команды рерает
+        //AirdropCommands.resetCommands(); TimerSpawner в static блоке команды рерает
         Generators.boot();
         AirdropSpawnerBoot.boot();
         AirdropComponents.boot();
@@ -62,16 +62,16 @@ public class BAirdropFlow extends JavaPlugin {
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         YamlMap map = ResourceUtil.load("workflow/default.yml", this);
         Workflow workflow = Workflow.CODEC.decode(map.get()).getOrThrow();
-       // BAF.manager().addTicking(workflow.createSpawner());
-        var testGenerator = workflow.generator();
-        Player player = (Player) sender;
-        Location loc;
-        int x = 0;
-        while ((loc = testGenerator.tryGenerate(player.getWorld())) == null) {
-            System.out.println(x++);
-        }
-        player.teleport(loc);
-        player.sendMessage(Component.text(x));
+        BAF.manager().addTicking(workflow.createSpawner());
+       // var testGenerator = workflow.generator();
+       // Player player = (Player) sender;
+       // Location loc;
+       // int x = 0;
+       // while ((loc = testGenerator.tryGenerate(player.getWorld()).join()) == null) {
+       //     System.out.println(x++);
+       // }
+       // player.teleport(loc);
+       // player.sendMessage(Component.text(x));
 
         return true;
     }

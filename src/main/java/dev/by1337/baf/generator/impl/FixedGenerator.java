@@ -8,6 +8,8 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.concurrent.CompletableFuture;
+
 public class FixedGenerator implements Generator {
     public static final YamlDecoder<FixedGenerator> DECODER = RecordYamlDecoder.mapOf(
             FixedGenerator::new,
@@ -20,7 +22,7 @@ public class FixedGenerator implements Generator {
     }
 
     @Override
-    public @Nullable Location tryGenerate(World world) {
-        return new Location(world, pos.x(), pos.y(), pos.z());
+    public CompletableFuture<@Nullable Location> tryGenerate(World world) {
+        return CompletableFuture.completedFuture(new Location(world, pos.x(), pos.y(), pos.z()));
     }
 }

@@ -2,12 +2,11 @@ package dev.by1337.baf.world;
 
 import dev.by1337.baf.generator.ChunkData;
 import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
 
 public class RegionFile {
     public static final int MAX_CHUNK_SIZE = 1024 * 200;
@@ -54,14 +53,31 @@ public class RegionFile {
         long start = accessFile.getFilePointer();
         accessFile.skipBytes(4);
         accessFile.writeInt(MAGIC);
-        data.save(accessFile);
+        var v = new DataOutputStream(new BufferedOutputStream(new OutputStream() {
+            @Override
+            public void write(int b) throws IOException {
+                accessFile.write(b);
+            }
+
+            @Override
+            public void write(byte[] b) throws IOException {
+                accessFile.write(b);
+            }
+
+            @Override
+            public void write(byte[] b, int off, int len) throws IOException {
+                accessFile.write(b, off, len);
+            }
+        }));
+        data.save(v);
+        v.close();
         long end = accessFile.getFilePointer();
         int size = (int) (end - start - 4);
         accessFile.seek(offset);
         accessFile.writeInt(size);
     }
 
-    public void close() throws IOException {
+    public synchronized void close() throws IOException {
         accessFile.close();
     }
 }

@@ -2,18 +2,17 @@ package dev.by1337.baf.generator.impl;
 
 import dev.by1337.baf.BAF;
 import dev.by1337.baf.generator.Generator;
-import dev.by1337.baf.util.Vec3i;
 import dev.by1337.baf.util.material.MaterialTester;
 import dev.by1337.baf.world.WorldData;
 import dev.by1337.yaml.decoder.RecordYamlDecoder;
 import dev.by1337.yaml.decoder.YamlDecoder;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.World;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.BitSet;
 import java.util.Random;
+import java.util.concurrent.CompletableFuture;
 
 public class RandomGenerator implements Generator {
     private final Random random = new Random();
@@ -47,7 +46,7 @@ public class RandomGenerator implements Generator {
     }
 
     @Override
-    public @Nullable Location tryGenerate(World world) {
+    public CompletableFuture<@Nullable Location> tryGenerate(World world) {
         WorldData data = BAF.worldData().getWorldData(world);
 
         int x = radius - random.nextInt(radius);
@@ -60,21 +59,23 @@ public class RandomGenerator implements Generator {
         int minZ = z - clear_zone;
         int maxZ = z + clear_zone;
 
-        WorldData.LayerResult layer = new WorldData.LayerResult(air_tester, solid_tester);
+        return data.collectChunks(minX, minZ, maxX, maxZ).thenApply(chunkMap -> {
+            WorldData.LayerResult layer = new WorldData.LayerResult(air_tester, solid_tester);
 
-
-        int freeLayers = 0;
-        for (int y = max_y; y > min_y; y--) {
-            data.countOfBlocks(y, minX, minZ, maxX, maxZ, layer);
-            if (layer.airs >= reqBlocks) {
-                freeLayers++;
-            } else if (layer.solid >= reqBlocks && freeLayers >= clear_y) {
-                return new Location(world, x, y + 1, z);
-            } else {
-                freeLayers = 0;
+            int freeLayers = 0;
+            for (int y = max_y; y > min_y; y--) {
+                data.countOfBlocks(y, minX, minZ, maxX, maxZ, layer, chunkMap);
+                if (layer.airs >= reqBlocks) {
+                    freeLayers++;
+                } else if (layer.solid >= reqBlocks && freeLayers >= clear_y) {
+                    return new Location(world, x, y + 1, z);
+                } else {
+                    freeLayers = 0;
+                }
             }
-        }
-        return null;
+            System.out.println("SKIP " + x + " " + z);
+            return null;
+        });
     }
 
     public static int square(int num) {

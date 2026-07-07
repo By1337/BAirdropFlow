@@ -7,6 +7,7 @@ import dev.by1337.baf.entity.TickableEntity;
 import dev.by1337.baf.spawner.AirdropSpawner;
 import dev.by1337.baf.util.time.DurationParser;
 import dev.by1337.baf.util.time.DurationRange;
+import dev.by1337.baf.world.WorldData;
 import dev.by1337.cmd.Command;
 import dev.by1337.cmd.CommandMsgError;
 import dev.by1337.cmd.argument.ArgumentString;
@@ -20,11 +21,14 @@ import dev.by1337.yaml.decoder.YamlDecoder;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.entity.Player;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 public class TimerSpawner implements AirdropSpawner {
     private static final Logger log = LoggerFactory.getLogger(TimerSpawner.class);
@@ -80,6 +84,7 @@ public class TimerSpawner implements AirdropSpawner {
         private boolean init;
         private final Map<String, String> values = new HashMap<>();
         private final PlaceholderResolver<EventContext> placeholders = PLACEHOLDERS.bindCtx(this);
+        private volatile CompletableFuture<@Nullable Location> locFuture;
 
         private Ticker(Workflow workflow) {
             this.workflow = workflow;
@@ -116,9 +121,20 @@ public class TimerSpawner implements AirdropSpawner {
 
         private boolean locationGen() {
             if (location == null) {
-                location = workflow.generator.tryGenerate(world);
+                if (locFuture == null){
+                    locFuture = workflow.generator.tryGenerate(world);
+                    locFuture.thenAccept(loc -> {
+                        location = loc;
+                        locFuture = null;
+                        if (location != null){
+                            for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+                                onlinePlayer.teleportAsync(location);
+                            }
+                        }
+                    });
+                }
                 if (location == null) {
-                    if (generatorFailure++ >= 200) {
+                    if (generatorFailure++ >= 250) {
                         log.error("Failed to generate location for {} in {}", workflow.id(), workflow.generator);
                         removed = true;
                     }
