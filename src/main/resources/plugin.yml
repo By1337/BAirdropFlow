@@ -9,6 +9,7 @@ depend:
 softdepend:
   - DecentHolograms
 
-commands:
-  baf:
-    aliases: []
+permissions:
+  baf.loot.admin:
+    description: Управление таблицами лута
+    default: op

@@ -3,10 +3,11 @@ package dev.by1337.baf;
 import dev.by1337.baf.interact.InteractManager;
 import dev.by1337.baf.loot.LootTables;
 import dev.by1337.baf.world.WorldDataContainer;
-import dev.by1337.edsl.EventContextFactory;
+import dev.by1337.edsl.MessageManager;
 import dev.by1337.edsl.context.EventContext;
 import dev.by1337.plc.PlaceholderResolver;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.Nullable;
 
 public class BAF {
@@ -29,7 +30,7 @@ public class BAF {
         return manager.newContext(p);
     }
 
-    public static EventContextFactory.Builder newContextBuilder(final Object... args) {
+    public static MessageManager.Builder newContextBuilder(final Object... args) {
         return manager.newContextBuilder(args);
     }
 
@@ -51,5 +52,8 @@ public class BAF {
 
     public static WorldDataContainer worldData() {
         return plugin.worldData;
+    }
+    public static Plugin plugin(){
+        return plugin;
     }
 }

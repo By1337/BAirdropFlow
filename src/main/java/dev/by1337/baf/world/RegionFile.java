@@ -1,8 +1,6 @@
 package dev.by1337.baf.world;
 
-import dev.by1337.baf.generator.ChunkData;
 import org.jetbrains.annotations.Nullable;
-import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

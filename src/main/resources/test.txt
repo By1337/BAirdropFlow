@@ -1,0 +1,74 @@
+<gradient:#AC2600:#FF7200> ╔═══╦</gradient><#FF7900>═<gradient:#FF8100:#FFA500>╦══╦═╦</gradient><#FF9D00>═<gradient:#FF9400:#FF7200>═╦══╦</gradient><#EA5F00>═<gradient:#D64C00:#981300>═╦══</gradient><#830000>╗
+<#981300> ║
+<#830000> ║<#FFFFE6>     <obf><#FF7200>|||</obf><#FF7700>   [Маяк убийца]   <obf><#FF7200>|||
+</obf><#830000> ║<#FFFFE6>   Появится уже через<#FFCC00> 3 минуты!
+<#981300> ║
+<gradient:#AC2600:#FF7200> ╚═══╩</gradient><#FF7900>═<gradient:#FF8100:#FFA500>╩══╩═╩</gradient><#FF9D00>═<gradient:#FF9400:#FF7200>═╩══╩</gradient><#EA5F00>═<gradient:#D64C00:#830000>═╩══╝</gradient>
+
+
+
+<gradient:#AC2600:#FF7200> ╔═══╦</gradient><#FF7900>═<gradient:#FF8100:#FFA500>╦══╦═╦</gradient><#FF9D00>═<gradient:#FF9400:#FF7200>═╦══╦</gradient><#EA5F00>═<gradient:#D64C00:#981300>═╦══</gradient><#830000>╗
+<#981300> ║
+<#830000> ║<#FFFFE6>     <obf><#FF7200>|||</obf><#FF7700>   [Маяк убийца]   <obf><#FF7200>|||
+</obf><#830000> ║<#FFFFE6>   Уровень лута:<#F5E23D> <gradient:#ADFF00:#FF7400><click:run_command:''><hover:show_text:'<dark_gray>[<#FFFF00>★★★★★<dark_gray>]'>Легендарный</gradient></hover></click>
+<#830000> ║<#FFFFE6>   Появился на координатах<#FFCC00> <click:run_command:'/gps -165 67 -1245'><hover:show_text:'<#FFCC00>➥ Нажмите<white>, чтобы установить <#FFCC00>GPS
+<white>Стрелка компаса будет
+указывать на место ивента.'>-165 67 -1245</hover></click><white>
+<#981300> ║
+<gradient:#AC2600:#FF7200> ╚═══╩</gradient><#FF7900>═<gradient:#FF8100:#FFA500>╩══╩═╩</gradient><#FF9D00>═<gradient:#FF9400:#FF7200>═╩══╩</gradient><#EA5F00>═<gradient:#D64C00:#830000>═╩══╝</gradient>
+
+
+<gradient:#AC2600:#FF7200> ╔═══╦</gradient><#FF7900>═<gradient:#FF8100:#FFA500>╦══╦═╦</gradient><#FF9D00>═<gradient:#FF9400:#FF7200>═╦══╦</gradient><#EA5F00>═<gradient:#D64C00:#981300>═╦══</gradient><#830000>╗
+<#981300> ║
+<#830000> ║<#FFFFE6>     <obf><#FF7200>|||</obf><#FF7700>   [Маяк убийца]   <obf><#FF7200>|||
+</obf><#830000> ║<#FFFFE6>   Уровень лута:<#F5E23D> <#E65400><click:run_command:''><hover:show_text:'<dark_gray>[<#E65400>★★★<gray>★★<dark_gray>]'>Богатый</hover></click><white>
+<#830000> ║<#FFFFE6>   Появился на координатах<#FFCC00> <click:run_command:'/gps 993 71 -1255'><hover:show_text:'<#FFCC00>➥ Нажмите<white>, чтобы установить <#FFCC00>GPS
+<white>Стрелка компаса будет
+указывать на место ивента.'>993 71 -1255</hover></click><white>
+<#981300> ║
+<gradient:#AC2600:#FF7200> ╚═══╩</gradient><#FF7900>═<gradient:#FF8100:#FFA500>╩══╩═╩</gradient><#FF9D00>═<gradient:#FF9400:#FF7200>═╩══╩</gradient><#EA5F00>═<gradient:#D64C00:#830000>═╩══╝</gradient>
+
+
+
+ <gradient:#7E1111:#FF0000>╔═══╦</gradient><#D90505>═<gradient:#B40A0A:#1D1D1D>╦══╦═</gradient><#3D1919>╦<gradient:#5E1515:#FF0000>══╦══╦</gradient><#D90505>═<gradient:#B40A0A:#431818>═╦══</gradient><#1D1D1D>╗
+ <#5E1515>║
+ <#3D1919>║<#FFFFE6>          <obf><#CC0000>|||</obf><#FF0000> [Горящий череп]   <obf><#CC0000>|||
+ </obf><#1D1D1D>║<#FFFFE6>   Уровень лута:<#F5E23D> <#EB996A><click:run_command:''><hover:show_text:'<dark_gray>[<#EB996A>★★<gray>★★★<dark_gray>]'>Солидный</hover></click><white>
+ <#3D1919>║<#FFFFE6>   Появился на координатах<#FF0000> <#CC0000><click:run_command:'/gps -1248 70 1323'><hover:show_text:'<#FF0000>➥ Нажмите<white>, чтобы установить <#FF0000>GPS
+<white>Стрелка компаса будет
+указывать на место ивента.'>[-1248 70 1323]</hover></click><white>
+ <#5E1515>║
+ <gradient:#7E1111:#FF0000>╚═══╩</gradient><#D90505>═<gradient:#B40A0A:#1D1D1D>╩══╩═</gradient><#3D1919>╩<gradient:#5E1515:#FF0000>══╩══╩</gradient><#D90505>═<gradient:#B40A0A:#1D1D1D>═╩══╝</gradient>
+
+
+<gradient:#6D00C3:#FF00B8> ╔══╦══╦══╦══╦</gradient><#F300B9>═<gradient:#E700BA:#7900C2>═╦══╦══╦══</gradient><#6D00C3>╗
+ ║
+ ║<#FFFFE6>          <obf><#E532FF>|||</obf><#E326E9>   [Голосование]   <obf><#E532FF>|||
+</obf><#6D00C3> ║<#FFE5CC>   Голосование за следующий ивент,
+<#6D00C3> ║<#FFE5CC>     нажми и голосуй: <#E326E9><click:run_command:'/event vote'><hover:show_text:'<red>Нажмите, <gold>чтобы открыть меню.'>[Голосовать]</hover></click><white>
+<#6D00C3> ║
+<gradient:#6D00C3:#FF00B8> ╚══╩══╩══╩══╩</gradient><#F300B9>═<gradient:#E700BA:#6D00C3>═╩══╩══╩══╝</gradient>
+
+<red>[ Голосование завершено ]
+<red>   <yellow>[1] <white>Маяк убийца — 72%
+<white>   <yellow>[2] <white>Сундук смерти — 18%
+<white>   <yellow>[3] <white>Адская резня — 9%
+<white>   <yellow>[4] <white>Метеоритный дождь — 0%
+<white>   <yellow>[5] <white>Вулкан — 0%
+
+<gradient:#AC2600:#FF7200> ╔═══╦</gradient><#FF7900>═<gradient:#FF8100:#FFA500>╦══╦═╦</gradient><#FF9D00>═<gradient:#FF9400:#FF7200>═╦══╦</gradient><#EA5F00>═<gradient:#D64C00:#981300>═╦══</gradient><#830000>╗
+<#981300> ║
+<#830000> ║<#FFFFE6>     <obf><#FF7200>|||</obf><#FF7700>   [Маяк убийца]   <obf><#FF7200>|||
+</obf><#830000> ║<#FFFFE6>   Появится уже через<#FFCC00> 3 минуты!
+<#981300> ║
+<gradient:#AC2600:#FF7200> ╚═══╩</gradient><#FF7900>═<gradient:#FF8100:#FFA500>╩══╩═╩</gradient><#FF9D00>═<gradient:#FF9400:#FF7200>═╩══╩</gradient><#EA5F00>═<gradient:#D64C00:#830000>═╩══╝</gradient>
+
+<gradient:#AC2600:#FF7200> ╔═══╦</gradient><#FF7900>═<gradient:#FF8100:#FFA500>╦══╦═╦</gradient><#FF9D00>═<gradient:#FF9400:#FF7200>═╦══╦</gradient><#EA5F00>═<gradient:#D64C00:#981300>═╦══</gradient><#830000>╗
+<#981300> ║
+<#830000> ║<#FFFFE6>     <obf><#FF7200>|||</obf><#FF7700>   [Маяк убийца]   <obf><#FF7200>|||
+</obf><#830000> ║<#FFFFE6>   Уровень лута:<#F5E23D> <#FB0000><click:run_command:''><hover:show_text:'<dark_gray>[<#FB0000>★★★★<gray>★<dark_gray>]'>Элитный</hover></click><white>
+<#830000> ║<#FFFFE6>   Появился на координатах<#FFCC00> <click:run_command:'/gps 1826 70 -189'><hover:show_text:'<#FFCC00>➥ Нажмите<white>, чтобы установить <#FFCC00>GPS
+<white>Стрелка компаса будет
+указывать на место ивента.'>1826 70 -189</hover></click><white>
+<#981300> ║
+<gradient:#AC2600:#FF7200> ╚═══╩</gradient><#FF7900>═<gradient:#FF8100:#FFA500>╩══╩═╩</gradient><#FF9D00>═<gradient:#FF9400:#FF7200>═╩══╩</gradient><#EA5F00>═<gradient:#D64C00:#830000>═╩══╝</gradient>

@@ -6,6 +6,7 @@ import org.bukkit.Location;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryCloseEvent;
@@ -40,7 +41,7 @@ public class LootingInventory implements Listener, InventoryHolder {
         }
     }
 
-    @EventHandler
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
     public void onOpen(InventoryOpenEvent event) {
         if (event.getInventory() == inventory) {
             viewers.add(event.getPlayer().getUniqueId());
@@ -54,7 +55,7 @@ public class LootingInventory implements Listener, InventoryHolder {
         }
     }
 
-    @EventHandler
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
     public void on(PlayerMoveEvent event) {
         if (event.getFrom().getBlock().equals(event.getTo().getBlock())) return;
         Player pl = event.getPlayer();
@@ -68,7 +69,7 @@ public class LootingInventory implements Listener, InventoryHolder {
         }
     }
 
-    @EventHandler
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
     public void on(PlayerTeleportEvent event) {
         Player pl = event.getPlayer();
         if (!viewers.contains(pl.getUniqueId())) return;
@@ -84,7 +85,7 @@ public class LootingInventory implements Listener, InventoryHolder {
 
     public void close() {
         HandlerList.unregisterAll(this);
-        new ArrayList<>(inventory.getViewers()).forEach(HumanEntity::closeInventory);
+        List.copyOf(inventory.getViewers()).forEach(HumanEntity::closeInventory);
     }
 
     @Override

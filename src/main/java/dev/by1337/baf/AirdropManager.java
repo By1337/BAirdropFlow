@@ -1,12 +1,11 @@
 package dev.by1337.baf;
 
 import dev.by1337.baf.component.AirdropComponent;
-import dev.by1337.baf.config.Config;
 import dev.by1337.baf.entity.TickableEntity;
 import dev.by1337.baf.interact.InteractManager;
 import dev.by1337.baf.loot.LootTables;
 import dev.by1337.baf.util.FileBackuper;
-import dev.by1337.edsl.EventContextFactory;
+import dev.by1337.edsl.MessageManager;
 import dev.by1337.edsl.context.EventContext;
 import dev.by1337.plc.PlaceholderResolver;
 import dev.by1337.yaml.YamlMap;
@@ -29,17 +28,16 @@ public class AirdropManager {
     private static final Logger log = LoggerFactory.getLogger(AirdropManager.class);
     private final List<Airdrop> airdrops = new CopyOnWriteArrayList<>();
     private final Plugin plugin;
-    private LootTables lootTables;
     private final InteractManager interactManager;
-    private final Config config;
+    private final MessageManager messages;
     private BukkitTask ticker;
     private final List<TickableEntity> ticking = new CopyOnWriteArrayList<>();
 
-    public AirdropManager(Plugin plugin, Config config) {
+    public AirdropManager(Plugin plugin, MessageManager messages) {
         this.plugin = plugin;
         interactManager = new InteractManager(plugin);
-        this.config = config;
-        loadLootTables();
+        this.messages = messages;
+        LootTables.DEFAULT.load(new File(plugin.getDataFolder(), "loot.yml"));
     }
 
     @ApiStatus.Internal
@@ -77,34 +75,6 @@ public class AirdropManager {
 
     public void addTicking(TickableEntity e) {
         ticking.add(e);
-    }
-
-    private void loadLootTables() {
-        File file = new File(plugin.getDataFolder(), "loot.yml");
-        if (file.exists()) {
-            try {
-                lootTables = YamlMap.load(file).get().decode(LootTables.CODEC).getOrThrow();
-            } catch (Exception e) {
-                log.error("Failed to load loot tables! Backed up to {}",
-                        FileBackuper.backup(file, new File(plugin.getDataFolder(), "backups")),
-                        e
-                );
-                lootTables = LootTables.createDefault();
-            }
-        } else {
-            lootTables = LootTables.createDefault();
-            saveLootTables();
-        }
-    }
-
-    public void saveLootTables() {
-        try {
-            File file = new File(plugin.getDataFolder(), "loot.yml");
-            var s = LootTables.CODEC.encode(lootTables).asYamlMap().getOrThrow().saveToString();
-            Files.writeString(file.toPath(), s, StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            log.error("Failed to save loot tables!", e);
-        }
     }
 
     public void addAirdrop(Airdrop airdrop) {
@@ -147,8 +117,9 @@ public class AirdropManager {
         airdrops.forEach(c);
     }
 
+    @Deprecated
     public LootTables lootTables() {
-        return lootTables;
+        return LootTables.DEFAULT;
     }
 
     public InteractManager interactManager() {
@@ -161,27 +132,27 @@ public class AirdropManager {
 
 
     public EventContext newContext(PlaceholderResolver<EventContext> p) {
-        return config.eventCtx.newContext().placeholders(p).build();
+        return messages.newContext().placeholders(p).build();
     }
 
     public EventContext newContext() {
-        return config.eventCtx.newContext().build();
+        return messages.newContext().build();
     }
 
-    public EventContextFactory.Builder newContextBuilder(final Object... args) {
-        return config.eventCtx.newContext(args);
+    public MessageManager.Builder newContextBuilder(final Object... args) {
+        return messages.newContext(args);
     }
 
 
     public EventContext newContext(@Nullable Player player) {
-        return config.eventCtx.newContext().source(player).build();
+        return messages.newContext().source(player).build();
     }
 
     public EventContext newContext(Airdrop airdrop) {
-        return config.eventCtx.newContext(airdrop).placeholders(Airdrop.PLACEHOLDERS.bindCtx(airdrop)).build();
+        return messages.newContext(airdrop).placeholders(Airdrop.PLACEHOLDERS.bindCtx(airdrop)).build();
     }
 
     public EventContext newContext(Airdrop airdrop, @Nullable Player player) {
-        return config.eventCtx.newContext(airdrop).source(player).placeholders(Airdrop.PLACEHOLDERS.bindCtx(airdrop)).build();
+        return messages.newContext(airdrop).source(player).placeholders(Airdrop.PLACEHOLDERS.bindCtx(airdrop)).build();
     }
 }

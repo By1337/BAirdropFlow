@@ -1,6 +1,9 @@
-package dev.by1337.baf.generator;
+package dev.by1337.baf.world;
 
 import dev.by1337.baf.util.zip.CRC32Util;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.shorts.Short2IntOpenCustomHashMap;
+import it.unimi.dsi.fastutil.shorts.Short2IntOpenHashMap;
 import org.bukkit.Chunk;
 import org.bukkit.Material;
 import org.slf4j.Logger;
@@ -32,6 +35,29 @@ public class ChunkData {
     public int maxY;
     private int sectionCount;
 
+    public void save2(DataOutput out) throws IOException {
+        Short2IntOpenHashMap blocks = new Short2IntOpenHashMap();
+        blocks.defaultReturnValue(0);
+        for (short block : this.blocks) {
+            if (block == AIR) continue;
+            blocks.merge(block, 1, Integer::sum);
+        }
+        short last = -1;
+        int lastPos = -1;
+        for (int pos = 0; pos < this.blocks.length; pos++) {
+            short block = this.blocks[pos];
+            if (block == AIR) continue;
+            if (lastPos != pos){
+                out.writeInt(lastPos = pos);
+            }
+            if (last != block){
+                last = block;
+                out.writeShort(-block);
+            }
+        }
+
+
+    }
     public void save(DataOutput out) throws IOException {
         CRC32 crc = new CRC32();
         out.writeInt(CRC32Util.updateInt(crc, x));

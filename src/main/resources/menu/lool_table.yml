@@ -1,0 +1,69 @@
+id: baf:loot
+provider: baf:loot
+title: "<gold>Лут {loot_table_id} <gray>[{current_page}/{max_page}]"
+size: 54
+item_slots: 0-44
+weight_lore:
+  - ""
+  - "<gold>Вес: <yellow>{weight}"
+  - "<gray>ЛКМ +1, ПКМ -1"
+  - "<gray>Shift: шаг 10; вес 0 отключает предмет"
+items:
+  help:
+    slot: 45
+    material: book
+    name: "<gold>Редактор лута"
+    lore:
+      - "<gray>Режим предметов: кладите и забирайте стаки."
+      - "<gray>Новый предмет получает вес 100."
+      - "<gray>Режим весов: меняйте веса кликами."
+      - "<gray>Закрытие и смена страницы сохраняют таблицу."
+  mode:
+    slot: 46
+    material: comparator
+    name: "<gold>Переключить предметы / веса"
+    lore:
+      - "<gray>Редактирование весов: <yellow>{weight_mode}"
+    on_click:
+      - '[toggle_weights]'
+  previous_page:
+    slot: 48
+    material: arrow
+    name: "<gold>Предыдущая страница"
+    on_click:
+      - '[previous_page]'
+  rolls:
+    slot: 49
+    material: clock
+    name: "<gold>Прокрутки: <yellow>{rolls}"
+    lore:
+      - "<gray>ЛКМ +1, ПКМ -1; Shift: шаг 10"
+      - "<gray>Выбор по весам, с повторениями."
+    on_left_click:
+      - '[rolls] 1'
+    on_right_click:
+      - '[rolls] -1'
+    on_shift_left_click:
+      - '[rolls] 10'
+    on_shift_right_click:
+      - '[rolls] -10'
+  next_page:
+    slot: 50
+    material: arrow
+    name: "<gold>Следующая страница"
+    lore:
+      - "<gray>Заполните страницу, чтобы добавить новую."
+    on_click:
+      - '[next_page]'
+  save:
+    slot: 52
+    material: emerald
+    name: "<green>Сохранить"
+    on_click:
+      - '[save_loot]'
+  close:
+    slot: 53
+    material: barrier
+    name: "<red>Сохранить и закрыть"
+    on_click:
+      - '[close]'
