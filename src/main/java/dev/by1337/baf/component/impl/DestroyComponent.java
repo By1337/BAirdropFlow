@@ -1,6 +1,7 @@
 package dev.by1337.baf.component.impl;
 
 import dev.by1337.baf.Airdrop;
+import dev.by1337.baf.web.NodeSchema;
 import dev.by1337.baf.component.AbstractComponent;
 import dev.by1337.baf.component.AirdropComponent;
 import dev.by1337.baf.component.ComponentFactory;
@@ -41,6 +42,9 @@ public class DestroyComponent extends AbstractComponent {
     }
 
     public static class Config implements ComponentFactory {
+        public static final NodeSchema WEB_SCHEMA = NodeSchema.of("Удаление", "Финальная нода __destroy__: очистка блоков и ресурсов.")
+                .events("on_destroy").inputs("destroy");
+
 
         public static final YamlDecoder<Config> DECODER = RecordYamlDecoder.mapOf(
                 Config::new,

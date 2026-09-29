@@ -1,6 +1,7 @@
 package dev.by1337.baf.component.impl.block;
 
 import dev.by1337.baf.Airdrop;
+import dev.by1337.baf.web.NodeSchema;
 import dev.by1337.baf.BAF;
 import dev.by1337.baf.component.AbstractComponent;
 import dev.by1337.baf.component.AirdropComponent;
@@ -74,6 +75,9 @@ public class BreakBlockComponent extends AbstractComponent {
     }
 
     public static class Config implements ComponentFactory {
+        public static final NodeSchema WEB_SCHEMA = NodeSchema.of("Разрушение блока", "Считает попытки сломать блок. Плейсхолдер {ctx:имя.count}.")
+                .vector("offsets", "Смещение блока", "0;0;0", false).integer("count", "Число попыток", 10, 1, true).events("on_create", "on_break", "on_broken", "on_remove").inputs("create", "remove");
+
         public static final YamlDecoder<Config> DECODER = RecordYamlDecoder.mapOf(
                 Config::new,
                 Vec3i.DECODER.fieldOf("offsets", new Vec3i(0, 0, 0)),

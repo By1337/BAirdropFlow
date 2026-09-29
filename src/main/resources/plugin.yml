@@ -13,3 +13,10 @@ permissions:
   baf.loot.admin:
     description: Управление таблицами лута
     default: op
+
+  baf.admin:
+    description: Управление аирдропами
+    default: op
+  baf.web.admin:
+    description: Получение ссылки на веб-редактор аирдропов
+    default: op

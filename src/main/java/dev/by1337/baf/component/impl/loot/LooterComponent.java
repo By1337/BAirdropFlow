@@ -1,6 +1,7 @@
 package dev.by1337.baf.component.impl.loot;
 
 import dev.by1337.baf.Airdrop;
+import dev.by1337.baf.web.NodeSchema;
 import dev.by1337.baf.BAF;
 import dev.by1337.baf.component.AbstractComponent;
 import dev.by1337.baf.component.AirdropComponent;
@@ -94,6 +95,13 @@ public class LooterComponent extends AbstractComponent {
 
 
     public static class Config implements ComponentFactory {
+        public static final NodeSchema WEB_SCHEMA = NodeSchema.of("Контейнер лута", "Открывает инвентарь с лутом при взаимодействии с блоком.")
+                .vector("offsets", "Смещение блока", "0;0;0", false)
+                .text("loot_table", "Таблица лута", "loot/default", true)
+                .text("title", "Заголовок инвентаря", "&7Title", false)
+                .events("on_create", "on_open", "on_remove")
+                .inputs("create", "remove");
+
         public static final YamlDecoder<Config> DECODER = RecordYamlDecoder.mapOf(
                 Config::new,
                 Vec3i.DECODER.fieldOf("offsets", new Vec3i(0, 0, 0)),

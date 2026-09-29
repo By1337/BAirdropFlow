@@ -1,0 +1,131 @@
+id: example:default
+world: world
+generator:
+  type: generator:fixed
+  at: 0;100;0
+args:
+  loot_table: example/default
+  type: обычный
+spawner:
+  type: spawner:timer
+  time: 5m
+  on_create:
+  - weights:
+      '20':
+      - set_value: loot_table example/epic
+      - set_value: type элитный
+      '50':
+      - set_value: loot_table example/rare
+      - set_value: type редкий
+      '100':
+      - set_value: loot_table example/default
+      - set_value: type обычный
+  - bc: "<white> \n<center><white>Аирдроп {value:type}\n<center><white>появится че\
+      рез 5 минут!\n<white>\n"
+  when:
+    2m:
+    - bc: |
+        <white>
+        <center><white>Аирдроп {value:type}
+        <center><white>появится через 2 минуты!
+        <white>
+    1m:
+    - bc: |
+        <white>
+        <center><white>Аирдроп {value:type}
+        <center><white>появится через 1 минуту!
+        <white>
+    5s-1s:
+    - bc: |
+        <white>
+        <center><white>Аирдроп {value:type}
+        <center><white>появится через {time} сек.
+        <white>
+  on_timer_end:
+  - bc: |
+      <white>
+      <center><white>Аирдроп {value:type}
+      <center><white>появился на [{x}, {y}, {z}]
+      <white>
+  - make:
+      loot_table: '{value:loot_table}'
+      type: '{value:type}'
+$web_meta: '{"version":2,"webNodes":{"web_e30f35f859b8":{"type":"web:commands","title":"Команды","x":340,"y":855,"bindings":[{"source":"__destroy__","output":"on_destroy","path":["on_destroy"],"kind":"array","start":1,"count":1}]},"web_ec40653e424b":{"type":"web:commands","title":"Команды","x":0,"y":855,"bindings":[{"source":"looter","output":"on_open","path":["on_open"],"kind":"array","start":0,"count":1}]},"web_0e058505374e":{"type":"web:commands","title":"Команды","x":340,"y":855,"bindings":[{"source":"looter","output":"on_open","path":["on_open"],"kind":"array","start":1,"count":1}]}},"nodes":{"__init__":{"x":-402.0894797704983,"y":-45.418754263716366,"width":459.5581441591521,"height":251.89072449608608,"title":"Начало"},"region":{"x":159.91570633492762,"y":-366.738522709103,"width":283.78710876497667,"height":237.42209992904972,"title":"Регион"},"tto":{"x":182.5456965369175,"y":-40.132149297170976,"title":"Таймер
+  до открытия"},"tto_holo":{"x":616.6299759351413,"y":-237.88874882112214,"width":359.14694838582955,"height":228,"title":"голограмма
+  до открытия"},"tte":{"x":688.5625047812781,"y":89.92799922803135,"title":"Таймер
+  до удаления"},"tte_holo":{"x":1286.3327709147568,"y":-131.768954366155,"title":"голограмма
+  до удаления"},"looter":{"x":1115.3167115151323,"y":-638.1798318982885,"width":436.6925626493075,"height":376.294072068277},"__destroy__":{"x":1188.3522933429213,"y":346.7616494014}},"viewport":{"x":-685.9529212216898,"y":683.7287473709491,"zoom":1.0551739542491385}}'
+nodes:
+  __init__:
+    type: __init__
+    on_init:
+    - create: region
+    - create: tto
+  region:
+    type: wg:region
+    size: 15;15;15
+    flags:
+    - use deny
+    - other-explosion deny
+    - mob-damage allow
+    - pvp allow
+    - tnt deny
+    - ghast-fireball deny
+    - wither-damage deny
+    - creeper-explosion deny
+    - vehicle-destroy allow
+    - interact deny
+    - entry-deny-message -e
+    - deny-message -e
+    - exit-deny-message -e
+  tto:
+    type: tick:timer
+    timer: 30
+    on_create:
+    - create: tto_holo
+    on_tick:
+    - call: update tto_holo
+    on_timer_end:
+    - create: tte
+    on_remove:
+    - remove: tto_holo
+  tto_holo:
+    type: dh:hologram
+    offsets: 0.5;1.8;0.5
+    lines:
+    - '&cAirdrop'
+    - '&fДо открытия: {ctx:tto.timer}'
+  tte:
+    type: tick:timer
+    timer: 30
+    on_create:
+    - create: tte_holo
+    - create: looter
+    on_tick:
+    - call: update tte_holo
+    on_timer_end: []
+    on_remove:
+    - remove: tte_holo
+    - remove: looter
+    - destroy: ''
+  tte_holo:
+    type: dh:hologram
+    offsets: 0.5;1.8;0.5
+    lines:
+    - '&aAirdrop'
+    - '&fДо удаления: {ctx:tte.timer}'
+  looter:
+    type: loot:looter
+    offsets: 0;0;0
+    loot_table: '{args:loot_table}'
+    title: '&aAirdrop!'
+    on_open:
+    - примсекр
+    - |
+      line1
+      line2
+  __destroy__:
+    type: __destroy__
+    on_destroy:
+    - remove: region
+    - setblock: '{x} {y} {z} air'

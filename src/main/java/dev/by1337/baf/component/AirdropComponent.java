@@ -6,7 +6,7 @@ import dev.by1337.edsl.context.EventContext;
 import dev.by1337.yaml.decoder.YamlDecoder;
 
 public interface AirdropComponent {
-    DecoderRegistry<ComponentFactory> REGISTRY = new DecoderRegistry<>();
+    NodeRegistry REGISTRY = new NodeRegistry();
 
     boolean call(String event, EventContext ctx);
     void markRemoved(EventContext ctx);

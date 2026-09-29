@@ -6,7 +6,7 @@
     <version>1.0</version>
 
     <properties>
-        <java.version>16</java.version>
+        <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -46,7 +46,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.3.0</version>
+                <version>3.6.0</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -55,6 +55,12 @@
                         </goals>
                         <configuration>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <relocations>
+                                <relocation>
+                                    <pattern>dev.by1337.web</pattern>
+                                    <shadedPattern>dev.by1337.baf.libs.web</shadedPattern>
+                                </relocation>
+                            </relocations>
                         </configuration>
                     </execution>
                 </executions>
@@ -105,6 +111,23 @@
     </repositories>
 
     <dependencies>
+        <dependency>
+            <groupId>dev.by1337.web</groupId>
+            <artifactId>client</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>dev.by1337.web</groupId>
+            <artifactId>backend</artifactId>
+            <version>1.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10.1</version>
+            <scope>provided</scope>
+        </dependency>
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>

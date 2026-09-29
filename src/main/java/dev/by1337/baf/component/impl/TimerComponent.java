@@ -1,6 +1,7 @@
 package dev.by1337.baf.component.impl;
 
 import dev.by1337.baf.Airdrop;
+import dev.by1337.baf.web.NodeSchema;
 import dev.by1337.baf.component.AbstractComponent;
 import dev.by1337.baf.component.AirdropComponent;
 import dev.by1337.baf.component.ComponentFactory;
@@ -54,6 +55,11 @@ public class TimerComponent extends AbstractComponent {
     }
 
     public static class Config implements ComponentFactory {
+        public static final NodeSchema WEB_SCHEMA = NodeSchema.of("Таймер", "Секундный таймер. Плейсхолдер {ctx:имя.timer}.")
+                .integer("timer", "Время, секунд", 20, 1, false)
+                .events("on_create", "on_tick", "on_timer_end", "on_remove")
+                .inputs("create", "remove");
+
         public static final YamlDecoder<Config> DECODER = RecordYamlDecoder.mapOf(
                 Config::new,
                 YamlDecoder.INT.fieldOf("timer", 20),

@@ -1,6 +1,7 @@
 package dev.by1337.baf.component.impl.dh;
 
 import dev.by1337.baf.Airdrop;
+import dev.by1337.baf.web.NodeSchema;
 import dev.by1337.baf.component.AbstractComponent;
 import dev.by1337.baf.component.AirdropComponent;
 import dev.by1337.baf.component.ComponentEvent;
@@ -75,6 +76,12 @@ public class DHHologramComponent extends AbstractComponent {
     }
 
     public static class Config implements ComponentFactory {
+        public static final NodeSchema WEB_SCHEMA = NodeSchema.of("Голограмма", "Голограмма DecentHolograms. Вызов update обновляет строки.")
+                .vector("offsets", "Смещение", "0;0;0", true)
+                .strings("lines", "Строки голограммы")
+                .events("on_create", "on_update", "on_remove")
+                .inputs("create", "remove", "update");
+
         public static final YamlDecoder<Config> DECODER = RecordYamlDecoder.mapOf(
                 Config::new,
                 Vec3d.DECODER.fieldOf("offsets", new Vec3d(0, 0, 0)),

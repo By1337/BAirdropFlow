@@ -1,6 +1,7 @@
 package dev.by1337.baf.component.impl;
 
 import dev.by1337.baf.Airdrop;
+import dev.by1337.baf.web.NodeSchema;
 import dev.by1337.baf.component.AbstractComponent;
 import dev.by1337.baf.component.AirdropComponent;
 import dev.by1337.baf.component.ComponentFactory;
@@ -21,7 +22,7 @@ public class InitComponent extends AbstractComponent {
     public void onInit(EventContext ctx) {
         try (var ignored = ctx.tracer().enter(name + " init {", "}")) {
             config.init.handle(ctx);
-            markRemoved(ctx);
+            if (!isRemoved()) markRemoved(ctx);
         }
     }
 
@@ -37,6 +38,9 @@ public class InitComponent extends AbstractComponent {
     }
 
     public static class Config implements ComponentFactory {
+        public static final NodeSchema WEB_SCHEMA = NodeSchema.of("Инициализация", "Входная нода __init__: запускает сценарий и удаляет себя.")
+                .events("on_init").inputs("create");
+
         public static final YamlDecoder<Config> DECODER = RecordYamlDecoder.mapOf(
                 Config::new,
                 HANDLER.fieldOf("on_init", EMPTY_HANDLER)

@@ -10,6 +10,7 @@ import com.sk89q.worldguard.protection.regions.ProtectedCuboidRegion;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 import com.sk89q.worldguard.protection.regions.RegionContainer;
 import dev.by1337.baf.Airdrop;
+import dev.by1337.baf.web.NodeSchema;
 import dev.by1337.baf.component.AbstractComponent;
 import dev.by1337.baf.component.AirdropComponent;
 import dev.by1337.baf.component.ComponentFactory;
@@ -75,6 +76,9 @@ public class WgRegionComponent extends AbstractComponent {
     }
 
     public static class Config implements ComponentFactory {
+        public static final NodeSchema WEB_SCHEMA = NodeSchema.of("Регион WorldGuard", "Защищает область вокруг аирдропа; удаляет регион при снятии ноды.")
+                .vector("size", "Полуразмер региона", "1;1;1", false).strings("flags", "Флаги WorldGuard").inputs("create", "remove");
+
         public static final YamlDecoder<Config> DECODER = RecordYamlDecoder.mapOf(
                 Config::new,
                 Vec3i.DECODER.fieldOf("size", new Vec3i(1, 1, 1)),
