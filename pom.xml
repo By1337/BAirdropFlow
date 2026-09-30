@@ -77,6 +77,39 @@
                     </archive>
                 </configuration>
             </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.gmaven</groupId>
+                <artifactId>groovy-maven-plugin</artifactId>
+                <version>2.1.1</version>
+                <executions>
+                    <execution>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <source>
+                                // Extract Paper version from MockBukkit JAR
+                                def mockbukkitJar = project.artifacts.find {
+                                    it.artifactId.startsWith('mockbukkit-')
+                                }?.file
+
+                                if (mockbukkitJar) {
+                                    def jar = new java.util.jar.JarFile(mockbukkitJar)
+                                    def manifest = jar.manifest
+                                    def paperVersion = manifest.mainAttributes.getValue('Paper-Version')
+                                    jar.close()
+
+                                    if (paperVersion) {
+                                        project.properties['paper.version.from.mockbukkit'] = paperVersion
+                                    }
+                                }
+                            </source>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
         <resources>
             <resource>
@@ -134,6 +167,7 @@
             <version>1.21.11-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
+
         <dependency>
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
@@ -213,6 +247,12 @@
             <version>2.23.0</version>
         </dependency>
         <!-- tests -->
+        <dependency>
+            <groupId>com.github.MockBukkit</groupId>
+            <artifactId>MockBukkit</artifactId>
+            <version>v1.21-SNAPSHOT</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>

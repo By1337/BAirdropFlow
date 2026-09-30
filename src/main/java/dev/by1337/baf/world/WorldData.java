@@ -17,6 +17,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,7 +27,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-public class WorldData implements Listener {
+public class WorldData implements Listener, Closeable {
     public static final Executor CHUNK_IO_EXECUTOR = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder()
             .setNameFormat("baf-chunk-io-%d")
             .build());

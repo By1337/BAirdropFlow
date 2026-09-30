@@ -2,7 +2,9 @@ package dev.by1337.baf;
 
 import dev.by1337.baf.interact.InteractManager;
 import dev.by1337.baf.loot.LootTables;
+import dev.by1337.baf.world.WorldData;
 import dev.by1337.baf.world.WorldDataContainer;
+import dev.by1337.baf.world.fake.FakeBlockSetter;
 import dev.by1337.edsl.MessageManager;
 import dev.by1337.edsl.context.EventContext;
 import dev.by1337.plc.PlaceholderResolver;
@@ -35,8 +37,9 @@ public class BAF {
     }
 
     public static EventContext newContext() {
-        return manager.newContext();
+        return manager.newContextBuilder().build();
     }
+
 
     public static EventContext newContext(@Nullable Player player) {
         return manager.newContext(player);
@@ -50,10 +53,14 @@ public class BAF {
         return manager.newContext(airdrop, player);
     }
 
-    public static WorldDataContainer worldData() {
+    public static WorldDataContainer<WorldData> worldData() {
         return plugin.worldData;
     }
     public static Plugin plugin(){
         return plugin;
     }
+    public static WorldDataContainer<FakeBlockSetter> fakeBlocks() {
+        return plugin.fakeBlocks;
+    }
+
 }

@@ -47,7 +47,7 @@ public class RandomGenerator implements Generator {
 
     @Override
     public CompletableFuture<@Nullable Location> tryGenerate(World world) {
-        WorldData data = BAF.worldData().getWorldData(world);
+        WorldData data = BAF.worldData().getIn(world);
 
         int x = radius - random.nextInt(radius);
         int z = radius - random.nextInt(radius);

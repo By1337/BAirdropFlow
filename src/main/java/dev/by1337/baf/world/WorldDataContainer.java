@@ -7,28 +7,44 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.world.WorldUnloadEvent;
 import org.bukkit.plugin.Plugin;
 
-public class WorldDataContainer implements Listener {
-    private final Plugin plugin;
-    private final ByWorldStorage<WorldData> storage;
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.function.Function;
 
-    public WorldDataContainer(Plugin plugin) {
-        this.plugin = plugin;
+public class WorldDataContainer<T extends Closeable> implements Listener {
+    private final ByWorldStorage<T> storage;
+    private final Function<World, T> factory;
+
+    public WorldDataContainer(Plugin plugin, Function<World, T> factory) {
+        this.factory = factory;
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
-        storage = new ByWorldStorage<>(w -> new WorldData(w, plugin));
+        storage = new ByWorldStorage<>(factory);
     }
 
     public void onUnload(WorldUnloadEvent e) {
         var v = storage.remove(e.getWorld());
-        if (v != null) v.close();
+        if (v != null) {
+            try {
+                v.close();
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+        }
     }
 
-    public WorldData getWorldData(World w) {
+    public T getIn(World w) {
         return storage.get(w);
     }
 
     public void close() {
         HandlerList.unregisterAll(this);
-        storage.values().forEach(WorldData::close);
+        storage.values().forEach(v -> {
+            try {
+                v.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
         storage.clear();
     }
 

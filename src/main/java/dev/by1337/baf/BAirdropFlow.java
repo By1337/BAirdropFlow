@@ -11,7 +11,10 @@ import dev.by1337.baf.spawner.AirdropSpawnerBoot;
 import dev.by1337.baf.web.AirdropWeb;
 import dev.by1337.baf.workflow.WorkflowFiles;
 import dev.by1337.baf.workflow.WorkflowRepository;
+import dev.by1337.baf.world.WorldData;
 import dev.by1337.baf.world.WorldDataContainer;
+import dev.by1337.baf.world.fake.BlockFlagger;
+import dev.by1337.baf.world.fake.FakeBlockSetter;
 import dev.by1337.bmenu.BMenu;
 import dev.by1337.bmenu.loader.MenuSubLoader;
 import dev.by1337.cmd.Command;
@@ -29,7 +32,8 @@ public class BAirdropFlow extends BasePlugin {
     AirdropManager manager;
     TimerSystem timerSystem;
     Config config;
-    WorldDataContainer worldData;
+    WorldDataContainer<WorldData> worldData;
+    WorldDataContainer<FakeBlockSetter> fakeBlocks;
     WorkflowRepository workflows;
     AirdropWeb web;
 
@@ -77,8 +81,10 @@ public class BAirdropFlow extends BasePlugin {
     @Override
     public void onEnable() {
         super.onEnable();
-        worldData = new WorldDataContainer(this);
+        worldData = new WorldDataContainer<>(this, w -> new WorldData(w, this));
         addCloseHook(worldData::close);
+        fakeBlocks = new WorldDataContainer<>(this, w -> new FakeBlockSetter(this, w));
+        addCloseHook(fakeBlocks::close);
         addCloseHook(manager::disable);
         manager.enable();
         addCloseHook(timerSystem);

@@ -1,4 +1,13 @@
 nodes:
+  schematic:
+    type: schematic:paster
+    path: '../WorldEdit/schematics/asteroid.schem'
+    offset: 0;0;0
+    no_replace:
+      - bedrock
+    no_place:
+      - barrier
+
 
 
   # КОМПОНЕНТ: tick:timer

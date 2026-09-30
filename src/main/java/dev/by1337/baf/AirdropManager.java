@@ -4,11 +4,9 @@ import dev.by1337.baf.component.AirdropComponent;
 import dev.by1337.baf.entity.TickableEntity;
 import dev.by1337.baf.interact.InteractManager;
 import dev.by1337.baf.loot.LootTables;
-import dev.by1337.baf.util.FileBackuper;
 import dev.by1337.edsl.MessageManager;
 import dev.by1337.edsl.context.EventContext;
 import dev.by1337.plc.PlaceholderResolver;
-import dev.by1337.yaml.YamlMap;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
@@ -18,8 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
@@ -54,7 +50,7 @@ public class AirdropManager {
         }
         ticking.clear();
         for (Airdrop airdrop : airdrops) {
-            removeAirdrop(airdrop, newContext());
+            removeAirdrop(airdrop, BAF.newContext(airdrop));
         }
     }
 
@@ -135,14 +131,9 @@ public class AirdropManager {
         return messages.newContext().placeholders(p).build();
     }
 
-    public EventContext newContext() {
-        return messages.newContext().build();
-    }
-
     public MessageManager.Builder newContextBuilder(final Object... args) {
         return messages.newContext(args);
     }
-
 
     public EventContext newContext(@Nullable Player player) {
         return messages.newContext().source(player).build();

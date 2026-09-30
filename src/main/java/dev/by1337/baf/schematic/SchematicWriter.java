@@ -1,0 +1,45 @@
+package dev.by1337.baf.schematic;
+
+import dev.by1337.baf.BAF;
+import dev.by1337.baf.util.Vec3i;
+import dev.by1337.baf.world.fake.FakeBlockSetter;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import org.bukkit.World;
+
+public class SchematicWriter {
+    private final LongOpenHashSet placedBlocks = new LongOpenHashSet();
+    private final World world;
+    private final FakeBlockSetter fakeBlockSetter;
+    private final Vec3i at;
+
+    public SchematicWriter(World world, Vec3i at) {
+        this.world = world;
+        fakeBlockSetter = BAF.fakeBlocks().getIn(world);
+        this.at = at;
+    }
+    public void writeSchematic(Schematic schematic) {
+        schematic.schematicFile().stream().forEach(pair -> {
+            if (schematic.no_place().contains(pair.getRight().getMaterial())) return;
+            var p = pair.getKey();
+            int x = p.x() + at.x();
+            int y = p.y() + at.y();
+            int z = p.z() + at.z();
+            var current = world.getBlockAt(x, y, z);
+            if (schematic.no_replace().contains(current.getType())) return;
+            placedBlocks.add(Vec3i.asLong(x, y, z));
+            fakeBlockSetter.set(x, y, z, pair.getRight());
+        });
+    }
+
+    public void undoSchematics() {
+        var iter = placedBlocks.iterator();
+        while (iter.hasNext()) {
+            long pos = iter.nextLong();
+            fakeBlockSetter.undo(
+                    Vec3i.getX(pos),
+                    Vec3i.getY(pos),
+                    Vec3i.getZ(pos)
+            );
+        }
+    }
+}
