@@ -2,6 +2,7 @@ package dev.by1337.baf.generator.impl;
 
 import dev.by1337.baf.generator.Generator;
 import dev.by1337.baf.util.Vec3i;
+import dev.by1337.baf.web.NodeSchema;
 import dev.by1337.yaml.decoder.RecordYamlDecoder;
 import dev.by1337.yaml.decoder.YamlDecoder;
 import org.bukkit.Location;
@@ -11,6 +12,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.concurrent.CompletableFuture;
 
 public class FixedGenerator implements Generator {
+    public static final NodeSchema WEB_SCHEMA = NodeSchema.of("Фиксированная точка", "Создаёт аирдроп по указанным координатам.")
+            .vector("at", "Координаты", "0;100;0", false);
     public static final YamlDecoder<FixedGenerator> DECODER = RecordYamlDecoder.mapOf(
             FixedGenerator::new,
             Vec3i.DECODER.fieldOf("at", new Vec3i(0, 100, 0))

@@ -6,7 +6,9 @@ nodes:
     no_replace:
       - bedrock
     no_place:
-      - barrier
+      - bedrock
+    replace:
+      barrier: air
 
 
 

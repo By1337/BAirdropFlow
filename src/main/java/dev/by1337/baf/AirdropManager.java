@@ -94,7 +94,7 @@ public class AirdropManager {
 
     public void removeAirdrop(Airdrop airdrop, EventContext ctx) {
         if (!airdrops.remove(airdrop)) {
-            throw new IllegalArgumentException("Airdrop " + airdrop + " is not registered!");
+            return;
         }
         var destroy = airdrop.config().nodes().get("__destroy__");
         if (destroy == null) {

@@ -46,9 +46,11 @@ public class SchematicComponent extends AbstractComponent {
     public static class Config implements ComponentFactory {
         public static final NodeSchema WEB_SCHEMA = NodeSchema.of("Схематика", "Вставляет схематику в мир")
                 .inputs("create", "remove")
-                .vector("offsets", "Смещение", "0;0;0", true)
-                .strings("no_replace", "блоки которые нельзя заменять")
-                .strings("no_place", "блоки которые не вставлять")
+                .vector("offsets", "Смещение", "0;0;0", false)
+                .text("path", "Путь до схематики", "../WorldEdit/schematics/asteroid.schem", true)
+                .materials("no_replace", "Блоки, которые нельзя заменять")
+                .materials("no_place", "Блоки, которые не вставлять")
+                .materialMap("replace", "Замена блоков")
                 ;
 
         public static final YamlDecoder<Config> DECODER = Schematic.DECODER.map(Config::new);

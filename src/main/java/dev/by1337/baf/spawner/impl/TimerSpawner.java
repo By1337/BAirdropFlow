@@ -8,6 +8,7 @@ import dev.by1337.baf.spawner.AirdropSpawner;
 import dev.by1337.baf.util.time.DurationParser;
 import dev.by1337.baf.util.time.DurationRange;
 import dev.by1337.baf.world.WorldData;
+import dev.by1337.baf.web.NodeSchema;
 import dev.by1337.cmd.Command;
 import dev.by1337.cmd.CommandMsgError;
 import dev.by1337.cmd.argument.ArgumentString;
@@ -31,6 +32,10 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public class TimerSpawner implements AirdropSpawner {
+    public static final NodeSchema WEB_SCHEMA = NodeSchema.of("Таймер", "Выбирает вариант, объявляет появление и создаёт аирдроп по окончании отсчёта.")
+            .duration("time", "Время до появления", "5m")
+            .events("on_create", "on_timer_end")
+            .timeEvents("when", "Сообщения по оставшемуся времени");
     private static final Logger log = LoggerFactory.getLogger(TimerSpawner.class);
     static EventHandler EMPTY_HANDLER = EventHandler.nop();
     static YamlDecoder<EventHandler> HANDLER = EventHandler.decoder().commandRewriter(s -> switch (s) {

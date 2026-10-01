@@ -22,21 +22,27 @@ public class Schematic {
             SchematicFile.DECODER.fieldOf("path"),
             Vec3i.DECODER.fieldOf("offsets", Vec3i.ZERO),
             BukkitYamlDecoders.material().wildcard().asSet().fieldOf("no_replace"),
-            BukkitYamlDecoders.material().wildcard().asSet().fieldOf("no_place")
+            BukkitYamlDecoders.material().wildcard().asSet().fieldOf("no_place"),
+            YamlDecoder.flattenKeys(
+                    BukkitYamlDecoders.material().wildcard(),
+                    BukkitYamlDecoders.material().map(v -> v.createBlockData()),
+                    (v, v1) -> v
+            ).fieldOf("replace", Map.of())
     );
 
     private boolean auto_rotate = false;
-    private Map<Material, List<Material>> replaces = Map.of();
     private final SchematicFile schematicFile;
     private final Vec3i offsets;
     private final Set<Material> no_replace;
     private final Set<Material> no_place;
+    private final Map<Material, BlockData> replaces;
 
-    public Schematic(SchematicFile schematicFile, Vec3i offsets, Set<Material> noReplace, Set<Material> noPlace) {
+    public Schematic(SchematicFile schematicFile, Vec3i offsets, Set<Material> noReplace, Set<Material> noPlace, Map<Material, BlockData> replaces) {
         this.schematicFile = offsets.isZero() ? schematicFile : schematicFile.mutatePos(v -> v.add(offsets));
         this.offsets = offsets;
         no_replace = noReplace;
         no_place = noPlace;
+        this.replaces = replaces;
     }
 
 
@@ -44,7 +50,7 @@ public class Schematic {
         if (auto_rotate) return mutator.apply(o);
         return o.copy();
     }
-    private Stream<Pair<Vec3i, BlockData>> bloksStream(SchematicFile s) {
+    /*private Stream<Pair<Vec3i, BlockData>> bloksStream(SchematicFile s) {
         return s.stream().map(this::mutate);
     }
     private Pair<Vec3i, BlockData> mutate(Pair<Vec3i, BlockData> pair) {
@@ -101,7 +107,7 @@ public class Schematic {
             v2.setWaterlogged(v1.isWaterlogged());
         }
         return Pair.of(pair.getLeft(), newData);
-    }
+    }*/
     public boolean canReplace(Material material){
         return !no_replace.contains(material);
     }
@@ -116,6 +122,14 @@ public class Schematic {
 
     public Set<Material> no_place() {
         return no_place;
+    }
+
+    public BlockData replace(BlockData m){
+        return replaces.getOrDefault(m.getMaterial(), m);
+    }
+
+    public Map<Material, BlockData> replaces() {
+        return replaces;
     }
 
     private static <T> T any(T t, T t1, T t2, T t3, T t4) {

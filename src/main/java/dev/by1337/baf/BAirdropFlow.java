@@ -92,13 +92,16 @@ public class BAirdropFlow extends BasePlugin {
         if (config.web.enabled()) {
             web = new AirdropWeb(workflows, config.web, action -> Bukkit.getScheduler().runTask(this, action));
             addCloseHook(web);
-            web.link().exceptionally(error -> {
-                log.warn("BWebTunnel недоступен: {}", error.getMessage());
-                return null;
-            });
         }
         registerCommand(new Command<CommandSender>("baf").executor(sender -> startWorkflow("default.yml"))
                 .sub(LootCommands.create())
+                .sub(new Command<CommandSender>("reload").requires(new RequiresPermission<>("baf.admin"))
+                        .executor((s) -> {
+                            onDisable();
+                            onLoad();
+                            onEnable();
+                            s.sendMessage("reloaded!");
+                        }))
                 .sub(new Command<CommandSender>("start").requires(new RequiresPermission<>("baf.admin"))
                         .executor(new ArgumentChoice<>("workflow", workflows::keys), (sender, key) -> {
                             if (key == null) throw new CommandMsgError("/baf start <файл аирдропа>");

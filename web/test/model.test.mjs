@@ -52,6 +52,25 @@ test('payload owns only editable settings and keeps revisions and positions', ()
   assert.throws(() => model.add('a.b', 'tick:timer', {}, {}));
   assert.throws(() => model.add('__proto__', 'tick:timer', {}, {}));
 });
+test('generator edits are saved in settings and support undo', () => {
+  const model = new GraphModel(fixture());
+  model.setGenerator({type:'generator:fixed',at:'10;90;20'});
+  assert.deepEqual(model.payload().settings.generator,{type:'generator:fixed',at:'10;90;20'});
+  model.undo();
+  assert.equal(model.payload().settings.generator,undefined);
+  model.redo();
+  assert.equal(model.payload().settings.generator.at,'10;90;20');
+});
+test('spawner and default args edits travel together in settings', () => {
+  const model = new GraphModel(fixture());
+  model.setArgs({type:'обычный'});
+  model.setSpawner({type:'spawner:timer',time:'5m',when:{'2m':[{bc:'Скоро'}]},on_timer_end:[{make:{type:'{value:type}'}}]});
+  assert.equal(model.payload().settings.args.type,'обычный');
+  assert.equal(model.payload().settings.spawner.when['2m'][0].bc,'Скоро');
+  model.undo();
+  assert.equal(model.payload().settings.spawner,undefined);
+  assert.equal(model.payload().settings.args.type,'обычный');
+});
 test('edits made during a pending save remain dirty after response', () => {
   const model = new GraphModel(fixture()); const sent = model.snapshot();
   model.change(() => model.nodes.timer.timer = 35);

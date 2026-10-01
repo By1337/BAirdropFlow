@@ -64,6 +64,36 @@ public final class NodeSchema {
         return this;
     }
 
+    public NodeSchema materials(String key, String title) {
+        JsonObject f = field(key, title, "array");
+        JsonObject item = new JsonObject(); item.addProperty("type", "string");
+        f.add("items", item); f.add("default", new JsonArray()); f.addProperty("x-control", "materials");
+        return this;
+    }
+
+    public NodeSchema materialMap(String key, String title) {
+        JsonObject f = field(key, title, "object");
+        JsonObject value = new JsonObject(); value.addProperty("type", "string");
+        f.add("additionalProperties", value); f.add("default", new JsonObject()); f.addProperty("x-control", "material-map");
+        return this;
+    }
+
+    public NodeSchema duration(String key, String title, String defaultValue) {
+        JsonObject f = field(key, title, "string");
+        f.addProperty("default", defaultValue);
+        f.addProperty("x-control", "duration");
+        required.add(key);
+        return this;
+    }
+
+    public NodeSchema timeEvents(String key, String title) {
+        JsonObject f = field(key, title, "object");
+        f.addProperty("x-control", "time-events");
+        f.add("default", new JsonObject());
+        required.add(key);
+        return this;
+    }
+
     public NodeSchema events(String... keys) {
         for (String key : keys) {
             JsonObject f = new JsonObject();

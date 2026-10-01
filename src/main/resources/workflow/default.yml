@@ -15,6 +15,7 @@ generator:
   clear_y: 3
   air_tester: '!solid & !water & !lava'
   solid_tester: 'solid & !ice'
+  offsets: 0;0;0
   # (air|cave_air)&!solid
   # !solid&air|!solid&cave_air
 

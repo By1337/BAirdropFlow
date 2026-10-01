@@ -103,6 +103,9 @@ export class GraphModel {
   }
   setNode(name, value) { this.change(() => this.nodes[name] = value); }
   setField(name, field, value) { this.change(() => this.nodes[name][field] = value); }
+  setGenerator(value) { this.change(() => this.config.generator = clone(value)); }
+  setSpawner(value) { this.change(() => this.config.spawner = clone(value)); }
+  setArgs(value) { this.change(() => this.config.args = clone(value)); }
 
   snapshot() { return clone({ config: this.config, metadata: this.metadata }); }
   remember(before) {

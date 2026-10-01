@@ -5,6 +5,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.by1337.baf.component.AirdropComponent;
 import dev.by1337.baf.config.WebConfig;
+import dev.by1337.baf.generator.Generators;
+import dev.by1337.baf.spawner.AirdropSpawnerBoot;
 import dev.by1337.baf.workflow.WorkflowFiles;
 import dev.by1337.baf.workflow.WorkflowRepository;
 import dev.by1337.web.client.RequestRouter;
@@ -37,8 +39,10 @@ public final class AirdropWeb implements Closeable {
 
     public static RequestRouter router(WorkflowRepository workflows, Supplier<JsonElement> schemas, Executor executor) {
         return new RequestRouter()
-                .get("/airdrops", h -> dispatch(h, executor, () -> workflows.list()))
+                .get("/airdrops", h -> dispatch(h, executor, workflows::list))
                 .get("/schemas", h -> dispatch(h, executor, schemas::get))
+                .get("/generator-schemas", h -> dispatch(h, executor, () -> JsonValues.GSON.toJsonTree(Generators.schemas())))
+                .get("/spawner-schemas", h -> dispatch(h, executor, () -> JsonValues.GSON.toJsonTree(AirdropSpawnerBoot.schemas())))
                 .get("/airdrop", h -> dispatch(h, executor, () -> workflows.read(h.params().getString("key"))))
                 .post("/commands/parse", h -> dispatch(h, executor, () -> {
                     JsonObject body = JsonParser.parseString(h.params().body()).getAsJsonObject();

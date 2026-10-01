@@ -68,6 +68,14 @@ class TunnelEditorTest {
             assertEquals(8, schemas.size());
             assertTrue(schemas.getAsJsonObject("tick:timer").getAsJsonObject("properties").has("timer"));
             assertFalse(schemas.has("default:commands"));
+            var schematicFields = schemas.getAsJsonObject("schematic:paster").getAsJsonObject("properties");
+            assertEquals("materials", schematicFields.getAsJsonObject("no_place").get("x-control").getAsString());
+            assertEquals("material-map", schematicFields.getAsJsonObject("replace").get("x-control").getAsString());
+            var generators = json(send(server, "generator-schemas", "GET", null)).getAsJsonObject("data");
+            assertTrue(generators.getAsJsonObject("generator:fixed").getAsJsonObject("properties").has("at"));
+            assertTrue(generators.getAsJsonObject("generator:random").getAsJsonObject("properties").has("air_tester"));
+            var spawners = json(send(server, "spawner-schemas", "GET", null)).getAsJsonObject("data");
+            assertTrue(spawners.getAsJsonObject("spawner:timer").getAsJsonObject("properties").has("when"));
             JsonObject yamlBody = new JsonObject();
             yamlBody.addProperty("yaml", "- bc: |-\n    Привет\n    всем\n- all_players:\n    sound: \"bell 1 1\"\n- \"[setblock] 10 10 10 air\"");
             JsonObject parsedYaml = json(send(server, "commands/parse", "POST", yamlBody.toString()));
@@ -78,6 +86,22 @@ class TunnelEditorTest {
             yamlBody.addProperty("yaml", "- '[destroy]'");
             assertFalse(json(send(server, "commands/parse", "POST", yamlBody.toString())).get("ok").getAsBoolean());
             JsonObject original = data(server), body = payload(original);
+            var settings = new JsonObject();
+            var generator = new JsonObject();
+            generator.addProperty("type", "generator:fixed");
+            generator.addProperty("at", "10;90;20");
+            settings.add("generator", generator);
+            var args = new JsonObject();
+            args.addProperty("loot_table", "example/default");
+            settings.add("args", args);
+            var spawner = JsonParser.parseString("""
+                    {"type":"spawner:timer","time":"5m",
+                     "on_create":[{"weights":{"20":[{"set_value":"loot_table example/epic"}],"80":[{"set_value":"loot_table example/default"}]}}],
+                     "when":{"2m":[{"bc":"Через две минуты"}]},
+                     "on_timer_end":[{"bc":"Аирдроп появился"},{"make":{"loot_table":"{value:loot_table}"}}]}
+                    """).getAsJsonObject();
+            settings.add("spawner", spawner);
+            body.add("settings", settings);
             // Well above the old 64 KiB tunnel limit, with Cyrillic and control characters.
             String text = "Привет ❤️\t\n".repeat(9000);
             body.getAsJsonObject("nodes").getAsJsonObject("opening").addProperty("editor_note", text);
@@ -98,6 +122,9 @@ class TunnelEditorTest {
             assertTrue(saved.get("ok").getAsBoolean(), saved.toString());
             JsonObject roundTrip = data(server);
             assertEquals(45, roundTrip.getAsJsonObject("config").getAsJsonObject("nodes").getAsJsonObject("opening").get("timer").getAsInt());
+            assertEquals(generator, roundTrip.getAsJsonObject("config").getAsJsonObject("generator"));
+            assertEquals(args, roundTrip.getAsJsonObject("config").getAsJsonObject("args"));
+            assertEquals(spawner, roundTrip.getAsJsonObject("config").getAsJsonObject("spawner"));
             assertEquals(actions, roundTrip.getAsJsonObject("config").getAsJsonObject("nodes").getAsJsonObject("opening").get("on_create"));
             assertEquals(text, roundTrip.getAsJsonObject("config").getAsJsonObject("nodes").getAsJsonObject("opening").get("editor_note").getAsString());
             assertTrue(roundTrip.getAsJsonObject("config").getAsJsonObject("custom_field").get("preserved").getAsBoolean());

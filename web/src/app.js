@@ -1,10 +1,11 @@
-import { GraphModel, clone, settingsKeys } from './model.js';
+import { GraphModel, clone } from './model.js';
 import { editableCommands, replaceEditableCommands, formatCommands } from './command-yaml.js';
+import { actions, validDuration, validTimeKey, messages, setMessage, removeMessage, variants, editVariants, variantValues, setVariantValue, removeVariantValue, makeCommand, setMakeParams, removeMake } from './spawner.js';
 const $ = selector => document.querySelector(selector);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const colors = { default:'#a898f4', tick:'#edc482', loot:'#63dec0', block:'#ff9da4', dh:'#84aaff', wg:'#a1c8ff' };
 const color = type => colors[String(type).split(':')[0]] ?? '#9aaac4';
-let model, schemas = {}, selected, selectedEdge, linking, graphView, drag, invalidFields = new Map(), catalogue = [];
+let model, schemas = {}, generatorSchemas = {}, spawnerSchemas = {}, selected, selectedEdge, linking, graphView, drag, invalidFields = new Map(), catalogue = [], editorTab = 'graph', generatorError = '', spawnerError = '';
 const nodeScroll = new Map();
 const nodeDrafts = new Map();
 const yamlRequests = new Map();
@@ -48,11 +49,11 @@ function leave() { return !model?.dirty || confirm('Есть несохранё�
 $('.brand').onclick = event => { event.preventDefault(); if (leave()) { history.replaceState(null, '', '#'); loadHome(); } };
 window.addEventListener('beforeunload', event => { if (model?.dirty) { event.preventDefault(); event.returnValue = ''; } });
 async function loadHome() {
-  model = null; selected = null; selectedEdge = null; linking = null; invalidFields.clear(); nodeDrafts.clear(); yamlRequests.clear(); pendingYaml.clear();
+  model = null; selected = null; selectedEdge = null; linking = null; generatorError = ''; spawnerError = ''; invalidFields.clear(); nodeDrafts.clear(); yamlRequests.clear(); pendingYaml.clear();
   $('#breadcrumb').textContent = 'Все аирдропы';
   $('#app').innerHTML = '<div class="loading"><span class="spinner"></span>Загрузка аирдропов…</div>';
   try {
-    [catalogue, schemas] = await Promise.all([api('airdrops'), api('schemas')]);
+    [catalogue, schemas, generatorSchemas, spawnerSchemas] = await Promise.all([api('airdrops'), api('schemas'), api('generator-schemas'), api('spawner-schemas')]);
     $('#app').innerHTML = `<section class="page"><div class="page-heading"><div><div class="eyebrow">СЦЕНАРИИ ВАШЕГО СЕРВЕРА</div><h1>Аирдропы</h1><p>Настройте события, таймеры и связи между нодами.<br>Все сценарии вашего сервера — в одном месте.</p></div><button id="reload-home" class="secondary">↻ Обновить список</button></div><div class="stats"><div class="stat"><b>${catalogue.length}</b><span>аирдропов</span></div><div class="stat"><b>${catalogue.reduce((n, item) => n + (item.nodeCount ?? 0), 0)}</b><span>нод в сценариях</span></div><div class="stat"><b>${Object.keys(schemas).length}</b><span>типов компонентов</span></div></div><div class="searchbar"><input id="search" placeholder="Поиск по имени, файлу или миру…" aria-label="Поиск аирдропов"><span>Конфиги из папки workflow</span></div><div class="cards" id="cards"></div></section>`;
     $('#reload-home').onclick = loadHome; $('#search').oninput = renderCards; renderCards();
   } catch (error) {
@@ -73,25 +74,211 @@ async function openEditor(key) {
   try {
     const workflowDocument = await api(`airdrop?key=${encodeURIComponent(key)}`);
     if (!Object.keys(schemas).length) schemas = await api('schemas');
-    model = new GraphModel(workflowDocument); selected = null; selectedEdge = null; linking = null; invalidFields.clear(); nodeScroll.clear(); nodeDrafts.clear(); yamlRequests.clear(); pendingYaml.clear();
+    if (!Object.keys(generatorSchemas).length) generatorSchemas = await api('generator-schemas');
+    if (!Object.keys(spawnerSchemas).length) spawnerSchemas = await api('spawner-schemas');
+    model = new GraphModel(workflowDocument); selected = null; selectedEdge = null; linking = null; generatorError = ''; spawnerError = ''; invalidFields.clear(); nodeScroll.clear(); nodeDrafts.clear(); yamlRequests.clear(); pendingYaml.clear();
     history.replaceState(null, '', `#edit/${encodeURIComponent(key)}`);
     $('#breadcrumb').textContent = `Аирдропы / ${workflowDocument.config.id ?? key}`;
-    $('#app').innerHTML = `<section class="workspace"><div class="workspace-toolbar"><button id="back" class="secondary">←</button><button id="add-node">+ Нода</button><button id="undo" title="Ctrl+Z">↶</button><button id="redo" title="Ctrl+Shift+Z">↷</button><button id="settings" class="optional">Настройки аирдропа</button><div class="spacer"></div><button id="reload-editor" title="Перезагрузить с диска">↻</button><button id="save" class="primary">Сохранить</button></div><aside class="library"><div class="section-label">Компоненты</div><div id="node-library"></div><p>Добавьте компонент, затем потяните от выхода события к нужному входу другой ноды.</p><div class="section-label" style="margin-top:28px">Ноды сценария</div><div id="outline"></div></aside><div class="graph-shell"><svg class="graph" tabindex="0" aria-label="Схема аирдропа"></svg><div class="graph-hint" id="graph-hint">Перетаскивайте ноды · Колесо — масштаб · Фон — перемещение</div><div class="graph-controls"><button id="zoom-out" aria-label="Уменьшить">−</button><span id="zoom-value">100%</span><button id="zoom-in" aria-label="Увеличить">+</button><button id="fit" title="Показать весь граф">⤢</button></div></div><aside class="inspector" id="inspector"></aside><footer class="workspace-status"><span id="node-count"></span><span id="edge-count"></span><span id="warnings"></span><span id="save-state"></span></footer></section>`;
+    $('#app').innerHTML = `<section class="workspace"><div class="workspace-toolbar"><button id="back" class="secondary">←</button><button id="tab-graph" class="editor-tab">Сценарий</button><button id="tab-generator" class="editor-tab">Генератор локации</button><button id="tab-spawner" class="editor-tab">Спавнер и параметры</button><button id="add-node">+ Нода</button><button id="undo" title="Ctrl+Z">↶</button><button id="redo" title="Ctrl+Shift+Z">↷</button><button id="settings" class="optional">Настройки аирдропа</button><div class="spacer"></div><button id="reload-editor" title="Перезагрузить с диска">↻</button><button id="save" class="primary">Сохранить</button></div><aside class="library"><div class="section-label">Компоненты</div><div id="node-library"></div><p>Добавьте компонент, затем потяните от выхода события к нужному входу другой ноды.</p><div class="section-label" style="margin-top:28px">Ноды сценария</div><div id="outline"></div></aside><div class="graph-shell"><svg class="graph" tabindex="0" aria-label="Схема аирдропа"></svg><div class="graph-hint" id="graph-hint">Перетаскивайте ноды · Колесо — масштаб · Фон — перемещение</div><div class="graph-controls"><button id="zoom-out" aria-label="Уменьшить">−</button><span id="zoom-value">100%</span><button id="zoom-in" aria-label="Увеличить">+</button><button id="fit" title="Показать весь граф">⤢</button></div></div><aside class="inspector" id="inspector"></aside><main class="generator-panel" id="generator-panel"></main><main class="spawner-panel" id="spawner-panel"></main><footer class="workspace-status"><span id="node-count"></span><span id="edge-count"></span><span id="warnings"></span><span id="save-state"></span></footer></section>`;
     $('#node-library').innerHTML = Object.entries(schemas).map(([type, schema]) => `<button data-type="${escape(type)}" style="--node-color:${color(type)}">${escape(schema.title)}<small>${escape(type)}</small></button>`).join('');
     $('#node-library').querySelectorAll('button').forEach(button => button.onclick = () => addNode(button.dataset.type));
     $('#back').onclick = () => { if (leave()) { history.replaceState(null, '', '#'); loadHome(); } };
     $('#add-node').onclick = () => addNode(); $('#settings').onclick = editSettings;
+    $('#tab-graph').onclick = () => switchTab('graph'); $('#tab-generator').onclick = () => switchTab('generator'); $('#tab-spawner').onclick = () => switchTab('spawner');
     $('#save').onclick = save; $('#reload-editor').onclick = () => openEditor(model.document.key);
-    $('#undo').onclick = () => { model.undo(); invalidFields.clear(); nodeDrafts.clear(); refresh(); }; $('#redo').onclick = () => { model.redo(); invalidFields.clear(); nodeDrafts.clear(); refresh(); };
+    $('#undo').onclick = () => { model.undo(); generatorError = ''; spawnerError = ''; invalidFields.clear(); nodeDrafts.clear(); refresh(); }; $('#redo').onclick = () => { model.redo(); generatorError = ''; spawnerError = ''; invalidFields.clear(); nodeDrafts.clear(); refresh(); };
     $('#zoom-in').onclick = () => zoomBy(1.15); $('#zoom-out').onclick = () => zoomBy(1 / 1.15); $('#fit').onclick = fit;
     const library=$('#node-library');
     { const b=document.createElement('button'); b.textContent='Заметка · Note'; b.style.setProperty('--node-color','#edc482'); b.onclick=()=>quickAdd('web:note',{x:((($('.graph-shell').clientWidth/2)-graphView.x)/graphView.zoom),y:((($('.graph-shell').clientHeight/2)-graphView.y)/graphView.zoom)}); library.append(b); }
-    graphView = clone(model.metadata.viewport); setupGraph(); refresh();
+    graphView = clone(model.metadata.viewport); setupGraph(); switchTab('graph'); refresh();
     if (!workflowDocument.metadata?.viewport) fit(false);
     if (workflowDocument.validationError) toast(`Конфиг содержит ошибки. Исправьте их перед сохранением.\n${workflowDocument.validationError}`, true);
   } catch (error) { toast(error.message, true); loadHome(); }
 }
 function schemaFor(node) { return schemas[node.type] ?? schemas[`default:${node.type}`] ?? { title: node.type, properties:{}, 'x-events':Object.keys(node).filter(key => key.startsWith('on_')) }; }
+function switchTab(tab) {
+  editorTab = tab;
+  $('.workspace').classList.toggle('generator-active', tab === 'generator');
+  $('.workspace').classList.toggle('spawner-active', tab === 'spawner');
+  $('#tab-graph').classList.toggle('active', tab === 'graph');
+  $('#tab-generator').classList.toggle('active', tab === 'generator');
+  $('#tab-spawner').classList.toggle('active', tab === 'spawner');
+  if (tab === 'generator') drawGenerator();
+  if (tab === 'spawner') drawSpawner();
+}
+function editGenerator(action) {
+  try { action(); }
+  catch (error) { generatorError = error.message; const label = $('.generator-error'); if (label) label.textContent = generatorError; updateStatus(); toast(generatorError, true); }
+}
+function drawGenerator() {
+  const panel = $('#generator-panel'); if (!panel || !model) return;
+  const generator = model.config.generator ?? {type:'generator:fixed', at:'0;100;0'};
+  const schema = generatorSchemas[generator.type];
+  const options = Object.entries(generatorSchemas).map(([type, entry]) => `<option value="${escape(type)}" ${type === generator.type ? 'selected' : ''}>${escape(entry.title)} · ${escape(type)}</option>`).join('');
+  panel.innerHTML = `<div class="generator-card"><div class="eyebrow">МЕСТО ПОЯВЛЕНИЯ</div><h2>Генератор локации</h2><p>Генератор определяет координаты нового аирдропа в выбранном мире.</p><div class="field"><label>Тип генератора</label><select id="generator-type">${schema ? '' : `<option value="${escape(generator.type)}" selected>${escape(generator.type)} · неизвестный тип</option>`}${options}</select></div><p class="muted">${escape(schema?.description ?? 'Тип генератора не зарегистрирован. Его JSON можно отредактировать ниже.')}</p><p class="generator-error">${escape(generatorError)}</p>${Object.entries(schema?.properties ?? {}).filter(([key]) => key !== 'type').map(([key, field]) => {
+    const value = generator[key] ?? field.default ?? '';
+    return `<div class="field"><label>${escape(field.title ?? key)}</label><input data-generator-field="${escape(key)}" type="${field.type === 'integer' ? 'number' : 'text'}" value="${escape(value)}" ${field.minimum !== undefined ? `min="${field.minimum}"` : ''} ${field.type === 'integer' ? 'step="1"' : ''}><small>${escape(field.description ?? '')}</small></div>`;
+  }).join('')}<details><summary class="section-label">Полный JSON генератора</summary><textarea id="raw-generator" rows="12" spellcheck="false">${escape(JSON.stringify(generator, null, 2))}</textarea><small>Неизвестные поля сохраняются.</small><button id="apply-generator-json" type="button">Применить JSON</button></details></div>`;
+  $('#generator-type').onchange = event => editGenerator(() => {
+    const type = event.target.value, selectedSchema = generatorSchemas[type];
+    const next = {type};
+    for (const [key, field] of Object.entries(selectedSchema.properties ?? {})) if (key !== 'type' && Object.hasOwn(field, 'default')) next[key] = clone(field.default);
+    generatorError = ''; model.setGenerator(next); drawGenerator(); updateStatus();
+  });
+  panel.querySelectorAll('[data-generator-field]').forEach(input => input.onchange = () => editGenerator(() => {
+    const key = input.dataset.generatorField, field = schema.properties[key];
+    let value = input.value;
+    if (field.type === 'integer') {
+      value = Number(value);
+      if (!input.value || !Number.isInteger(value) || field.minimum !== undefined && value < field.minimum) throw new Error(`Недопустимое число для «${field.title}»`);
+    }
+    if (field['x-control'] === 'vector' && !/^-?\d+;-?\d+;-?\d+$/.test(value.trim())) throw new Error('Координаты должны быть в формате x;y;z');
+    generatorError = ''; model.setGenerator({...model.config.generator, [key]:value}); drawGenerator(); updateStatus();
+  }));
+  $('#apply-generator-json').onclick = () => editGenerator(() => {
+    const next = JSON.parse($('#raw-generator').value);
+    if (!next || Array.isArray(next) || typeof next !== 'object' || typeof next.type !== 'string') throw new Error('Нужен объект генератора с полем type');
+    generatorError = ''; model.setGenerator(next); drawGenerator(); updateStatus();
+  });
+}
+function editSpawner(action) {
+  try {
+    action(); spawnerError = ''; drawSpawner(); updateStatus();
+  } catch (error) {
+    spawnerError = error.message; const label = $('.spawner-error'); if (label) label.textContent = spawnerError;
+    updateStatus(); toast(spawnerError, true);
+  }
+}
+function changeSpawner(action) {
+  const next = clone(model.config.spawner ?? {type:'spawner:timer', time:'5m', when:{}, on_timer_end:[{make:{}}]});
+  action(next); model.setSpawner(next);
+}
+function mapRows(kind, entries, extra = '') {
+  return Object.entries(entries ?? {}).map(([key,value]) => `<div class="spawner-map-row" data-map-row="${kind}" data-original="${escape(key)}" ${extra}><input data-map-key value="${escape(key)}" aria-label="Имя параметра" placeholder="loot_table"><input data-map-value value="${escape(value)}" aria-label="Значение параметра" placeholder="example/default"><button type="button" data-op="remove-pair" title="Удалить">×</button></div>`).join('');
+}
+function messageRows(handler, stage, time = '') {
+  const list = messages(handler);
+  return list.map(({index,text}) => `<div class="spawner-message" data-stage="${stage}" data-time="${escape(time)}" data-index="${index}"><textarea data-message rows="3" spellcheck="false" aria-label="Текст объявления">${escape(text)}</textarea><button type="button" data-op="remove-message" title="Удалить сообщение">×</button></div>`).join('') || '<p class="muted">Сообщений пока нет.</p>';
+}
+function drawSpawner() {
+  const panel = $('#spawner-panel'); if (!panel || !model) return;
+  const spawner = model.config.spawner ?? {type:'spawner:timer',time:'5m',when:{},on_timer_end:[{make:{}}]};
+  const schema = spawnerSchemas[spawner.type], supported = spawner.type === 'spawner:timer';
+  const args = model.config.args ?? {}, when = spawner.when ?? {}, choices = variants(spawner.on_create), make = makeCommand(spawner.on_timer_end);
+  const options = Object.entries(spawnerSchemas).map(([type,entry]) => `<option value="${escape(type)}" ${type === spawner.type ? 'selected' : ''}>${escape(entry.title)} · ${escape(type)}</option>`).join('');
+  panel.innerHTML = `<div class="spawner-content"><div class="eyebrow">ЗАПУСК АИРДРОПА</div><h2>Спавнер и параметры</h2><p class="muted">Параметры по умолчанию попадут в аирдроп. Спавнер может выбрать другие значения и передать их при создании.</p><p class="spawner-error">${escape(spawnerError)}</p><section class="spawner-section"><h3>Тип спавнера</h3><select id="spawner-type">${schema ? '' : `<option value="${escape(spawner.type)}" selected>${escape(spawner.type)} · неизвестный тип</option>`}${options}</select><small>${escape(schema?.description ?? 'Неизвестный тип. Используйте полный JSON ниже.')}</small></section><section class="spawner-section"><div class="spawner-section-head"><div><h3>Параметры аирдропа</h3><p>Значения по умолчанию доступны в нодах как {args:имя}.</p></div><button type="button" data-op="add-pair" data-kind="args">+ Параметр</button></div>${mapRows('args',args) || '<p class="muted">Параметров нет.</p>'}</section>${supported ? `<section class="spawner-section"><h3>Отсчёт</h3><div class="field"><label>Время до появления</label><input id="spawner-time" value="${escape(spawner.time ?? '5m')}" placeholder="5m"><small>Например: 5m, 1h30m.</small></div></section><section class="spawner-section"><div class="spawner-section-head"><div><h3>Случайный вариант</h3><p>При запуске выбирается один вариант. Вес — относительная вероятность. Значения доступны в сообщениях как {value:имя}.</p></div><button type="button" data-op="add-variant">+ Вариант</button></div>${choices.map(({weight,branch}) => `<div class="spawner-card" data-variant="${escape(weight)}"><div class="spawner-card-head"><label>Вес <input data-variant-weight type="number" min="0.001" step="any" value="${escape(weight)}"></label><button type="button" data-op="remove-variant" class="danger">Удалить вариант</button></div>${variantValues(branch).map(({index,key,value}) => `<div class="spawner-map-row" data-map-row="variant" data-index="${index}"><input data-map-key value="${escape(key)}" aria-label="Имя значения"><input data-map-value value="${escape(value)}" aria-label="Значение"><button type="button" data-op="remove-pair" title="Удалить">×</button></div>`).join('')}<button type="button" class="secondary" data-op="add-pair" data-kind="variant">+ Значение</button>${branch.length > variantValues(branch).length ? `<small>Остальные команды варианта сохраняются в полном JSON.</small>` : ''}</div>`).join('') || '<p class="muted">Вариантов нет: значение можно взять из параметров по умолчанию.</p>'}</section><section class="spawner-section"><div class="spawner-section-head"><div><h3>При запуске отсчёта</h3><p>Объявления после выбора случайного варианта.</p></div><button type="button" data-op="add-message" data-stage="on_create">+ Сообщение</button></div>${messageRows(spawner.on_create,'on_create')}</section><section class="spawner-section"><div class="spawner-section-head"><div><h3>Объявления по времени</h3><p>Момент или диапазон оставшегося времени: 2m, 5s-1s.</p></div><button type="button" data-op="add-time">+ Время</button></div>${Object.entries(when).map(([time,handler]) => `<div class="spawner-card" data-time-card="${escape(time)}"><div class="spawner-card-head"><label>Осталось <input data-time-key value="${escape(time)}" placeholder="2m"></label><button type="button" data-op="remove-time" class="danger">Удалить</button></div>${messageRows(handler,'when',time)}<button type="button" class="secondary" data-op="add-message" data-stage="when" data-time="${escape(time)}">+ Сообщение</button>${actions(handler).length > messages(handler).length ? '<small>Другие команды этого времени сохранены в полном JSON.</small>' : ''}</div>`).join('') || '<p class="muted">Промежуточных объявлений нет.</p>'}</section><section class="spawner-section"><div class="spawner-section-head"><div><h3>Когда время вышло</h3><p>Последние объявления и создание аирдропа.</p></div><button type="button" data-op="add-message" data-stage="on_timer_end">+ Сообщение</button></div>${messageRows(spawner.on_timer_end,'on_timer_end')}<div class="spawner-card"><div class="spawner-section-head"><div><h3>Создать аирдроп</h3><p>Переданные значения заменяют параметры по умолчанию. Например, loot_table = {value:loot_table}.</p></div><button type="button" data-op="toggle-make" class="${make.index >= 0 ? 'danger' : ''}">${make.index >= 0 ? 'Убрать создание' : '+ Создавать'}</button></div>${make.index >= 0 ? `<div class="spawner-section-head"><b>Передаваемые параметры</b><button type="button" data-op="add-pair" data-kind="make">+ Параметр</button></div>${mapRows('make',make.params) || '<p class="muted">Будут использованы параметры по умолчанию.</p>'}` : '<p class="muted">По завершении отсчёта аирдроп не создаётся.</p>'}</div></section>` : ''}<section class="spawner-section"><details><summary>Полный JSON спавнера</summary><p class="muted">Для дополнительных команд EventDSL и нестандартных настроек.</p><textarea id="raw-spawner" rows="16" spellcheck="false">${escape(JSON.stringify(spawner,null,2))}</textarea><button type="button" id="apply-spawner-json">Применить JSON</button></details></section></div>`;
+  $('#spawner-type').onchange = event => editSpawner(() => {
+    const type = event.target.value, selectedSchema = spawnerSchemas[type];
+    if (!selectedSchema) throw new Error('Тип спавнера не найден');
+    const next = {type}; for (const [key,field] of Object.entries(selectedSchema.properties ?? {})) if (key !== 'type' && Object.hasOwn(field,'default')) next[key] = clone(field.default);
+    if (type === 'spawner:timer') next.on_timer_end = [{make:{}}];
+    model.setSpawner(next);
+  });
+  $('#apply-spawner-json').onclick = () => editSpawner(() => {
+    const next = JSON.parse($('#raw-spawner').value);
+    if (!next || typeof next !== 'object' || Array.isArray(next) || typeof next.type !== 'string') throw new Error('Нужен объект спавнера с полем type');
+    model.setSpawner(next);
+  });
+  panel.onchange = event => {
+    if (!event.target.matches('#spawner-time,[data-variant-weight],[data-time-key],[data-message],[data-map-key],[data-map-value]')) return;
+    editSpawner(() => {
+    const input = event.target, row = input.closest('[data-map-row]'), variant = input.closest('[data-variant]'), timeCard = input.closest('[data-time-card]');
+    if (input.id === 'spawner-time') {
+      if (!validDuration(input.value)) throw new Error('Время: используйте формат 5m или 1h30m');
+      changeSpawner(next => next.time = input.value); return;
+    }
+    if (input.matches('[data-variant-weight]')) {
+      const old = variant.dataset.variant, weight = input.value.trim();
+      if (!Number.isFinite(Number(weight)) || Number(weight) <= 0) throw new Error('Вес должен быть больше нуля');
+      changeSpawner(next => next.on_create = editVariants(next.on_create, weights => {
+        if (weight !== old && Object.hasOwn(weights,weight)) throw new Error('Такой вес уже есть');
+        const branch = weights[old]; delete weights[old]; weights[weight] = branch;
+      })); return;
+    }
+    if (input.matches('[data-time-key]')) {
+      const old = timeCard.dataset.timeCard, key = input.value.trim();
+      if (!validTimeKey(key)) throw new Error('Время: используйте 2m или диапазон 5s-1s');
+      changeSpawner(next => {
+        if (key !== old && Object.hasOwn(next.when,key)) throw new Error('Такое время уже есть');
+        const handler = next.when[old]; delete next.when[old]; next.when[key] = handler;
+      }); return;
+    }
+    if (input.matches('[data-message]')) {
+      const box = input.closest('[data-stage]'), stage = box.dataset.stage, time = box.dataset.time, index = Number(box.dataset.index);
+      changeSpawner(next => { if (stage === 'when') next.when[time] = setMessage(next.when[time],index,input.value); else next[stage] = setMessage(next[stage],index,input.value); }); return;
+    }
+    if (row) {
+      const kind = row.dataset.mapRow, key = row.querySelector('[data-map-key]').value.trim(), value = row.querySelector('[data-map-value]').value;
+      if (!key || /\s/.test(key)) throw new Error('Имя параметра должно быть без пробелов');
+      if (kind === 'variant') {
+        if (!value.trim()) throw new Error('Введите значение варианта');
+        const weight = variant.dataset.variant, index = Number(row.dataset.index);
+        changeSpawner(next => next.on_create = editVariants(next.on_create, weights => {
+          const values = variantValues(weights[weight]);
+          if (values.some(item => item.index !== index && item.key === key)) throw new Error('Имя значения уже есть в этом варианте');
+          weights[weight] = setVariantValue(weights[weight], index, key, value);
+        }));
+      } else {
+        const old = row.dataset.original, values = kind === 'args' ? {...args} : {...make.params};
+        if (key !== old && Object.hasOwn(values,key)) throw new Error('Такой параметр уже есть');
+        delete values[old]; values[key] = value;
+        if (kind === 'args') model.setArgs(values); else changeSpawner(next => next.on_timer_end = setMakeParams(next.on_timer_end,values));
+      }
+    }
+    });
+  };
+  panel.onclick = async event => {
+    const button = event.target.closest('[data-op]'); if (!button) return;
+    const op = button.dataset.op, variant = button.closest('[data-variant]'), timeCard = button.closest('[data-time-card]'), row = button.closest('[data-map-row]');
+    const pair = async (title, keyLabel, valueLabel) => dialog(`<h2>${title}</h2><div class="field"><label>${keyLabel}</label><input name="key" required autocomplete="off"></div><div class="field"><label>${valueLabel}</label><input name="value" required autocomplete="off"></div>`, 'Добавить');
+    if (op === 'add-pair' || op === 'add-variant' || op === 'add-time' || op === 'add-message') {
+      let result;
+      if (op === 'add-message') result = await dialog('<h2>Новое объявление</h2><div class="field"><label>Текст сообщения</label><textarea name="text" required rows="5" placeholder="Аирдроп появится через {time} сек."></textarea></div>', 'Добавить');
+      else if (op === 'add-time') result = await pair('Время объявления','Осталось времени: 2m или 5s-1s','Первое сообщение');
+      else if (op === 'add-variant') result = await dialog('<h2>Случайный вариант</h2><div class="field"><label>Вес</label><input name="weight" type="number" min="0.001" step="any" required placeholder="20"></div><div class="field"><label>Имя значения</label><input name="key" required placeholder="type"></div><div class="field"><label>Значение</label><input name="value" required placeholder="элитный"></div>', 'Добавить');
+      else result = await pair('Новый параметр','Имя','Значение');
+      if (!result) return;
+      editSpawner(() => {
+        if (op === 'add-message') {
+          const stage = button.dataset.stage, time = button.dataset.time, value = String(result.get('text'));
+          changeSpawner(next => { if (stage === 'when') next.when[time] = setMessage(next.when[time],null,value); else next[stage] = setMessage(next[stage],null,value); });
+        } else if (op === 'add-time') {
+          const key = String(result.get('key')).trim(), value = String(result.get('value'));
+          if (!validTimeKey(key)) throw new Error('Время: используйте 2m или 5s-1s');
+          changeSpawner(next => { next.when ??= {}; if (Object.hasOwn(next.when,key)) throw new Error('Такое время уже есть'); next.when[key] = [{bc:value}]; });
+        } else if (op === 'add-variant') {
+          const weight = String(result.get('weight')).trim(), key = String(result.get('key')).trim(), value = String(result.get('value'));
+          if (!Number.isFinite(Number(weight)) || Number(weight) <= 0 || !key || /\s/.test(key)) throw new Error('Укажите положительный вес и имя без пробелов');
+          changeSpawner(next => next.on_create = editVariants(next.on_create, weights => { if (Object.hasOwn(weights,weight)) throw new Error('Такой вес уже есть'); weights[weight] = setVariantValue([],null,key,value); }));
+        } else {
+          const kind = button.dataset.kind, key = String(result.get('key')).trim(), value = String(result.get('value'));
+          if (!key || /\s/.test(key)) throw new Error('Имя параметра должно быть без пробелов');
+          if (kind === 'variant') changeSpawner(next => next.on_create = editVariants(next.on_create, weights => {
+            const weight = variant.dataset.variant;
+            if (variantValues(weights[weight]).some(item => item.key === key)) throw new Error('Такое имя уже есть');
+            weights[weight] = setVariantValue(weights[weight],null,key,value);
+          }));
+          else { const values = kind === 'args' ? {...args} : {...make.params}; if (Object.hasOwn(values,key)) throw new Error('Такой параметр уже есть'); values[key] = value;
+            if (kind === 'args') model.setArgs(values); else changeSpawner(next => next.on_timer_end = setMakeParams(next.on_timer_end,values)); }
+        }
+      });
+      return;
+    }
+    editSpawner(() => {
+      if (op === 'remove-variant') changeSpawner(next => next.on_create = editVariants(next.on_create, weights => delete weights[variant.dataset.variant]));
+      else if (op === 'remove-time') changeSpawner(next => { delete next.when[timeCard.dataset.timeCard]; });
+      else if (op === 'remove-message') { const box = button.closest('[data-stage]'), stage = box.dataset.stage, time = box.dataset.time, index = Number(box.dataset.index);
+        changeSpawner(next => { if (stage === 'when') next.when[time] = removeMessage(next.when[time],index); else next[stage] = removeMessage(next[stage],index); }); }
+      else if (op === 'toggle-make') changeSpawner(next => next.on_timer_end = make.index >= 0 ? removeMake(next.on_timer_end) : setMakeParams(next.on_timer_end,{}));
+      else if (op === 'remove-pair') {
+        const kind = row.dataset.mapRow;
+        if (kind === 'variant') changeSpawner(next => next.on_create = editVariants(next.on_create, weights => { const weight = variant.dataset.variant; weights[weight] = removeVariantValue(weights[weight],Number(row.dataset.index)); }));
+        else { const values = kind === 'args' ? {...args} : {...make.params}; delete values[row.dataset.original];
+          if (kind === 'args') model.setArgs(values); else changeSpawner(next => next.on_timer_end = setMakeParams(next.on_timer_end,values)); }
+      }
+    });
+  };
+}
 const eventsFor = node => [...new Set([...(schemaFor(node)['x-events'] ?? []), ...Object.keys(node).filter(key => key.startsWith('on_'))])];
 function refresh() {
   if (!model) return;
@@ -100,6 +287,8 @@ function refresh() {
   if (selected && !model.node(selected)) selected = null;
   if (selectedEdge) selectedEdge = model.edges().find(edge => edge.id === selectedEdge.id) ?? null;
   drawGraph(); drawInspector();
+  if (editorTab === 'generator') drawGenerator();
+  if (editorTab === 'spawner') drawSpawner();
   $('#outline').innerHTML = Object.entries(model.allNodes()).map(([name, node]) => `<button class="outline-node ${selected === name ? 'active' : ''}" data-name="${escape(name)}"><span style="color:${model.layout(name).color || color(node.type)}">●</span> ${escape(model.title(name))}</button>`).join('');
   $('#outline').querySelectorAll('button').forEach(button => button.onclick = () => { selected = button.dataset.name; selectedEdge = null; refresh(); });
   updateStatus();
@@ -107,8 +296,8 @@ function refresh() {
 function updateStatus() {
   const edges = model.edges(); $('#node-count').textContent = `${Object.keys(model.allNodes()).length} нод`; $('#edge-count').textContent = `${edges.length} связей`;
   const missing = edges.filter(edge => edge.missing && !edge.dynamic).length;
-  $('#warnings').textContent = missing ? `${missing} ссылок на отсутствующие ноды` : '';
-  $('#warnings').className = missing ? 'warn' : '';
+  $('#warnings').textContent = [missing ? `${missing} ссылок на отсутствующие ноды` : '', generatorError, spawnerError].filter(Boolean).join(' · ');
+  $('#warnings').className = missing || generatorError || spawnerError ? 'warn' : '';
   $('#save-state').textContent = model.dirty ? '● Есть несохранённые изменения' : 'Все изменения сохранены';
   $('#undo').disabled = !model.undoStack.length; $('#redo').disabled = !model.redoStack.length;
 }
@@ -153,6 +342,7 @@ function nodeFields(name,node,schema) {
       return `<div class="node-field"><label>${escape(title)} <span>команды</span></label><textarea data-node-event="${escape(name)}" data-field="${escape(key)}" class="${state?'invalid':''}" spellcheck="false" placeholder="- bc: Привет всем">${escape(nodeDrafts.get(JSON.stringify([name,key]))??formatCommands(handlerList(value)))}</textarea><small class="node-field-error">${escape(state?.message??'')}</small></div>`;
     }
     if(control==='lines') return `<div class="node-field"><label>${escape(title)}</label><textarea data-node-lines="${escape(name)}" data-field="${escape(key)}" spellcheck="false" placeholder="Одна строка на линию">${escape(nodeDrafts.get(JSON.stringify([name,key]))??(Array.isArray(value)?value.join('\n'):value))}</textarea></div>`;
+    if(control==='materials' || control==='material-map') return `<div class="node-field"><label>${escape(title)}</label><div class="node-field-summary">${escape(control==='materials' ? `${Array.isArray(value)?value.length:0} материалов` : `${Object.keys(value ?? {}).length} замен`)} · настройка справа</div></div>`;
     if(field.type==='string'||field.type==='integer') return `<div class="node-field"><label>${escape(title)}</label><input data-inline-node="${escape(name)}" data-inline-field="${escape(key)}" type="${field.type==='integer'?'number':'text'}" value="${escape(value)}" ${field.minimum!==undefined?`min="${field.minimum}"`:''}></div>`;
     return `<div class="node-field"><label>${escape(title)}</label><div class="node-field-summary">${escape(Array.isArray(value)?`${value.length} элементов`:typeof value==='object'?Object.keys(value??{}).join(', '):String(value))}</div></div>`;
   });
@@ -372,6 +562,37 @@ function bindCommandEditor(panel, key, read, write) {
   };
   input.onchange=()=>trackYaml(commit());
 }
+function materialEditor(key, value, control) {
+  const entries = control === 'materials' ? (Array.isArray(value) ? value : []).map(item => [item]) : Object.entries(value && typeof value === 'object' && !Array.isArray(value) ? value : {});
+  const rows = entries.map(([source, target], index) => `<div class="material-row"><input data-material-key="${escape(key)}" data-material-index="${index}" value="${escape(source)}" placeholder="${control === 'materials' ? 'bedrock' : 'barrier'}" aria-label="Материал ${index + 1}">${control === 'material-map' ? `<span>→</span><input data-material-value="${escape(key)}" data-material-index="${index}" value="${escape(target)}" placeholder="air" aria-label="Замена ${index + 1}">` : ''}<button type="button" data-material-remove="${escape(key)}" data-material-index="${index}" title="Удалить">×</button></div>`).join('');
+  return `<div class="material-editor" data-material-editor="${escape(key)}" data-material-control="${control}">${rows}<button type="button" class="secondary" data-material-add="${escape(key)}">+ ${control === 'materials' ? 'Материал' : 'Замена'}</button></div>`;
+}
+function bindMaterialEditors(panel) {
+  panel.querySelectorAll('[data-material-editor]').forEach(editor => {
+    const key = editor.dataset.materialEditor, control = editor.dataset.materialControl;
+    const commit = () => {
+      const rows = [...editor.querySelectorAll('.material-row')];
+      const entries = rows.map(row => [row.querySelector('[data-material-key]').value.trim(), row.querySelector('[data-material-value]')?.value.trim()]);
+      if (entries.some(([source, target]) => !source || control === 'material-map' && !target)) throw new Error('Заполните все материалы');
+      if (new Set(entries.map(([source]) => source.toLowerCase())).size !== entries.length) throw new Error('Материалы не должны повторяться');
+      model.setField(selected, key, control === 'materials' ? entries.map(([source]) => source) : Object.fromEntries(entries));
+      invalidFields.delete(JSON.stringify([selected, key]));
+      drawGraph(); drawInspector(); updateStatus();
+    };
+    const apply = () => { try { commit(); } catch (error) { invalidFields.set(JSON.stringify([selected, key]), {message:error.message}); toast(error.message, true); } };
+    editor.querySelectorAll('input').forEach(input => input.onchange = apply);
+    editor.querySelectorAll('[data-material-remove]').forEach(button => button.onclick = () => { button.closest('.material-row').remove(); apply(); });
+    editor.querySelector('[data-material-add]').onclick = () => {
+      const row = document.createElement('div'); row.className = 'material-row';
+      row.innerHTML = `<input data-material-key="${escape(key)}" placeholder="${control === 'materials' ? 'bedrock' : 'barrier'}" aria-label="Новый материал">${control === 'material-map' ? `<span>→</span><input data-material-value="${escape(key)}" placeholder="air" aria-label="Новая замена">` : ''}<button type="button" title="Удалить">×</button>`;
+      editor.insertBefore(row, editor.querySelector('[data-material-add]'));
+      invalidFields.set(JSON.stringify([selected, key]), {message:'Заполните новый материал'});
+      row.querySelector('input').focus();
+      row.querySelectorAll('input').forEach(input => input.onchange = apply);
+      row.querySelector('button').onclick = () => { row.remove(); apply(); };
+    };
+  });
+}
 function drawInspector() {
   const panel = $('#inspector');
   if (selectedEdge) {
@@ -386,13 +607,14 @@ function drawInspector() {
     const value = node[key] ?? field.default ?? '', control = field['x-control'], json = control === 'event' || (!control && ['array','object'].includes(field.type));
     const draft = invalidFields.get(JSON.stringify([selected, key]));
     const display = draft?.value ?? (control === 'lines' ? (Array.isArray(value) ? value.join('\n') : value) : json ? JSON.stringify(value, null, 2) : value);
-    const body = control === 'event' ? commandEditor(value,key) : control === 'lines' || json ? `<textarea data-field="${escape(key)}" data-control="${control ?? 'json'}" rows="${json ? 5 : 3}" spellcheck="false">${escape(display)}</textarea>` : `<input data-field="${escape(key)}" data-control="${field.type}" type="${field.type === 'integer' ? 'number' : 'text'}" value="${escape(display)}" ${field.minimum !== undefined ? `min="${field.minimum}"` : ''} ${field.type === 'integer' ? 'step="1"' : ''} ${required.includes(key) ? 'required' : ''}>`;
+    const body = control === 'event' ? commandEditor(value,key) : control === 'materials' || control === 'material-map' ? materialEditor(key,value,control) : control === 'lines' || json ? `<textarea data-field="${escape(key)}" data-control="${control ?? 'json'}" rows="${json ? 5 : 3}" spellcheck="false">${escape(display)}</textarea>` : `<input data-field="${escape(key)}" data-control="${field.type}" type="${field.type === 'integer' ? 'number' : 'text'}" value="${escape(display)}" ${field.minimum !== undefined ? `min="${field.minimum}"` : ''} ${field.type === 'integer' ? 'step="1"' : ''} ${required.includes(key) ? 'required' : ''}>`;
     return `<div class="field${draft ? ' error' : ''}"><label>${escape(field.title ?? key)}${required.includes(key) ? ' *' : ''}</label>${body}<small>${escape(control === 'event' ? 'Связи create, remove и destroy соединяются на схеме.' : field.description ?? '')}</small><small class="field-error">${escape(draft?.message ?? '')}</small></div>`;
   }).join('')}<details><summary class="section-label">Полный JSON ноды</summary><textarea id="raw-node" rows="14" spellcheck="false">${escape(JSON.stringify(node, null, 2))}</textarea><small>Неизвестные поля сохраняются.</small><button id="apply-raw" style="margin-top:10px">Применить JSON</button></details><div class="section-label">Исходящие связи</div><div id="inspector-edges"></div>`;
   $('#node-title').onchange = event => { model.setTitle(selected,event.target.value); refresh(); };
   $('#node-color').oninput = event => { model.setColor(selected,event.target.value);drawGraph();updateStatus(); };
   $('#reset-color').onclick = () => {model.setColor(selected,null);refresh();};
   fields.filter(([,field])=>field['x-control']==='event').forEach(([key])=>{const name=selected;bindCommandEditor(panel,key,()=>model.nodes[name][key]??[],values=>model.setField(name,key,values));});
+  bindMaterialEditors(panel);
   $('#node-name').onchange = event => safe(() => {
     const old = selected, name = event.target.value.trim(); model.rename(old, name);
     for (const [key, draft] of [...invalidFields]) { const [nodeName, field] = JSON.parse(key); if (nodeName === old) { invalidFields.delete(key); invalidFields.set(JSON.stringify([name, field]), draft); } }
@@ -447,12 +669,12 @@ async function addNode(type) {
   });
 }
 async function editSettings() {
-  const data = model.payload().settings;
-  const result = await dialog(`<h2>Настройки аирдропа</h2><p>Идентификатор, мир, аргументы, генератор и спавнер. Прочие поля файла сохраняются без изменения.</p><textarea class="settings-json" name="settings" spellcheck="false">${escape(JSON.stringify(data, null, 2))}</textarea>`, 'Применить');
+  const {generator, spawner, args, ...data} = model.payload().settings;
+  const result = await dialog(`<h2>Настройки аирдропа</h2><p>Идентификатор и мир. Генератор, спавнер и параметры аирдропа редактируются на вкладках.</p><textarea class="settings-json" name="settings" spellcheck="false">${escape(JSON.stringify(data, null, 2))}</textarea>`, 'Применить');
   if (!result) return;
   safe(() => {
     const parsed = JSON.parse(result.get('settings'));
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) || Object.keys(parsed).some(key => !settingsKeys.includes(key))) throw new Error('Допустимые поля: ' + settingsKeys.join(', '));
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) || Object.keys(parsed).some(key => !['id','world'].includes(key))) throw new Error('Допустимые поля: id, world');
     model.change(() => Object.assign(model.config, parsed)); refresh();
   });
 }
@@ -462,7 +684,7 @@ async function save() {
   try {
     if (pendingYaml.size) await Promise.all([...pendingYaml]);
     if (model !== current) return;
-    if (invalidFields.size) { toast('Исправьте ошибки в полях перед сохранением.', true); return; }
+    if (invalidFields.size || generatorError || spawnerError) { toast('Исправьте ошибки в полях перед сохранением.', true); return; }
     button.textContent = 'Сохранение…';
     const sent = current.snapshot();
     const document = await api('airdrop', current.payload());
@@ -476,7 +698,7 @@ window.addEventListener('keydown', event => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { event.preventDefault(); document.activeElement?.blur(); save(); return; }
   if (['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)) return;
   if (event.key === 'Escape') { cancelGesture(); return; }
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? model.redo() : model.undo(); invalidFields.clear(); nodeDrafts.clear(); refresh(); }
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? model.redo() : model.undo(); generatorError = ''; spawnerError = ''; invalidFields.clear(); nodeDrafts.clear(); refresh(); }
   if (event.key === 'Delete') safe(() => { if (selectedEdge) { model.removeEdge(selectedEdge); selectedEdge = null; refresh(); } else if (selected && confirm(`Удалить ноду «${selected}»?`)) { model.remove(selected); selected = null; refresh(); } });
 });
 const initialKey = location.hash.startsWith('#edit/') ? decodeURIComponent(location.hash.slice(6)) : null;

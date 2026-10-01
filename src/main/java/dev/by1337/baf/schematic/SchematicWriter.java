@@ -27,7 +27,7 @@ public class SchematicWriter {
             var current = world.getBlockAt(x, y, z);
             if (schematic.no_replace().contains(current.getType())) return;
             placedBlocks.add(Vec3i.asLong(x, y, z));
-            fakeBlockSetter.set(x, y, z, pair.getRight());
+            fakeBlockSetter.set(x, y, z, schematic.replace(pair.getRight()));
         });
     }
 
