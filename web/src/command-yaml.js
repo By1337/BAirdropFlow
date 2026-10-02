@@ -45,6 +45,40 @@ function lines(value, depth, prefix) {
   return `${space}${prefix}${scalar(value)}\n`;
 }
 
+export function formatActions(values) {
+  return values.map(value=>lines(value,0,'- ')).join('').replace(/\n$/, '');
+}
 export function formatCommands(values) {
-  return editableCommands(values).map(value=>lines(value,0,'- ')).join('').replace(/\n$/, '');
+  return formatActions(editableCommands(values));
+}
+
+// A local export must also retain command text that has not been parsed by the server yet.
+export function formatWorkflowYaml(config, metadata, drafts = new Map()) {
+  const document = structuredClone(config);
+  document.$web_meta = JSON.stringify(metadata);
+  const output = [];
+  for (const [key, value] of Object.entries(document)) {
+    if (key !== 'nodes' || !value || typeof value !== 'object' || Array.isArray(value)) {
+      output.push(lines(value, 0, `${keyOf(key)}: `));
+      continue;
+    }
+    if (!Object.keys(value).length) { output.push('nodes: {}\n'); continue; }
+    output.push('nodes:\n');
+    for (const [name, node] of Object.entries(value)) {
+      output.push(`  ${keyOf(name)}:\n`);
+      for (const [field, item] of Object.entries(node)) {
+        const draft = drafts.get(JSON.stringify([name, field]));
+        if (field !== 'on_run' || node.type !== 'default:commands' || draft === undefined) {
+          output.push(lines(item, 4, `${keyOf(field)}: `));
+          continue;
+        }
+        const connections = Array.isArray(item) ? item.filter(isConnection) : [];
+        if (!draft.trim() && !connections.length) { output.push('    on_run: []\n'); continue; }
+        output.push('    on_run:\n');
+        if (draft.trim()) output.push(draft.replace(/\n$/, '').split('\n').map(line => `      ${line}\n`).join(''));
+        for (const connection of connections) output.push(lines(connection, 6, '- '));
+      }
+    }
+  }
+  return output.join('');
 }

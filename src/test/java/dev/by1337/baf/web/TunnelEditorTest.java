@@ -65,9 +65,23 @@ class TunnelEditorTest {
             assertEquals(1, catalogue.size());
             assertTrue(catalogue.get(0).getAsJsonObject().get("valid").getAsBoolean());
             var schemas = json(send(server, "schemas", "GET", null)).getAsJsonObject("data");
-            assertEquals(8, schemas.size());
+            assertEquals(10, schemas.size());
             assertTrue(schemas.getAsJsonObject("tick:timer").getAsJsonObject("properties").has("timer"));
-            assertFalse(schemas.has("default:commands"));
+            var particleSchema = schemas.getAsJsonObject("particle:animation");
+            assertTrue(particleSchema.getAsJsonObject("properties").has("animation"));
+            assertTrue(particleSchema.getAsJsonObject("properties").has("ticks"));
+            assertTrue(particleSchema.getAsJsonObject("properties").has("offsets"));
+            assertFalse(particleSchema.getAsJsonObject("properties").has("infinity"));
+            var commands = schemas.getAsJsonObject("default:commands");
+            assertEquals("on_run", commands.getAsJsonArray("x-events").get(0).getAsString());
+            assertEquals("run", commands.getAsJsonArray("x-inputs").get(0).getAsString());
+            assertFalse(schemas.getAsJsonObject("default:__init__").getAsJsonArray("x-events").contains(new JsonPrimitive("on_create")));
+            assertFalse(schemas.getAsJsonObject("default:__destroy__").getAsJsonArray("x-events").contains(new JsonPrimitive("on_remove")));
+            for (String type : new String[]{"schematic:paster", "wg:region"}) {
+                var events = schemas.getAsJsonObject(type).getAsJsonArray("x-events");
+                assertTrue(events.contains(new JsonPrimitive("on_create")), type);
+                assertTrue(events.contains(new JsonPrimitive("on_remove")), type);
+            }
             var schematicFields = schemas.getAsJsonObject("schematic:paster").getAsJsonObject("properties");
             assertEquals("materials", schematicFields.getAsJsonObject("no_place").get("x-control").getAsString());
             assertEquals("material-map", schematicFields.getAsJsonObject("replace").get("x-control").getAsString());
@@ -81,6 +95,10 @@ class TunnelEditorTest {
             JsonObject parsedYaml = json(send(server, "commands/parse", "POST", yamlBody.toString()));
             assertTrue(parsedYaml.get("ok").getAsBoolean(), parsedYaml.toString());
             assertEquals("Привет\nвсем", parsedYaml.getAsJsonArray("data").get(0).getAsJsonObject().get("bc").getAsString());
+            yamlBody.addProperty("yaml", "- setblock: '{x} {y} {z} minecraft:respawn_anchor[charges=4]'\n- console: '123213'");
+            var commandList = json(send(server, "commands/parse", "POST", yamlBody.toString())).getAsJsonArray("data");
+            assertEquals(2, commandList.size());
+            assertEquals("{x} {y} {z} minecraft:respawn_anchor[charges=4]", commandList.get(0).getAsJsonObject().get("setblock").getAsString());
             yamlBody.addProperty("yaml", "- create: timer");
             assertFalse(json(send(server, "commands/parse", "POST", yamlBody.toString())).get("ok").getAsBoolean());
             yamlBody.addProperty("yaml", "- '[destroy]'");
@@ -112,15 +130,23 @@ class TunnelEditorTest {
             actions.add(broadcast);
             actions.add("[setblock] 10 10 10 air");
             body.getAsJsonObject("nodes").getAsJsonObject("opening").add("on_create", actions);
+            body.getAsJsonObject("nodes").add("commands", JsonParser.parseString("""
+                    {"type":"default:commands","on_run":[
+                      {"setblock":"{x} {y} {z} minecraft:respawn_anchor[charges=4]"},
+                      {"console":"123213"}]}
+                    """).getAsJsonObject());
             JsonObject point = new JsonObject();
             point.addProperty("x", 123);
             point.addProperty("y", -42);
             JsonObject positions = new JsonObject();
             positions.add("opening", point);
             body.getAsJsonObject("metadata").add("nodes", positions);
+            assertEquals(original.get("revision").getAsString(), data(server).get("revision").getAsString());
             var saved = json(send(server, "airdrop", "POST", body.toString()));
             assertTrue(saved.get("ok").getAsBoolean(), saved.toString());
+            assertTrue(Files.readString(dir.resolve("data/workflow/default.yml")).contains("minecraft:respawn_anchor[charges=4]"));
             JsonObject roundTrip = data(server);
+            assertEquals(2, roundTrip.getAsJsonObject("config").getAsJsonObject("nodes").getAsJsonObject("commands").getAsJsonArray("on_run").size());
             assertEquals(45, roundTrip.getAsJsonObject("config").getAsJsonObject("nodes").getAsJsonObject("opening").get("timer").getAsInt());
             assertEquals(generator, roundTrip.getAsJsonObject("config").getAsJsonObject("generator"));
             assertEquals(args, roundTrip.getAsJsonObject("config").getAsJsonObject("args"));

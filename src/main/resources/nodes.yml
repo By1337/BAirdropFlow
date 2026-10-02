@@ -9,6 +9,8 @@ nodes:
       - bedrock
     replace:
       barrier: air
+    on_create: []
+    on_remove: []
 
 
 
@@ -36,4 +38,18 @@ nodes:
     on_timer_end: []
     on_remove: []
 
+  # Анимация из plugins/BAirdropFlow/particles/example.yml (ID без расширения).
+  particle:
+    type: particle:animation
+    animation: example
+    offsets: 0;0;0
+    ticks: 100
+    on_create: []
+    on_timer_end: []
+    on_remove: []
 
+  commands:
+    type: default:commands
+    on_run:
+      - setblock: '{x} {y} {z} minecraft:respawn_anchor[charges=4]'
+      - console: '123213'

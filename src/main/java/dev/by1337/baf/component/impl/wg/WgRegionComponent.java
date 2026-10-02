@@ -16,6 +16,7 @@ import dev.by1337.baf.component.AirdropComponent;
 import dev.by1337.baf.component.ComponentFactory;
 import dev.by1337.baf.ref.CleanerSlot;
 import dev.by1337.baf.util.Vec3i;
+import dev.by1337.edsl.EventHandler;
 import dev.by1337.edsl.context.EventContext;
 import dev.by1337.yaml.decoder.RecordYamlDecoder;
 import dev.by1337.yaml.decoder.YamlDecoder;
@@ -61,6 +62,7 @@ public class WgRegionComponent extends AbstractComponent {
                     )
             );
             regionRemover.set(airdrop.world());
+            config.onCreate.handle(ctx);
         }
     }
 
@@ -68,6 +70,7 @@ public class WgRegionComponent extends AbstractComponent {
     public void onRemove(EventContext ctx) {
         try (var ignored = ctx.tracer().enter(name + " remove {", "}")) {
             regionRemover.cleanup();
+            config.onRemove.handle(ctx);
         }
     }
 
@@ -77,19 +80,26 @@ public class WgRegionComponent extends AbstractComponent {
 
     public static class Config implements ComponentFactory {
         public static final NodeSchema WEB_SCHEMA = NodeSchema.of("Регион WorldGuard", "Защищает область вокруг аирдропа; удаляет регион при снятии ноды.")
-                .vector("size", "Полуразмер региона", "1;1;1", false).strings("flags", "Флаги WorldGuard").inputs("create", "remove");
+                .vector("size", "Полуразмер региона", "1;1;1", false).strings("flags", "Флаги WorldGuard")
+                .events("on_create", "on_remove").inputs("create", "remove");
 
         public static final YamlDecoder<Config> DECODER = RecordYamlDecoder.mapOf(
                 Config::new,
                 Vec3i.DECODER.fieldOf("size", new Vec3i(1, 1, 1)),
-                YamlDecoder.STRINGS.fieldOf("flags", List.of())
+                YamlDecoder.STRINGS.fieldOf("flags", List.of()),
+                HANDLER.fieldOf("on_create", EMPTY_HANDLER),
+                HANDLER.fieldOf("on_remove", EMPTY_HANDLER)
         );
         private final Vec3i size;
         private final List<String> flags;
+        private final EventHandler onCreate;
+        private final EventHandler onRemove;
 
-        public Config(Vec3i size, List<String> flags) {
+        public Config(Vec3i size, List<String> flags, EventHandler onCreate, EventHandler onRemove) {
             this.size = size;
             this.flags = flags;
+            this.onCreate = onCreate;
+            this.onRemove = onRemove;
         }
 
         @Override

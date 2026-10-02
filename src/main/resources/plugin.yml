@@ -5,6 +5,7 @@ api-version: '1.21'
 depend:
   - BLib
   - BMenu
+  - WorldEdit
 
 softdepend:
   - DecentHolograms

@@ -49,11 +49,13 @@ public final class NodeSchema {
         return this;
     }
 
+
     public NodeSchema vector(String key, String title, String defaultValue, boolean fractional) {
         JsonObject f = field(key, title, "string");
         f.addProperty("default", defaultValue);
         f.addProperty("x-control", "vector");
-        f.addProperty("description", fractional ? "x;y;z, дробные координаты" : "x;y;z, целые координаты");
+        f.addProperty("x-fractional", fractional);
+        f.addProperty("description", fractional ? "Дробные координаты X, Y, Z" : "Целые координаты X, Y, Z");
         return this;
     }
 

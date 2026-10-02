@@ -51,18 +51,7 @@ public final class WorkflowFiles {
                                       JsonObject settings, Consumer<YamlMap> validator) throws IOException {
         Path path = resolve(key);
         byte[] original = Files.readAllBytes(path);
-        if (revision == null || !revision(original).equals(revision)) throw new ConflictException();
-        YamlMap candidate = YamlMap.loadFromString(new String(original, java.nio.charset.StandardCharsets.UTF_8));
-        candidate.set("nodes", null);
-        candidate.set("nodes", JsonValues.raw(nodes));
-        candidate.set("$web_meta", JsonValues.GSON.toJson(metadata));
-        if (settings != null) {
-            for (var entry : settings.entrySet()) {
-                if (!SETTINGS.contains(entry.getKey())) throw new IllegalArgumentException("Нельзя менять поле " + entry.getKey());
-                candidate.set(entry.getKey(), JsonValues.raw(entry.getValue()));
-            }
-        }
-        validator.accept(candidate);
+        YamlMap candidate = candidate(original, revision, nodes, metadata, settings, validator);
         byte[] bytes = candidate.saveToString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
         Document result = new Document(key, revision(bytes), candidate);
         if (JsonValues.GSON.toJson(result.json()).getBytes(java.nio.charset.StandardCharsets.UTF_8).length >
@@ -80,6 +69,23 @@ public final class WorkflowFiles {
             catch (AtomicMoveNotSupportedException e) { Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING); }
         } finally { Files.deleteIfExists(temporary); }
         return result;
+    }
+
+    private YamlMap candidate(byte[] original, String revision, JsonObject nodes, JsonObject metadata,
+                              JsonObject settings, Consumer<YamlMap> validator) {
+        if (revision == null || !revision(original).equals(revision)) throw new ConflictException();
+        YamlMap candidate = YamlMap.loadFromString(new String(original, java.nio.charset.StandardCharsets.UTF_8));
+        candidate.set("nodes", null);
+        candidate.set("nodes", JsonValues.raw(nodes));
+        candidate.set("$web_meta", JsonValues.GSON.toJson(metadata));
+        if (settings != null) {
+            for (var entry : settings.entrySet()) {
+                if (!SETTINGS.contains(entry.getKey())) throw new IllegalArgumentException("Нельзя менять поле " + entry.getKey());
+                candidate.set(entry.getKey(), JsonValues.raw(entry.getValue()));
+            }
+        }
+        validator.accept(candidate);
+        return candidate;
     }
 
     private static String revision(byte[] bytes) {

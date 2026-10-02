@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import dev.by1337.baf.Workflow;
+import dev.by1337.yaml.YamlMap;
 import dev.by1337.yaml.decoder.YamlDecoder;
 
 import java.io.IOException;
@@ -91,26 +92,28 @@ public final class WorkflowRepository {
     }
 
     public JsonObject save(String key, String revision, JsonObject nodes, JsonObject metadata, JsonObject settings) throws IOException {
-        var saved = files.save(key, revision, nodes, metadata, settings, yaml -> {
-            if (nodes.size() > 512) throw new IllegalArgumentException("Максимум 512 нод в одном аирдропе");
-            for (var node : nodes.entrySet()) {
-                String name = node.getKey();
-                if (name.isBlank() || name.length() > 128 || name.matches(".*[\\s.{}%\"'\\\\].*") ||
-                        Set.of("__proto__", "prototype", "constructor").contains(name) || !node.getValue().isJsonObject()) {
-                    throw new IllegalArgumentException("Некорректная нода " + node.getKey());
-                }
-            }
-            if (!nodes.has("__init__") || !nodes.has("__destroy__")) {
-                throw new IllegalArgumentException("Нужны ноды __init__ и __destroy__");
-            }
-            if (metadata == null || dev.by1337.baf.web.JsonValues.GSON.toJson(metadata).getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 65536) {
-                throw new IllegalArgumentException("Метаданные редактора слишком большие");
-            }
-            dev.by1337.baf.web.JsonValues.raw(metadata);
-            var decoded = decoder.decode(yaml.get());
-            if (decoded.hasError() || decoded.result() == null) throw new IllegalArgumentException(decoded.error());
-        });
+        var saved = files.save(key, revision, nodes, metadata, settings, yaml -> validate(nodes, metadata, yaml));
         update(saved);
         return saved.json();
+    }
+
+    private void validate(JsonObject nodes, JsonObject metadata, YamlMap yaml) {
+        if (nodes.size() > 512) throw new IllegalArgumentException("Максимум 512 нод в одном аирдропе");
+        for (var node : nodes.entrySet()) {
+            String name = node.getKey();
+            if (name.isBlank() || name.length() > 128 || name.matches(".*[\\s.{}%\"'\\\\].*") ||
+                    Set.of("__proto__", "prototype", "constructor").contains(name) || !node.getValue().isJsonObject()) {
+                throw new IllegalArgumentException("Некорректная нода " + node.getKey());
+            }
+        }
+        if (!nodes.has("__init__") || !nodes.has("__destroy__")) {
+            throw new IllegalArgumentException("Нужны ноды __init__ и __destroy__");
+        }
+        if (metadata == null || dev.by1337.baf.web.JsonValues.GSON.toJson(metadata).getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 65536) {
+            throw new IllegalArgumentException("Метаданные редактора слишком большие");
+        }
+        dev.by1337.baf.web.JsonValues.raw(metadata);
+        var decoded = decoder.decode(yaml.get());
+        if (decoded.hasError() || decoded.result() == null) throw new IllegalArgumentException(decoded.error());
     }
 }

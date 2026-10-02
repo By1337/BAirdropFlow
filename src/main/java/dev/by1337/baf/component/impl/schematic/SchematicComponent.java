@@ -33,6 +33,7 @@ public class SchematicComponent extends AbstractComponent {
             SchematicWriter writer = new SchematicWriter(airdrop.world(), new Vec3i(airdrop.x(), airdrop.y(), airdrop.z()));
             schematic.set(writer);
             writer.writeSchematic(config.schematic);
+            config.onCreate.handle(ctx);
         }
     }
 
@@ -40,6 +41,7 @@ public class SchematicComponent extends AbstractComponent {
     public void onRemove(EventContext ctx) {
         try (var ignored = ctx.tracer().enter(name + " remove {", "}")) {
             schematic.cleanup();
+            config.onRemove.handle(ctx);
         }
     }
 
@@ -51,13 +53,23 @@ public class SchematicComponent extends AbstractComponent {
                 .materials("no_replace", "Блоки, которые нельзя заменять")
                 .materials("no_place", "Блоки, которые не вставлять")
                 .materialMap("replace", "Замена блоков")
+                .events("on_create", "on_remove")
                 ;
 
-        public static final YamlDecoder<Config> DECODER = Schematic.DECODER.map(Config::new);
+        public static final YamlDecoder<Config> DECODER = RecordYamlDecoder.mapOf(
+                Config::new,
+                Schematic.DECODER.fieldOf(),
+                HANDLER.fieldOf("on_create", EMPTY_HANDLER),
+                HANDLER.fieldOf("on_remove", EMPTY_HANDLER)
+        );
         private final Schematic schematic;
+        private final EventHandler onCreate;
+        private final EventHandler onRemove;
 
-        public Config(Schematic schematic) {
+        public Config(Schematic schematic, EventHandler onCreate, EventHandler onRemove) {
             this.schematic = schematic;
+            this.onCreate = onCreate;
+            this.onRemove = onRemove;
         }
 
         @Override

@@ -8,6 +8,7 @@ import com.sk89q.worldedit.extent.clipboard.io.ClipboardFormats;
 import com.sk89q.worldedit.extent.clipboard.io.ClipboardReader;
 import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.world.block.BlockState;
+import dev.by1337.baf.BAF;
 import dev.by1337.baf.util.Vec3i;
 import dev.by1337.core.util.misc.Pair;
 import dev.by1337.yaml.decoder.YamlDecoder;
@@ -136,6 +137,7 @@ public class SchematicFile {
     }
 
     public static List<Pair<Vec3i, BlockData>> readFromFile(String schem) {
+        if (BAF.RUNNING_IN_IDE) return new ArrayList<>();
         try {
             File pluginsFolder = new File("./plugins");
 

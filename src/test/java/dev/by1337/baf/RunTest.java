@@ -25,8 +25,9 @@ import java.util.concurrent.Executors;
 public class RunTest {
     private static final Logger log = LoggerFactory.getLogger(RunTest.class);
 
-    @Test //ЭТО НЕ ТЕСТ, А ЗАПУСК WEB РЕДАКТОРА ДЛЯ ОТЛАДКИ
+   //     @Test //ЭТО НЕ ТЕСТ, А ЗАПУСК WEB РЕДАКТОРА ДЛЯ ОТЛАДКИ
     void startBackand() throws Exception {
+         System.setProperty("baf.ide", "true");
         System.out.println(dev.by1337.yaml.YamlMap.getYamlReader());
         Generators.boot();
         AirdropSpawnerBoot.boot();

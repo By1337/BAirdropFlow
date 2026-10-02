@@ -1,0 +1,37 @@
+__root__:
+  type: base:root
+  connections:
+    particle_4: "%7 & <20"
+    particle_1: "%7 & <30 & >20"
+    particle_2: "%4 & <30"
+  $web: '{"name":"Root","position":{"x":-322,"y":259},"autoName":true}'
+particle_4:
+  type: base:particle
+  particle: explosion_emitter
+  count: 25
+  maxSpeed: 0
+  overrideLimiter: false
+  alwaysShow: false
+  offsets: 0;10;0
+  dist: 10;5;10
+  $web: '{"name":"explosion_emitter","position":{"x":337,"y":298},"autoName":true}'
+particle_1:
+  type: base:particle
+  particle: explosion_emitter
+  count: 25
+  maxSpeed: 0
+  overrideLimiter: false
+  alwaysShow: false
+  offsets: 0;10;0
+  dist: 5;5;5
+  $web: '{"name":"explosion_emitter","position":{"x":322,"y":106},"autoName":true}'
+particle_2:
+  type: base:particle
+  particle: firefly
+  count: 100
+  maxSpeed: 0
+  overrideLimiter: false
+  alwaysShow: false
+  offsets: 0;10;0
+  dist: 10;5;10
+  $web: '{"name":"firefly","position":{"x":16,"y":53},"autoName":true}'

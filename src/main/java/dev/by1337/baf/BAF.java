@@ -1,6 +1,7 @@
 package dev.by1337.baf;
 
 import dev.by1337.baf.interact.InteractManager;
+import dev.by1337.baf.component.system.ParticleGraphs;
 import dev.by1337.baf.loot.LootTables;
 import dev.by1337.baf.world.WorldData;
 import dev.by1337.baf.world.WorldDataContainer;
@@ -13,6 +14,7 @@ import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.Nullable;
 
 public class BAF {
+    public static boolean RUNNING_IN_IDE = Boolean.getBoolean("baf.ide");
     static AirdropManager manager;
     static BAirdropFlow plugin;
 
@@ -58,6 +60,9 @@ public class BAF {
     }
     public static Plugin plugin(){
         return plugin;
+    }
+    public static ParticleGraphs particleGraphs() {
+        return plugin.particleGraphs;
     }
     public static WorldDataContainer<FakeBlockSetter> fakeBlocks() {
         return plugin.fakeBlocks;

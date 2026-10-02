@@ -3,6 +3,8 @@ package dev.by1337.baf;
 import dev.by1337.baf.command.AirdropCommands;
 import dev.by1337.baf.command.LootCommands;
 import dev.by1337.baf.component.AirdropComponents;
+import dev.by1337.baf.component.system.ParticleGraphs;
+import dev.by1337.baf.component.system.ParticleSystem;
 import dev.by1337.baf.component.system.TimerSystem;
 import dev.by1337.baf.config.Config;
 import dev.by1337.baf.generator.Generators;
@@ -13,7 +15,6 @@ import dev.by1337.baf.workflow.WorkflowFiles;
 import dev.by1337.baf.workflow.WorkflowRepository;
 import dev.by1337.baf.world.WorldData;
 import dev.by1337.baf.world.WorldDataContainer;
-import dev.by1337.baf.world.fake.BlockFlagger;
 import dev.by1337.baf.world.fake.FakeBlockSetter;
 import dev.by1337.bmenu.BMenu;
 import dev.by1337.bmenu.loader.MenuSubLoader;
@@ -31,6 +32,8 @@ import java.io.File;
 public class BAirdropFlow extends BasePlugin {
     AirdropManager manager;
     TimerSystem timerSystem;
+    ParticleSystem particleSystem;
+    ParticleGraphs particleGraphs;
     Config config;
     WorldDataContainer<WorldData> worldData;
     WorldDataContainer<FakeBlockSetter> fakeBlocks;
@@ -52,6 +55,13 @@ public class BAirdropFlow extends BasePlugin {
         messages.setDebug(config.debug);
         BAF.manager = manager = new AirdropManager(this, messages);
         timerSystem = new TimerSystem(this, manager);
+        particleSystem = new ParticleSystem(this, manager);
+        if (!new File(getDataFolder(), "particles").exists()) {
+            ResourceUtil.saveIfNotExist("particles/example.yml", this);
+            ResourceUtil.saveIfNotExist("particles/explosion.yml", this);
+        }
+        particleGraphs = new ParticleGraphs(this);
+        particleGraphs.load();
         ResourceUtil.saveIfNotExist("workflow/default.yml", this);
         workflows = new WorkflowRepository(new WorkflowFiles(getDataFolder().toPath().resolve("workflow"),
                 getDataFolder().toPath().resolve("backups/workflow")), Workflow.CODEC, log::warn);
@@ -89,6 +99,8 @@ public class BAirdropFlow extends BasePlugin {
         manager.enable();
         addCloseHook(timerSystem);
         timerSystem.start();
+        addCloseHook(particleSystem);
+        particleSystem.start();
         if (config.web.enabled()) {
             web = new AirdropWeb(workflows, config.web, action -> Bukkit.getScheduler().runTask(this, action));
             addCloseHook(web);
@@ -118,6 +130,10 @@ public class BAirdropFlow extends BasePlugin {
                                             .clickEvent(net.kyori.adventure.text.event.ClickEvent.openUrl(link))
                                             .hoverEvent(net.kyori.adventure.text.Component.text(link)));
                             }));
-                        })), null);
+                        }))
+                .sub(new Command<CommandSender>("particle_web").requires(new RequiresPermission<>("baf.web.admin"))
+                        .executor(sender -> sender.sendMessage(net.kyori.adventure.text.Component.text("Открыть редактор частиц")
+                                .clickEvent(net.kyori.adventure.text.event.ClickEvent.openUrl("https://particle.bdev.space/"))
+                                .hoverEvent(net.kyori.adventure.text.Component.text("https://particle.bdev.space/"))))), null);
     }
 }
