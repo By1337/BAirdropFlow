@@ -11,6 +11,7 @@ public final class NodeSchema {
     private final JsonArray required = new JsonArray();
     private final JsonArray events = new JsonArray();
     private final JsonArray inputs = new JsonArray();
+    private final JsonObject placeholders = new JsonObject();
 
     private NodeSchema(String title, String description) {
         schema.addProperty("$schema", "https://json-schema.org/draft/2020-12/schema");
@@ -21,6 +22,7 @@ public final class NodeSchema {
         schema.add("required", required);
         schema.add("x-events", events);
         schema.add("x-inputs", inputs);
+        schema.add("x-placeholders", placeholders);
         schema.addProperty("additionalProperties", true);
         required.add("type");
     }
@@ -112,6 +114,14 @@ public final class NodeSchema {
     }
 
     public NodeSchema inputs(String... values) { Arrays.stream(values).forEach(inputs::add); return this; }
+
+    public NodeSchema placeholder(String key, String title, String description) {
+        JsonObject info = new JsonObject();
+        info.addProperty("title", title);
+        info.addProperty("description", description);
+        placeholders.add(key, info);
+        return this;
+    }
 
     public JsonObject json(String type) {
         JsonObject result = schema.deepCopy();

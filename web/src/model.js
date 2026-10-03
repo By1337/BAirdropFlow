@@ -1,3 +1,5 @@
+import { renameNodePlaceholders } from './node-placeholders.js';
+
 export const clone = value => structuredClone(value);
 export const settingsKeys = ['id', 'world', 'args', 'generator', 'spawner'];
 const validName = name => name.trim() === name && !!name && name.length <= 128 && !/[\s.{}%"'\\]/u.test(name) && !['__proto__', 'prototype', 'constructor'].includes(name);
@@ -148,6 +150,8 @@ export class GraphModel {
         const token = tokens[edge.action === 'call' ? 1 : 0];
         if (token) parent[key] = value.slice(0, start + token.index) + name + value.slice(start + token.index + token[0].length);
       }
+      this.config = renameNodePlaceholders(this.config, old, name);
+      this.metadata = renameNodePlaceholders(this.metadata, old, name);
       this.nodes[name] = this.nodes[old]; delete this.nodes[old];
       this.metadata.nodes[name] = this.metadata.nodes[old]; delete this.metadata.nodes[old];
     });

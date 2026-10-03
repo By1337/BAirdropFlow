@@ -1,190 +1,198 @@
-id: "example:default"
-world: "world"
+id: example:default
+world: world
 generator1:
-  type: "generator:fixed"
-  at: "0;100;0"
+  type: generator:fixed
+  at: 0;100;0
 generator:
-  type: "generator:random"
-  radius: "2500"
+  type: generator:random
+  radius: '2500'
   min_y: 50
   max_y: 100
   clear_zone: 4
   clear_y: 3
-  air_tester: "!solid & !water & !lava"
-  solid_tester: "solid & !ice"
-  offsets: "0;2;0"
+  air_tester: '!solid & !water & !lava'
+  solid_tester: solid & !ice
+  offsets: 0;2;0
 args:
-  loot_table: "example/default"
-  type: "обычный"
+  loot_table: example/default
+  type: обычный
 spawner:
-  type: "spawner:timer"
-  time: "5s"
+  type: spawner:timer
+  time: 5s
   on_create:
-    - weights:
-        "20":
-          - set_value: "loot_table example/epic"
-          - set_value: "type элитный"
-        "50":
-          - set_value: "loot_table example/rare"
-          - set_value: "type редкий"
-        "100":
-          - set_value: "loot_table example/default"
-          - set_value: "type обычный"
-    - bc: |
-        <white> 
-        <center><white>Аирдроп {value:type}
-        <center><white>появится через 5 минут!
-        <white>
+  - weights:
+      '20':
+      - set_value: loot_table example/epic
+      - set_value: type элитный
+      '50':
+      - set_value: loot_table example/rare
+      - set_value: type редкий
+      '100':
+      - set_value: loot_table example/default
+      - set_value: type обычный
+  - bc: "<white> \n<center><white>Аирдроп {value:type}\n<center><white>появится че\
+      рез 5 минут!\n<white>\n"
   when:
-    "2m":
-      - bc: |
-          <white>
-          <center><white>Аирдроп {value:type}
-          <center><white>появится через 2 минуты!
-          <white>
-    "1m":
-      - bc: |
-          <white>
-          <center><white>Аирдроп {value:type}
-          <center><white>появится через 1 минуту!
-          <white>
-    "5s-1s":
-      - bc: |
-          <white>
-          <center><white>Аирдроп {value:type}
-          <center><white>появится через {time} сек.
-          <white>
-  on_timer_end:
+    2m:
     - bc: |
         <white>
         <center><white>Аирдроп {value:type}
-        <center><white>появился на [{x}, {y}, {z}]
+        <center><white>появится через 2 минуты!
         <white>
-    - make:
-        loot_table: "{value:loot_table}"
-        type: "{value:type}"
-"$web_meta": "{\"version\":3,\"webNodes\":{},\"nodes\":{\"__init__\":{\"x\":-1433.637230140598,\"y\":-4.338705002353507},\"region\":{\"x\":-820.7371665670128,\"y\":-648.816189798398,\"width\":326.0708458715418,\"height\":428.6557890966744},\"schematic\":{\"x\":-304.27437967712973,\"y\":-656.5343070343325,\"width\":351.31729824973274,\"height\":309.38830352657686},\"tto\":{\"x\":-731.1200179802102,\"y\":232.41464769563663,\"title\":\"Таймер до открытия\"},\"tto_holo\":{\"x\":-204.13824933075065,\"y\":243.13000279789165,\"title\":\"Голограма до открытия\"},\"tte\":{\"x\":-235.35292593240302,\"y\":672.6108935360105,\"title\":\"Таймер до удаления\"},\"tte_holo\":{\"x\":325.60346884470897,\"y\":706.325243826314,\"title\":\"Голограмма до удаления\"},\"looter\":{\"x\":832.5478535736253,\"y\":713.3130722469418},\"__destroy__\":{\"x\":-1510.7000575673442,\"y\":-678.0906218125681},\"animation\":{\"x\":839.543477454157,\"y\":-697.3232918903789},\"commands\":{\"x\":170.3221363513528,\"y\":-729.5079777563786,\"width\":469.7160940009587,\"height\":176},\"commands_1\":{\"x\":173.28249153015926,\"y\":-502.1358963887456,\"width\":464.5113720691554,\"height\":176},\"animation_1\":{\"x\":1570.612051299646,\"y\":697.7002622395848},\"commands_2\":{\"x\":1230.2047719541033,\"y\":1115.1862056469315,\"width\":401.8100436008122,\"height\":176}},\"viewport\":{\"x\":755.7209041678868,\"y\":377.58724285029837,\"zoom\":0.5342706039317007}}"
+    1m:
+    - bc: |
+        <white>
+        <center><white>Аирдроп {value:type}
+        <center><white>появится через 1 минуту!
+        <white>
+    5s-1s:
+    - bc: |
+        <white>
+        <center><white>Аирдроп {value:type}
+        <center><white>появится через {time} сек.
+        <white>
+  on_timer_end:
+  - bc: |
+      <white>
+      <center><white>Аирдроп {value:type}
+      <center><white>появился на [{x}, {y}, {z}]
+      <white>
+  - make:
+      loot_table: '{value:loot_table}'
+      type: '{value:type}'
+$web_meta: '{"version":3,"webNodes":{},"nodes":{"__init__":{"x":-1455.2314869387528,"y":-17.098923147311933,"title":"Старт"},"region":{"x":-820.7371665670128,"y":-648.816189798398,"width":326.0708458715418,"height":428.6557890966744,"title":"wg
+  регион"},"schematic":{"x":-304.27437967712973,"y":-656.5343070343325,"width":351.31729824973274,"height":309.38830352657686,"title":"схематика"},"tto_holo":{"x":-204.13824933075065,"y":243.13000279789165,"title":"Голограма
+  до открытия","width":340,"height":348.3253213333286},"tte":{"x":-235.35292593240302,"y":672.6108935360105,"title":"Таймер
+  до удаления"},"tte_holo":{"x":325.60346884470897,"y":706.325243826314,"title":"Голограмма
+  до удаления"},"looter":{"x":832.5478535736253,"y":713.3130722469418,"title":"Инвентарь
+  с лутом","width":334.11064089786896,"height":399.83827057237596},"__destroy__":{"x":-1454.7511460970993,"y":-341.41556318591404,"title":"Удаление"},"animation":{"x":839.543477454157,"y":-697.3232918903789,"width":335.20623891339625,"height":394.83936062536486,"title":"партиклы
+  аира"},"commands":{"x":170.3221363513528,"y":-729.5079777563786,"width":469.7160940009587,"height":176,"title":"установить
+  блок аира"},"commands_1":{"x":173.28249153015926,"y":-502.1358963887456,"width":464.5113720691554,"height":176,"title":"удалить
+  блок аира"},"animation_1":{"x":1429.267432848501,"y":663.3456974319831,"width":333.1289612281961,"height":393.9489114702449,"title":"Анимация
+  взрыва"},"commands_2":{"x":1230.2047719541033,"y":1115.1862056469315,"width":401.8100436008122,"height":176,"title":"При
+  открытии инва"},"tto":{"x":-731.1200179802102,"y":232.41464769563663,"title":"Таймер
+  до открытия"}},"viewport":{"x":730.3811087239635,"y":-49.28374381086553,"zoom":0.5342706039317013}}'
 nodes:
   __init__:
-    type: "__init__"
+    type: __init__
     on_init:
-      - create: "tto"
-      - create: "region"
+    - create: tto
+    - create: region
   region:
-    type: "wg:region"
-    size: "15;15;15"
+    type: wg:region
+    size: 15;15;15
     flags:
-      - "use deny"
-      - "other-explosion deny"
-      - "mob-damage allow"
-      - "pvp allow"
-      - "tnt deny"
-      - "ghast-fireball deny"
-      - "wither-damage deny"
-      - "creeper-explosion deny"
-      - "vehicle-destroy allow"
-      - "interact deny"
-      - "entry-deny-message -e"
-      - "deny-message -e"
-      - "exit-deny-message -e"
+    - use deny
+    - other-explosion deny
+    - mob-damage allow
+    - pvp allow
+    - tnt deny
+    - ghast-fireball deny
+    - wither-damage deny
+    - creeper-explosion deny
+    - vehicle-destroy allow
+    - interact deny
+    - entry-deny-message -e
+    - deny-message -e
+    - exit-deny-message -e
     on_create:
-      - create: "schematic"
+    - create: schematic
     on_remove:
-      - remove: "schematic"
+    - remove: schematic
   schematic:
-    type: "schematic:paster"
-    path: "../WorldEdit/schematics/asteroid.schem"
-    offset: "0;-1;0"
+    type: schematic:paster
+    path: ../WorldEdit/schematics/asteroid.schem
+    offset: 0;-1;0
     no_replace:
-      - "bedrock"
+    - bedrock
     no_place:
-      - "air"
+    - air
     on_create:
-      - create: "commands"
+    - create: commands
     on_remove:
-      - create: "commands_1"
+    - create: commands_1
     replace:
-      barrier: "air"
-  tto:
-    type: "tick:timer"
-    timer: 30
-    on_create:
-      - create: "tto_holo"
-    on_tick:
-      - call: "update tto_holo"
-    on_timer_end:
-      - create: "tte"
-    on_remove:
-      - remove: "tto_holo"
+      barrier: air
   tto_holo:
-    type: "dh:hologram"
-    offsets: "0.5;1.8;0.5"
+    type: dh:hologram
+    offsets: 0.5;1.8;0.5
     lines:
-      - "&cAirdrop"
-      - "&fДо открытия: {ctx:tto.timer}"
+    - '&cAirdrop'
+    - '&fДо открытия: {ctx:tto.timer}'
   tte:
-    type: "tick:timer"
+    type: tick:timer
     timer: 30
     on_create:
-      - create: "tte_holo"
+    - create: tte_holo
     on_tick:
-      - call: "update tte_holo"
+    - call: update tte_holo
     on_timer_end: []
     on_remove:
-      - remove: "tte_holo"
-      - destroy: ""
+    - remove: tte_holo
+    - destroy: ''
   tte_holo:
-    type: "dh:hologram"
-    offsets: "0.5;1.8;0.5"
+    type: dh:hologram
+    offsets: 0.5;1.8;0.5
     lines:
-      - "&aAirdrop"
-      - "&fДо удаления: {ctx:tte.timer}"
+    - '&aAirdrop'
+    - '&fДо удаления: {ctx:tte.timer}'
     on_create:
-      - create: "looter"
+    - create: looter
     on_remove:
-      - remove: "looter"
+    - remove: looter
   looter:
-    type: "loot:looter"
-    offsets: "0;0;0"
-    loot_table: "{args:loot_table}"
-    title: "&aAirdrop!"
+    type: loot:looter
+    offsets: 0;0;0
+    loot_table: '{args:loot_table}'
+    title: '&aAirdrop!'
     on_open:
-      - create: "commands_2"
+    - create: commands_2
     on_create:
-      - create: "animation_1"
+    - create: animation_1
     on_remove: []
   __destroy__:
-    type: "__destroy__"
+    type: __destroy__
     on_destroy:
-      - setblock: "{x} {y} {z} air"
-      - remove: "region"
+    - setblock: '{x} {y} {z} air'
+    - remove: region
   animation:
-    type: "particle:animation"
-    animation: "example"
+    type: particle:animation
+    animation: example
     ticks: -1
     on_create: []
     on_remove: []
     on_timer_end: []
-    offsets: "0.5;0;0.5"
+    offsets: 0.5;0;0.5
   commands:
-    type: "default:commands"
+    type: default:commands
     on_run:
-      - setblock: "{x} {y} {z} minecraft:respawn_anchor[charges=4]"
-      - create: "animation"
+    - setblock: '{x} {y} {z} minecraft:respawn_anchor[charges=4]'
+    - create: animation
   commands_1:
-    type: "default:commands"
+    type: default:commands
     on_run:
-      - setblock: "{x} {y} {z} air"
-      - remove: "animation"
+    - setblock: '{x} {y} {z} air'
+    - remove: animation
   animation_1:
-    type: "particle:animation"
-    animation: "explosion"
-    offsets: "0.5;0;0.5"
+    type: particle:animation
+    animation: explosion
+    offsets: 0.5;0;0.5
     ticks: 30
     on_create: []
     on_remove: []
     on_timer_end: []
   commands_2:
-    type: "default:commands"
+    type: default:commands
     on_run:
-      - message: "&7Личное сообщение для %player_name%"
+    - message: '&7Личное сообщение для %player_name%'
+  tto:
+    type: tick:timer
+    timer: 30
+    on_create:
+    - create: tto_holo
+    on_tick:
+    - call: update tto_holo
+    on_timer_end:
+    - create: tte
+    on_remove:
+    - remove: tto_holo

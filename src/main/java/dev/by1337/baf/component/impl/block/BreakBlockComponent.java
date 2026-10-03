@@ -76,6 +76,7 @@ public class BreakBlockComponent extends AbstractComponent {
 
     public static class Config implements ComponentFactory {
         public static final NodeSchema WEB_SCHEMA = NodeSchema.of("Разрушение блока", "Считает попытки сломать блок. Плейсхолдер {ctx:имя.count}.")
+                .placeholder("count", "Осталось попыток", "Число попыток разрушения до завершения.")
                 .vector("offsets", "Смещение блока", "0;0;0", false).integer("count", "Число попыток", 10, 1, true).events("on_create", "on_break", "on_broken", "on_remove").inputs("create", "remove");
 
         public static final YamlDecoder<Config> DECODER = RecordYamlDecoder.mapOf(

@@ -57,6 +57,7 @@ public class TimerComponent extends AbstractComponent {
     public static class Config implements ComponentFactory {
         public static final NodeSchema WEB_SCHEMA = NodeSchema.of("Таймер", "Секундный таймер. Плейсхолдер {ctx:имя.timer}.")
                 .integer("timer", "Время, секунд", 20, 1, false)
+                .placeholder("timer", "Осталось секунд", "Текущее значение таймера.")
                 .events("on_create", "on_tick", "on_timer_end", "on_remove")
                 .inputs("create", "remove");
 

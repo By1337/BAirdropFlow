@@ -13,30 +13,40 @@ import dev.by1337.web.db.User;
 import dev.by1337.web.network.ConnectionListener;
 import dev.by1337.web.network.content.GetStaticContentHandler;
 import org.junit.jupiter.api.Test;
+import org.mockbukkit.mockbukkit.MockBukkit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 
 public class RunTest {
     private static final Logger log = LoggerFactory.getLogger(RunTest.class);
 
-   //     @Test //ЭТО НЕ ТЕСТ, А ЗАПУСК WEB РЕДАКТОРА ДЛЯ ОТЛАДКИ
+    // @Test //ЭТО НЕ ТЕСТ, А ЗАПУСК WEB РЕДАКТОРА ДЛЯ ОТЛАДКИ
     void startBackand() throws Exception {
-         System.setProperty("baf.ide", "true");
+        System.setProperty("baf.ide", "true");
+        MockBukkit.mock();
         System.out.println(dev.by1337.yaml.YamlMap.getYamlReader());
         Generators.boot();
         AirdropSpawnerBoot.boot();
         AirdropComponents.boot();
         Database database = new Database() {
-            public boolean isValidSecret(String secret) { return false; }
-            public User getUserByLogin(String login) { return null; }
-            public boolean addUser(User user) { throw new UnsupportedOperationException(); }
-            public void close() { }
+            public boolean isValidSecret(String secret) {
+                return false;
+            }
+
+            public User getUserByLogin(String login) {
+                return null;
+            }
+
+            public boolean addUser(User user) {
+                throw new UnsupportedOperationException();
+            }
+
+            public void close() {
+            }
         };
         var clients = new ClientList();
         var server = new ConnectionListener(clients, new GetStaticContentHandler(clients, Path.of("/home/by1337/Projects/src_java/BAirdropFlow/web/dist/")), database);
@@ -50,14 +60,7 @@ public class RunTest {
                 "",
                 ""
         ), Executors.newSingleThreadExecutor());
-
-       // BVaultWebEndPoint webEndPoint = new BVaultWebEndPoint("ws://localhost:" + port + "/api/ws", moduleRoot.resolve("result.ts"));
-       // String token = webEndPoint.getConnection().join().getToken();
-        System.out.println("Preview: " +web.link().get());
-       // Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-       //     webEndPoint.close();
-       //     server.stop();
-       // }));
+        System.out.println("Preview: " + web.link().get());
         new CountDownLatch(1).await(); // Ctrl+C stops the preview process.*/
     }
 }

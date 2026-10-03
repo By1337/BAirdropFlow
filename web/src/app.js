@@ -1,10 +1,10 @@
 import {EventDslEditor, makeDescriptor} from './event-dsl-editor.js';
-import {actionCount} from './event-dsl-model.js';
 import { GraphModel, clone } from './model.js';
-import { editableCommands, replaceEditableCommands, formatCommands, formatWorkflowYaml } from './command-yaml.js';
+import { replaceEditableCommands, formatCommands, formatWorkflowYaml } from './command-yaml.js';
 import { validDuration, validTimeKey } from './spawner.js';
 import { splitVector, joinVector } from './vector.js';
 import { highlightYaml } from './yaml-highlight.js';
+import { nodePlaceholders, renameNodePlaceholders } from './node-placeholders.js';
 const $ = selector => document.querySelector(selector);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const colors = { default:'#a898f4', tick:'#edc482', loot:'#63dec0', block:'#ff9da4', dh:'#84aaff', wg:'#a1c8ff' };
@@ -88,6 +88,8 @@ async function openEditor(key) {
     $('#node-library').querySelectorAll('button').forEach(button => button.onclick = () => addNode(button.dataset.type));
     $('#back').onclick = () => { if (leave()) { history.replaceState(null, '', '#'); loadHome(); } };
     $('#add-node').onclick = () => addNode(); $('#settings').onclick = editSettings;
+    $('#settings').insertAdjacentHTML('afterend', '<button id="placeholders" class="optional secondary">Плейсхолдеры</button>');
+    $('#placeholders').onclick = showPlaceholders;
     $('#tab-graph').onclick = () => switchTab('graph'); $('#tab-generator').onclick = () => switchTab('generator'); $('#tab-spawner').onclick = () => switchTab('spawner');
     $('#save').onclick = save; $('#copy-yaml').onclick = copyYaml;
     $('#copy-yaml').onpointerdown = event => event.preventDefault();
@@ -102,6 +104,32 @@ async function openEditor(key) {
   } catch (error) { toast(error.message, true); loadHome(); }
 }
 function schemaFor(node) { return schemas[node.type] ?? schemas[`default:${node.type}`] ?? { title: node.type, properties:{}, 'x-events':Object.keys(node).filter(key => key.startsWith('on_')) }; }
+function placeholderList(entries) {
+  if (!entries.length) return '';
+  return `<section class="node-placeholders"><div class="section-label">Плейсхолдеры</div>${entries.map(entry=>`<div class="placeholder-entry"><label>${escape(entry.title ?? entry.key)}</label><div class="placeholder-value"><input readonly spellcheck="false" aria-label="Плейсхолдер ${escape(entry.key)}" value="${escape(entry.value)}"><button type="button" data-copy-placeholder title="Скопировать плейсхолдер" aria-label="Скопировать ${escape(entry.value)}">⧉</button></div><small>${escape(entry.description ?? '')}</small></div>`).join('')}<small>Доступны, пока соответствующая нода создана.</small></section>`;
+}
+function bindPlaceholders(host) {
+  host.querySelectorAll('.placeholder-value input').forEach(input=>input.onclick=()=>input.select());
+  host.querySelectorAll('[data-copy-placeholder]').forEach(button=>{
+    button.onpointerdown=event=>event.preventDefault();
+    button.onclick=async()=>{
+      const input=button.previousElementSibling;
+      try {
+        if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable');
+        await navigator.clipboard.writeText(input.value);
+        toast('Плейсхолдер скопирован.');
+      } catch { input.focus(); input.select(); toast('Плейсхолдер выделен. Нажмите Ctrl+C для копирования.'); }
+    };
+  });
+}
+async function showPlaceholders() {
+  if (!model) return;
+  const entries=nodePlaceholders(model.nodes,schemas);
+  const groups=[...new Set(entries.map(entry=>entry.node))];
+  const closed=dialog(`<h2>Плейсхолдеры нод</h2>${groups.map(name=>`<h3 class="placeholder-node">${escape(model.title(name))}${model.title(name)!==name?` <small>· ${escape(name)}</small>`:''}</h3>${placeholderList(entries.filter(entry=>entry.node===name))}`).join('') || '<p>У нод этого сценария нет экспортируемых плейсхолдеров.</p>'}`, 'Закрыть');
+  bindPlaceholders($('#dialog-content'));
+  await closed;
+}
 function switchTab(tab) {
   editorTab = tab;
   $('.workspace').classList.toggle('generator-active', tab === 'generator');
@@ -258,19 +286,16 @@ function readVector(container, fractional) {
 }
 function nodeFields(name,node,schema) {
   const known=new Set(['type']);
-  const fields=Object.entries(schema.properties??{}).filter(([key])=>key!=='type').map(([key,field])=>{
+  const fields=Object.entries(schema.properties??{}).filter(([key])=>key!=='type'&&!key.startsWith('on_')).map(([key,field])=>{
     known.add(key);
     const value=node[key]??field.default??'', control=field['x-control'], title=field.title??key;
-    if(control==='event') {
-      return `<div class="node-field"><label>${escape(title)}</label><div class="node-field-summary">${actionCount(editableCommands(handlerList(value)))} действий · настройка справа</div></div>`;
-    }
     if(control==='lines') return `<div class="node-field"><label>${escape(title)}</label><textarea data-node-lines="${escape(name)}" data-field="${escape(key)}" spellcheck="false" placeholder="Одна строка на линию">${escape(nodeDrafts.get(JSON.stringify([name,key]))??(Array.isArray(value)?value.join('\n'):value))}</textarea></div>`;
     if(control==='materials' || control==='material-map') return `<div class="node-field"><label>${escape(title)}</label><div class="node-field-summary">${escape(control==='materials' ? `${Array.isArray(value)?value.length:0} материалов` : `${Object.keys(value ?? {}).length} замен`)} · настройка справа</div></div>`;
     if(control==='vector') return `<div class="node-field"><span>${escape(title)}</span>${vectorInputs(value, field['x-fractional'] === true, `data-node-vector="${escape(name)}" data-vector-field="${escape(key)}"`)}</div>`;
     if(field.type==='string'||field.type==='integer') return `<div class="node-field"><label>${escape(title)}</label><input data-inline-node="${escape(name)}" data-inline-field="${escape(key)}" type="${field.type==='integer'?'number':'text'}" value="${escape(value)}" ${field.minimum!==undefined?`min="${field.minimum}"`:''}></div>`;
     return `<div class="node-field"><label>${escape(title)}</label><div class="node-field-summary">${escape(Array.isArray(value)?`${value.length} элементов`:typeof value==='object'?Object.keys(value??{}).join(', '):String(value))}</div></div>`;
   });
-  for(const [key,value] of Object.entries(node)) if(!known.has(key)) fields.push(`<div class="node-field"><label>${escape(key)}</label><div class="node-field-summary">${escape(typeof value==='object'?Array.isArray(value)?`${value.length} элементов`:Object.keys(value).join(', '):String(value))}</div></div>`);
+  for(const [key,value] of Object.entries(node)) if(!known.has(key)&&!key.startsWith('on_')) fields.push(`<div class="node-field"><label>${escape(key)}</label><div class="node-field-summary">${escape(typeof value==='object'?Array.isArray(value)?`${value.length} элементов`:Object.keys(value).join(', '):String(value))}</div></div>`);
   return fields.join('')||'<div class="node-field-empty">Настроек нет</div>';
 }
 function drawGraph() {
@@ -348,7 +373,7 @@ function drawGraph() {
           invalidFields.delete(JSON.stringify([name,'on_run']));
           refresh();
         } catch (error) {
-          if (model !== owner) return;
+          if (model !== owner || !model.nodes[name] || nodeDrafts.get(JSON.stringify([name,'on_run'])) !== draft) return;
           invalidFields.set(JSON.stringify([name,'on_run']), {value:draft,message:error.message});
           input.classList.add('invalid');
           input.parentElement.querySelector('.node-field-error').textContent = error.message;
@@ -543,7 +568,7 @@ function drawInspector() {
   if (!selected) { panel.innerHTML = '<div class="inspector-empty"><div class="large-icon">⌘</div><h2>Настройки ноды</h2><p>Выберите ноду на схеме,<br>чтобы изменить её параметры и события.</p></div>'; return; }
   if (model.isWeb(selected)) { drawWebInspector(); return; }
   const node = model.nodes[selected], schema = schemaFor(node), required = schema.required ?? [];
-  const fields = Object.entries(schema.properties ?? {}).filter(([key]) => key !== 'type');
+  const fields = Object.entries(schema.properties ?? {}).filter(([key]) => key !== 'type' && !key.startsWith('on_'));
   panel.innerHTML = `<div class="section-label">Компонент</div><div class="inspector-title"><h2>${escape(schema.title ?? node.type)}</h2><button id="delete-node" class="icon-button danger" title="Удалить ноду">×</button></div><p>${escape(schema.description ?? 'Тип не зарегистрирован.')}</p><div class="field"><label for="node-title">Название в редакторе</label><input id="node-title" value="${escape(model.layout(selected).title || '')}" placeholder="${escape(selected)}"></div><div class="field"><label for="node-name">ID ноды</label><input id="node-name" value="${escape(selected)}" ${['__init__','__destroy__'].includes(selected) ? 'readonly' : ''}></div><div class="field"><label for="node-color">Цвет ноды</label><div class="color-control"><input id="node-color" type="color" value="${escape(model.layout(selected).color || color(node.type))}"><button id="reset-color" type="button" class="secondary">Сбросить</button></div></div><div class="field"><label>Тип</label><div class="readonly-type">${escape(node.type)}</div></div>${fields.map(([key, field]) => {
     const value = node[key] ?? field.default ?? '', control = field['x-control'], json = control === 'event' || (!control && ['array','object'].includes(field.type));
     const draft = invalidFields.get(JSON.stringify([selected, key]));
@@ -554,7 +579,8 @@ function drawInspector() {
   $('#node-title').onchange = event => { model.setTitle(selected,event.target.value); refresh(); };
   $('#node-color').oninput = event => { model.setColor(selected,event.target.value);drawGraph();updateStatus(); };
   $('#reset-color').onclick = () => {model.setColor(selected,null);refresh();};
-  fields.filter(([,field])=>field['x-control']==='event').forEach(([key])=>{const name=selected;mountActions(panel.querySelector(`[data-inspector-event="${key}"]`),editableCommands(handlerList(model.nodes[name][key])),values=>model.setField(name,key,replaceEditableCommands(model.nodes[name][key]??[],values)),{},true);});
+  $('#raw-node').closest('details').insertAdjacentHTML('beforebegin',placeholderList(nodePlaceholders({[selected]:node},schemas)));
+  bindPlaceholders(panel);
   bindMaterialEditors(panel);
   panel.querySelectorAll('[data-inspector-vector]').forEach(container => {
     container.querySelectorAll('input').forEach(input => input.onchange = () => {
@@ -573,8 +599,16 @@ function drawInspector() {
     });
   });
   $('#node-name').onchange = event => safe(() => {
-    const old = selected, name = event.target.value.trim(); model.rename(old, name);
-    for (const [key, draft] of [...invalidFields]) { const [nodeName, field] = JSON.parse(key); if (nodeName === old) { invalidFields.delete(key); invalidFields.set(JSON.stringify([name, field]), draft); } }
+    const old = selected, name = event.target.value.trim();
+    const remap=(entries,convert)=>entries.map(([key,value])=>{
+      const [nodeName,field]=JSON.parse(key);
+      return [JSON.stringify([nodeName===old?name:nodeName,field]),convert(value)];
+    });
+    const drafts=remap([...nodeDrafts],value=>renameNodePlaceholders(value,old,name));
+    const errors=remap([...invalidFields],entry=>({...entry,value:renameNodePlaceholders(entry.value,old,name)}));
+    model.rename(old, name);
+    nodeDrafts.clear(); for (const [key,value] of drafts) nodeDrafts.set(key,value);
+    invalidFields.clear(); for (const [key,value] of errors) invalidFields.set(key,value);
     selected = name; refresh();
   });
   $('#delete-node').onclick = () => safe(() => { if (confirm(`Удалить ноду «${selected}» и ссылки на неё?`)) { model.remove(selected); selected = null; refresh(); } });
