@@ -65,7 +65,12 @@ class TunnelEditorTest {
             assertEquals(1, catalogue.size());
             assertTrue(catalogue.get(0).getAsJsonObject().get("valid").getAsBoolean());
             var schemas = json(send(server, "schemas", "GET", null)).getAsJsonObject("data");
-            assertEquals(11, schemas.size());
+            assertEquals(12, schemas.size());
+            var timeout = schemas.getAsJsonObject("tick:timeout");
+            assertEquals(4, timeout.getAsJsonObject("properties").size()); // type, ticks and two outputs
+            assertEquals(1, timeout.getAsJsonObject("properties").getAsJsonObject("ticks").get("minimum").getAsInt());
+            assertEquals(JsonParser.parseString("[\"create\",\"remove\"]"), timeout.getAsJsonArray("x-inputs"));
+            assertEquals(JsonParser.parseString("[\"on_remove\",\"on_timer_end\"]"), timeout.getAsJsonArray("x-events"));
             assertTrue(schemas.getAsJsonObject("tick:timer").getAsJsonObject("properties").has("timer"));
             assertEquals("Осталось секунд", schemas.getAsJsonObject("tick:timer").getAsJsonObject("x-placeholders")
                     .getAsJsonObject("timer").get("title").getAsString());

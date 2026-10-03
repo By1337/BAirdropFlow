@@ -38,6 +38,16 @@ nodes:
     on_timer_end: []
     on_remove: []
 
+  # TTL ожидания: create запускает отсчёт, remove отменяет его.
+  # 1200 тиков = 60 секунд при 20 TPS. Только по истечении TTL удаляем аирдроп.
+  # При клике удалите ttl, затем создайте таймер до открытия.
+  ttl:
+    type: tick:timeout
+    ticks: 1200
+    on_remove: []
+    on_timer_end:
+      - destroy: ''
+
   # Анимация из plugins/BAirdropFlow/particles/example.yml (ID без расширения).
   particle:
     type: particle:animation
