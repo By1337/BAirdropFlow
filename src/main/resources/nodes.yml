@@ -53,3 +53,19 @@ nodes:
     on_run:
       - setblock: '{x} {y} {z} minecraft:respawn_anchor[charges=4]'
       - console: '123213'
+
+  # Создайте timer перед bossbar. Время обновляется автоматически.
+  # Прогресс = текущее время / значение, полученное при создании боссбара.
+  bossbar:
+    type: default:bossbar
+    radius: 64
+    title: '<gold>До открытия: <white>{ctx:bossbar.time}'
+    color: green
+    overlay: progress
+    flags: [] # darken_screen, play_boss_music, create_world_fog
+    progress: 1.0 # используется при progress_from_time: false
+    time: '{ctx:timer.timer}' # пустая строка отключает источник времени
+    progress_from_time: true
+    on_create: []
+    on_update: []
+    on_remove: []

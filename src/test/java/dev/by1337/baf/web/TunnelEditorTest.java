@@ -65,11 +65,18 @@ class TunnelEditorTest {
             assertEquals(1, catalogue.size());
             assertTrue(catalogue.get(0).getAsJsonObject().get("valid").getAsBoolean());
             var schemas = json(send(server, "schemas", "GET", null)).getAsJsonObject("data");
-            assertEquals(10, schemas.size());
+            assertEquals(11, schemas.size());
             assertTrue(schemas.getAsJsonObject("tick:timer").getAsJsonObject("properties").has("timer"));
             assertEquals("Осталось секунд", schemas.getAsJsonObject("tick:timer").getAsJsonObject("x-placeholders")
                     .getAsJsonObject("timer").get("title").getAsString());
             assertTrue(schemas.getAsJsonObject("block:break").getAsJsonObject("x-placeholders").has("count"));
+            var bossbar = schemas.getAsJsonObject("default:bossbar");
+            assertTrue(bossbar.getAsJsonObject("x-placeholders").has("time"));
+            var bossbarFields = bossbar.getAsJsonObject("properties");
+            assertEquals("boolean", bossbarFields.getAsJsonObject("progress_from_time").get("type").getAsString());
+            assertEquals("number", bossbarFields.getAsJsonObject("radius").get("type").getAsString());
+            assertEquals(1D, bossbarFields.getAsJsonObject("progress").get("maximum").getAsDouble());
+            assertEquals(7, bossbarFields.getAsJsonObject("color").getAsJsonArray("enum").size());
             var particleSchema = schemas.getAsJsonObject("particle:animation");
             assertTrue(particleSchema.getAsJsonObject("properties").has("animation"));
             assertTrue(particleSchema.getAsJsonObject("properties").has("ticks"));

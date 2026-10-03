@@ -51,6 +51,28 @@ public final class NodeSchema {
         return this;
     }
 
+    public NodeSchema number(String key, String title, double defaultValue, double minimum, Double maximum) {
+        JsonObject f = field(key, title, "number");
+        f.addProperty("default", defaultValue);
+        f.addProperty("minimum", minimum);
+        if (maximum != null) f.addProperty("maximum", maximum);
+        return this;
+    }
+
+    public NodeSchema bool(String key, String title, boolean defaultValue) {
+        field(key, title, "boolean").addProperty("default", defaultValue);
+        return this;
+    }
+
+    public NodeSchema choice(String key, String title, String defaultValue, String... choices) {
+        JsonObject f = field(key, title, "string");
+        f.addProperty("default", defaultValue);
+        JsonArray values = new JsonArray();
+        Arrays.stream(choices).forEach(values::add);
+        f.add("enum", values);
+        return this;
+    }
+
 
     public NodeSchema vector(String key, String title, String defaultValue, boolean fractional) {
         JsonObject f = field(key, title, "string");

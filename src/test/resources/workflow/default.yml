@@ -64,14 +64,16 @@ $web_meta: '{"version":3,"webNodes":{},"nodes":{"__init__":{"x":-1455.2314869387
   регион"},"schematic":{"x":-304.27437967712973,"y":-656.5343070343325,"width":351.31729824973274,"height":309.38830352657686,"title":"схематика"},"tto_holo":{"x":-204.13824933075065,"y":243.13000279789165,"title":"Голограма
   до открытия","width":340,"height":348.3253213333286},"tte":{"x":-235.35292593240302,"y":672.6108935360105,"title":"Таймер
   до удаления"},"tte_holo":{"x":325.60346884470897,"y":706.325243826314,"title":"Голограмма
-  до удаления"},"looter":{"x":832.5478535736253,"y":713.3130722469418,"title":"Инвентарь
-  с лутом","width":334.11064089786896,"height":399.83827057237596},"__destroy__":{"x":-1454.7511460970993,"y":-341.41556318591404,"title":"Удаление"},"animation":{"x":839.543477454157,"y":-697.3232918903789,"width":335.20623891339625,"height":394.83936062536486,"title":"партиклы
+  до удаления"},"looter":{"x":1138.3082945087287,"y":717.1736603116069,"title":"Инвентарь
+  с лутом","width":334.11064089786896,"height":399.83827057237596},"__destroy__":{"x":-1436.5789826505936,"y":-599.7187999606723,"title":"Удаление"},"animation":{"x":839.543477454157,"y":-697.3232918903789,"width":335.20623891339625,"height":394.83936062536486,"title":"партиклы
   аира"},"commands":{"x":170.3221363513528,"y":-729.5079777563786,"width":469.7160940009587,"height":176,"title":"установить
   блок аира"},"commands_1":{"x":173.28249153015926,"y":-502.1358963887456,"width":464.5113720691554,"height":176,"title":"удалить
-  блок аира"},"animation_1":{"x":1429.267432848501,"y":663.3456974319831,"width":333.1289612281961,"height":393.9489114702449,"title":"Анимация
-  взрыва"},"commands_2":{"x":1230.2047719541033,"y":1115.1862056469315,"width":401.8100436008122,"height":176,"title":"При
+  блок аира"},"animation_1":{"x":1735.7999489825913,"y":671.8390194502103,"width":333.1289612281961,"height":393.9489114702449,"title":"Анимация
+  взрыва"},"commands_2":{"x":1563.7614752307597,"y":1119.0467937115966,"width":401.8100436008122,"height":176,"title":"При
   открытии инва"},"tto":{"x":-731.1200179802102,"y":232.41464769563663,"title":"Таймер
-  до открытия"}},"viewport":{"x":730.3811087239635,"y":-49.28374381086553,"zoom":0.5342706039317013}}'
+  до открытия"},"bossbar":{"x":318.02865087009616,"y":231.41951289135716,"width":321.71812468603815,"height":323.20037336682725,"title":"Босс
+  бар до открытия"},"bossbar_1":{"x":735.5605095349089,"y":721.7639613791565,"width":336.13934124542476,"height":676.1895786100388,"title":"Босс
+  бар до удаления"}},"viewport":{"x":998.1272066949176,"y":306.0799888361292,"zoom":0.3583323536400851}}'
 nodes:
   __init__:
     type: __init__
@@ -119,6 +121,11 @@ nodes:
     lines:
     - '&cAirdrop'
     - '&fДо открытия: {ctx:tto.timer}'
+    on_create:
+    - create: bossbar
+    on_remove:
+    - remove: bossbar
+    on_update: []
   tte:
     type: tick:timer
     timer: 30
@@ -137,9 +144,9 @@ nodes:
     - '&aAirdrop'
     - '&fДо удаления: {ctx:tte.timer}'
     on_create:
-    - create: looter
+    - create: bossbar_1
     on_remove:
-    - remove: looter
+    - remove: bossbar_1
   looter:
     type: loot:looter
     offsets: 0;0;0
@@ -196,3 +203,29 @@ nodes:
     - create: tte
     on_remove:
     - remove: tto_holo
+  bossbar:
+    type: default:bossbar
+    title: '&cAirdrop&f до открытия {ctx:bossbar.time}'
+    radius: 64
+    color: red
+    overlay: progress
+    flags: []
+    progress: 1
+    time: '{ctx:tto.timer}'
+    progress_from_time: true
+    on_create: []
+    on_remove: []
+  bossbar_1:
+    type: default:bossbar
+    title: '&cAirdrop&f до удаления {ctx:bossbar_1.time}'
+    radius: 64
+    color: red
+    overlay: progress
+    flags: []
+    progress: 1
+    time: '{ctx:tte.timer}'
+    progress_from_time: true
+    on_create:
+    - create: looter
+    on_remove:
+    - remove: looter

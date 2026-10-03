@@ -248,6 +248,12 @@
         </dependency>
         <!-- tests -->
         <dependency>
+            <groupId>org.ow2.asm</groupId>
+            <artifactId>asm-tree</artifactId>
+            <version>9.9.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>com.github.MockBukkit</groupId>
             <artifactId>MockBukkit</artifactId>
             <version>v1.21-SNAPSHOT</version>

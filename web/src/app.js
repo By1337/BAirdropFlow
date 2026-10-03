@@ -284,6 +284,24 @@ function vectorInputs(value, fractional, attributes = '') {
 function readVector(container, fractional) {
   return joinVector([...container.querySelectorAll('[data-vector-axis]')].map(input => input.value), fractional);
 }
+function scalarInput(value, field, attributes) {
+  if (field.enum || field.type === 'boolean') {
+    const choices=field.enum ?? [true,false];
+    return `<select ${attributes}>${choices.map(choice=>`<option value="${escape(choice)}" ${String(value)===String(choice)?'selected':''}>${escape(choice)}</option>`).join('')}</select>`;
+  }
+  const numeric=['integer','number'].includes(field.type);
+  return `<input ${attributes} type="${numeric?'number':'text'}" value="${escape(value)}" ${numeric?`step="${field.type==='integer'?'1':'any'}"`:''} ${field.minimum!==undefined?`min="${field.minimum}"`:''} ${field.maximum!==undefined?`max="${field.maximum}"`:''}>`;
+}
+function readScalar(input, field) {
+  if (field.type==='boolean') return input.value==='true';
+  if (!['integer','number'].includes(field.type)) return input.value;
+  const value=Number(input.value);
+  if (!input.value.trim() || !Number.isFinite(value) || field.type==='integer'&&!Number.isInteger(value) ||
+    field.minimum!==undefined&&value<field.minimum || field.maximum!==undefined&&value>field.maximum) {
+    throw new Error(`Введите допустимое ${field.type==='integer'?'целое число':'число'}${field.minimum!==undefined?` от ${field.minimum}`:''}${field.maximum!==undefined?` до ${field.maximum}`:''}`);
+  }
+  return value;
+}
 function nodeFields(name,node,schema) {
   const known=new Set(['type']);
   const fields=Object.entries(schema.properties??{}).filter(([key])=>key!=='type'&&!key.startsWith('on_')).map(([key,field])=>{
@@ -292,7 +310,7 @@ function nodeFields(name,node,schema) {
     if(control==='lines') return `<div class="node-field"><label>${escape(title)}</label><textarea data-node-lines="${escape(name)}" data-field="${escape(key)}" spellcheck="false" placeholder="Одна строка на линию">${escape(nodeDrafts.get(JSON.stringify([name,key]))??(Array.isArray(value)?value.join('\n'):value))}</textarea></div>`;
     if(control==='materials' || control==='material-map') return `<div class="node-field"><label>${escape(title)}</label><div class="node-field-summary">${escape(control==='materials' ? `${Array.isArray(value)?value.length:0} материалов` : `${Object.keys(value ?? {}).length} замен`)} · настройка справа</div></div>`;
     if(control==='vector') return `<div class="node-field"><span>${escape(title)}</span>${vectorInputs(value, field['x-fractional'] === true, `data-node-vector="${escape(name)}" data-vector-field="${escape(key)}"`)}</div>`;
-    if(field.type==='string'||field.type==='integer') return `<div class="node-field"><label>${escape(title)}</label><input data-inline-node="${escape(name)}" data-inline-field="${escape(key)}" type="${field.type==='integer'?'number':'text'}" value="${escape(value)}" ${field.minimum!==undefined?`min="${field.minimum}"`:''}></div>`;
+    if(['string','integer','number','boolean'].includes(field.type)) return `<div class="node-field"><label>${escape(title)}</label>${scalarInput(value,field,`data-inline-node="${escape(name)}" data-inline-field="${escape(key)}"`)}</div>`;
     return `<div class="node-field"><label>${escape(title)}</label><div class="node-field-summary">${escape(Array.isArray(value)?`${value.length} элементов`:typeof value==='object'?Object.keys(value??{}).join(', '):String(value))}</div></div>`;
   });
   for(const [key,value] of Object.entries(node)) if(!known.has(key)&&!key.startsWith('on_')) fields.push(`<div class="node-field"><label>${escape(key)}</label><div class="node-field-summary">${escape(typeof value==='object'?Array.isArray(value)?`${value.length} элементов`:Object.keys(value).join(', '):String(value))}</div></div>`);
@@ -385,8 +403,7 @@ function drawGraph() {
   });
   $('.graph').querySelectorAll('[data-inline-field]').forEach(input=>input.onchange=()=>safe(()=>{
     const node=model.nodes[input.dataset.inlineNode], field=input.dataset.inlineField, schema=schemaFor(node).properties[field];
-    const value=schema.type==='integer'?Number(input.value):input.value;
-    if(schema.type==='integer'&&(!Number.isInteger(value)||!input.value||schema.minimum!==undefined&&value<schema.minimum)) throw new Error('Введите допустимое целое число');
+    const value=readScalar(input,schema);
     model.setField(input.dataset.inlineNode,field,value);refresh();
   }));
   $('.graph').querySelectorAll('[data-node-vector]').forEach(container => {
@@ -573,7 +590,7 @@ function drawInspector() {
     const value = node[key] ?? field.default ?? '', control = field['x-control'], json = control === 'event' || (!control && ['array','object'].includes(field.type));
     const draft = invalidFields.get(JSON.stringify([selected, key]));
     const display = draft?.value ?? (control === 'lines' ? (Array.isArray(value) ? value.join('\n') : value) : json ? JSON.stringify(value, null, 2) : value);
-    const body = control === 'event' ? `<div data-inspector-event="${escape(key)}"></div>` : control === 'materials' || control === 'material-map' ? materialEditor(key,value,control) : control === 'vector' ? vectorInputs(draft?.value ?? value, field['x-fractional'] === true, `data-inspector-vector="${escape(key)}"`) : control === 'lines' || json ? `<textarea data-field="${escape(key)}" data-control="${control ?? 'json'}" rows="${json ? 5 : 3}" spellcheck="false">${escape(display)}</textarea>` : `<input data-field="${escape(key)}" data-control="${field.type}" type="${field.type === 'integer' ? 'number' : 'text'}" value="${escape(display)}" ${field.minimum !== undefined ? `min="${field.minimum}"` : ''} ${field.type === 'integer' ? 'step="1"' : ''} ${required.includes(key) ? 'required' : ''}>`;
+    const body = control === 'event' ? `<div data-inspector-event="${escape(key)}"></div>` : control === 'materials' || control === 'material-map' ? materialEditor(key,value,control) : control === 'vector' ? vectorInputs(draft?.value ?? value, field['x-fractional'] === true, `data-inspector-vector="${escape(key)}"`) : control === 'lines' || json ? `<textarea data-field="${escape(key)}" data-control="${control ?? 'json'}" rows="${json ? 5 : 3}" spellcheck="false">${escape(display)}</textarea>` : scalarInput(display,field,`data-field="${escape(key)}" data-control="${field.type}" ${required.includes(key)?'required':''}`);
     return `<div class="field${draft ? ' error' : ''}"><label>${escape(field.title ?? key)}${required.includes(key) ? ' *' : ''}</label>${body}<small>${escape(control === 'event' ? 'Связи create, remove и destroy соединяются на схеме.' : field.description ?? '')}</small><small class="field-error">${escape(draft?.message ?? '')}</small></div>`;
   }).join('')}<details><summary class="section-label">Полный JSON ноды</summary><textarea id="raw-node" rows="14" spellcheck="false">${escape(JSON.stringify(node, null, 2))}</textarea><small>Неизвестные поля сохраняются.</small><button id="apply-raw" style="margin-top:10px">Применить JSON</button></details><div class="section-label">Исходящие связи</div><div id="inspector-edges"></div>`;
   $('#node-title').onchange = event => { model.setTitle(selected,event.target.value); refresh(); };
@@ -618,8 +635,7 @@ function drawInspector() {
       let value;
       if (control === 'lines') value = input.value ? input.value.split('\n') : [];
       else if (control === 'event' || control === 'json') value = JSON.parse(input.value);
-      else if (control === 'integer') { value = Number(input.value); if (!input.value || !Number.isInteger(value) || (input.min && value < Number(input.min))) throw new Error(`Нужно целое число от ${input.min || 'допустимого минимума'}`); }
-      else value = input.value;
+      else value = readScalar(input,schema.properties[field]);
       model.setField(selected,field,value); invalidFields.delete(JSON.stringify([selected, field]));
       $('#raw-node').value = JSON.stringify(model.nodes[selected], null, 2);
       container.classList.remove('error'); container.querySelector('.field-error').textContent = '';
@@ -705,7 +721,11 @@ async function copyYaml() {
     if (active?.id === 'note-text' && selected && metadata.webNodes?.[selected]) metadata.webNodes[selected].text=active.value;
     if (active?.dataset.commandYaml) drafts.set(JSON.stringify([active.dataset.commandYaml,'on_run']),active.value);
     if (active?.dataset.nodeLines && config.nodes[active.dataset.nodeLines]) config.nodes[active.dataset.nodeLines][active.dataset.field]=active.value ? active.value.split('\n') : [];
-    if (active?.dataset.inlineField && config.nodes[active.dataset.inlineNode]) config.nodes[active.dataset.inlineNode][active.dataset.inlineField]=active.type==='number' && active.value!=='' ? Number(active.value) : active.value;
+    if (active?.dataset.inlineField && config.nodes[active.dataset.inlineNode]) {
+      let value=active.value;
+      try { value=readScalar(active,schemaFor(config.nodes[active.dataset.inlineNode]).properties[active.dataset.inlineField]); } catch { /* Keep the raw draft. */ }
+      config.nodes[active.dataset.inlineNode][active.dataset.inlineField]=value;
+    }
     if (active?.dataset.vectorAxis) {
       const container=active.closest('[data-node-vector],[data-inspector-vector],[data-generator-vector]');
       if (container) {
@@ -718,7 +738,8 @@ async function copyYaml() {
     if (active?.dataset.field && !active.dataset.nodeLines && selected && config.nodes[selected]) {
       const control=active.dataset.control;
       let value=active.value;
-      if (control==='integer' && value!=='' && Number.isInteger(Number(value))) value=Number(value);
+      if (['integer','number'].includes(control) && value!=='' && Number.isFinite(Number(value))) value=Number(value);
+      else if (control==='boolean') value=value==='true';
       else if (control==='lines') value=value ? value.split('\n') : [];
       else if (control==='json') { try { value=JSON.parse(value); } catch { /* Keep the raw draft. */ } }
       config.nodes[selected][active.dataset.field]=value;
