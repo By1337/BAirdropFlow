@@ -3,12 +3,12 @@ package dev.by1337.baf;
 import dev.by1337.baf.command.AirdropCommands;
 import dev.by1337.baf.command.LootCommands;
 import dev.by1337.baf.component.AirdropComponents;
-import dev.by1337.baf.component.system.ParticleGraphs;
-import dev.by1337.baf.component.system.ParticleSystem;
+import dev.by1337.baf.component.system.AsyncTimerSystem;
 import dev.by1337.baf.component.system.TimerSystem;
 import dev.by1337.baf.config.Config;
 import dev.by1337.baf.generator.Generators;
 import dev.by1337.baf.loot.menu.LootMenu;
+import dev.by1337.baf.particle.ParticleGraphs;
 import dev.by1337.baf.spawner.AirdropSpawnerBoot;
 import dev.by1337.baf.web.AirdropWeb;
 import dev.by1337.baf.workflow.WorkflowFiles;
@@ -31,8 +31,6 @@ import java.io.File;
 
 public class BAirdropFlow extends BasePlugin {
     AirdropManager manager;
-    TimerSystem timerSystem;
-    ParticleSystem particleSystem;
     ParticleGraphs particleGraphs;
     Config config;
     WorldDataContainer<WorldData> worldData;
@@ -54,8 +52,6 @@ public class BAirdropFlow extends BasePlugin {
         messages.setCommands(AirdropCommands.getCommands());
         messages.setDebug(config.debug);
         BAF.manager = manager = new AirdropManager(this, messages);
-        timerSystem = new TimerSystem(this, manager);
-        particleSystem = new ParticleSystem(this, manager);
         if (!new File(getDataFolder(), "particles").exists()) {
             ResourceUtil.saveIfNotExist("particles/example.yml", this);
             ResourceUtil.saveIfNotExist("particles/explosion.yml", this);
@@ -97,10 +93,8 @@ public class BAirdropFlow extends BasePlugin {
         addCloseHook(fakeBlocks::close);
         addCloseHook(manager::disable);
         manager.enable();
-        addCloseHook(timerSystem);
-        timerSystem.start();
-        addCloseHook(particleSystem);
-        particleSystem.start();
+        addCloseHook(new TimerSystem(this, manager).start());
+        addCloseHook(new AsyncTimerSystem(this, manager).start());
         if (config.web.enabled()) {
             web = new AirdropWeb(workflows, config.web, action -> Bukkit.getScheduler().runTask(this, action));
             addCloseHook(web);

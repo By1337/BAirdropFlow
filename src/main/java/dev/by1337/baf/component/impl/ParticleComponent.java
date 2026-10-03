@@ -5,6 +5,7 @@ import dev.by1337.baf.BAF;
 import dev.by1337.baf.component.AbstractComponent;
 import dev.by1337.baf.component.AirdropComponent;
 import dev.by1337.baf.component.ComponentFactory;
+import dev.by1337.baf.component.system.TimerSystem;
 import dev.by1337.baf.util.Vec3d;
 import dev.by1337.baf.web.NodeSchema;
 import dev.by1337.edsl.EventHandler;
@@ -17,7 +18,7 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 
-public class ParticleComponent extends AbstractComponent {
+public class ParticleComponent extends AbstractComponent implements TimerSystem.Tickable {
     private static final double VIEW_DISTANCE_SQUARED = 30 * 30;
     private final Config config;
     private final Location location;
@@ -50,7 +51,8 @@ public class ParticleComponent extends AbstractComponent {
         }
     }
 
-    public void onTick(EventContext ctx) {
+    @Override
+    public void onSyncTick(EventContext ctx) {
         if (config.ticks != -1 && tick >= config.ticks) {
             try (var ignored = ctx.tracer().enter(name + " on_timer_end {", "}")) {
                 config.onTimerEnd.handle(ctx);
@@ -61,6 +63,7 @@ public class ParticleComponent extends AbstractComponent {
         World world = location.getWorld();
         if (world != null) {
             var particles = graph.make(tick);
+
             for (Player player : world.getPlayers()) {
                 if (player.getLocation().distanceSquared(location) <= VIEW_DISTANCE_SQUARED) {
                     ParticleRender.render(player, particles, location.getX(), location.getY(), location.getZ());
@@ -95,8 +98,10 @@ public class ParticleComponent extends AbstractComponent {
         private final EventHandler onTimerEnd;
 
         public Config(String animation, Vec3d offsets, int ticks, EventHandler onCreate, EventHandler onRemove, EventHandler onTimerEnd) {
-            if (animation == null || animation.isBlank()) throw new IllegalArgumentException("Particle animation ID is empty");
-            if (ticks < 1 && ticks != -1) throw new IllegalArgumentException("Particle lifetime must be positive or -1");
+            if (animation == null || animation.isBlank())
+                throw new IllegalArgumentException("Particle animation ID is empty");
+            if (ticks < 1 && ticks != -1)
+                throw new IllegalArgumentException("Particle lifetime must be positive or -1");
             this.animation = animation;
             this.offsets = offsets;
             this.ticks = ticks;

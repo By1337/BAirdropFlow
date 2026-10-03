@@ -1,6 +1,7 @@
 package dev.by1337.baf.component.impl;
 
 import dev.by1337.baf.Airdrop;
+import dev.by1337.baf.component.system.TimerSystem;
 import dev.by1337.baf.web.NodeSchema;
 import dev.by1337.baf.component.AbstractComponent;
 import dev.by1337.baf.component.AirdropComponent;
@@ -11,10 +12,11 @@ import dev.by1337.edsl.context.EventContext;
 import dev.by1337.yaml.decoder.RecordYamlDecoder;
 import dev.by1337.yaml.decoder.YamlDecoder;
 
-public class TimerComponent extends AbstractComponent {
+public class TimerComponent extends AbstractComponent implements TimerSystem.Tickable {
 
     private final Config config;
     private int timer;
+    private int tick = 0;
 
     private TimerComponent(Config config, String name, ComponentHolder owner) {
         super(name, owner);
@@ -52,6 +54,12 @@ public class TimerComponent extends AbstractComponent {
                 config.on_tick.handle(ctx);
             }
         }
+    }
+
+    @Override
+    public void onSyncTick(EventContext ctx) {
+        if (tick++ % 20 == 0)
+            onTick(ctx);
     }
 
     public static class Config implements ComponentFactory {

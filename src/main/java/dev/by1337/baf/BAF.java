@@ -1,7 +1,7 @@
 package dev.by1337.baf;
 
 import dev.by1337.baf.interact.InteractManager;
-import dev.by1337.baf.component.system.ParticleGraphs;
+import dev.by1337.baf.particle.ParticleGraphs;
 import dev.by1337.baf.loot.LootTables;
 import dev.by1337.baf.world.WorldData;
 import dev.by1337.baf.world.WorldDataContainer;

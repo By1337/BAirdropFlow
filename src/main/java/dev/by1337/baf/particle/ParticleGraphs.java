@@ -1,4 +1,4 @@
-package dev.by1337.baf.component.system;
+package dev.by1337.baf.particle;
 
 import dev.by1337.particle.flow.emit.EmitterGraph;
 import dev.by1337.yaml.YamlMap;
