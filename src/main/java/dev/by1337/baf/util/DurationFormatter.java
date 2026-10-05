@@ -1,8 +1,13 @@
 package dev.by1337.baf.util;
 
-/** Formats a duration in seconds using the same two-unit layout as BAuctionV2. */
 public final class DurationFormatter {
-    private DurationFormatter() {}
+    private DurationFormatter() {
+    }
+
+    public static String formatMillis(long ms) {
+        if (ms <= 999) return "<lang:bairdropflow.time.format.seconds:0>";
+        return formatSeconds(ms / 1000);
+    }
 
     public static String formatSeconds(long seconds) {
         seconds = Math.max(0, seconds);

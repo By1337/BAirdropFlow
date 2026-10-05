@@ -1,6 +1,7 @@
 package dev.by1337.baf;
 
 import dev.by1337.baf.interact.InteractManager;
+import dev.by1337.baf.gps.GPSRegistry;
 import dev.by1337.baf.particle.ParticleGraphs;
 import dev.by1337.baf.loot.LootTables;
 import dev.by1337.baf.world.WorldData;
@@ -12,6 +13,8 @@ import dev.by1337.plc.PlaceholderResolver;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.UUID;
 
 public class BAF {
     public static boolean RUNNING_IN_IDE = Boolean.getBoolean("baf.ide");
@@ -28,6 +31,10 @@ public class BAF {
 
     public static InteractManager blockInteract() {
         return manager.interactManager();
+    }
+
+    public static GPSRegistry gps() {
+        return plugin.gps;
     }
 
     public static EventContext newContext(PlaceholderResolver<EventContext> p) {
@@ -68,4 +75,23 @@ public class BAF {
         return plugin.fakeBlocks;
     }
 
+    public static void sendMessage(String key, UUID player, PlaceholderResolver<EventContext> c) {
+        if (plugin == null) return;
+        plugin.sendMessage(key, player, c);
+    }
+
+    public static void sendMessage(String key, Player player, PlaceholderResolver<EventContext> c) {
+        if (plugin == null) return;
+        plugin.sendMessage(key, player, c);
+    }
+
+    public static void sendMessage(String key, UUID player) {
+        if (plugin == null) return;
+        plugin.sendMessage(key, player);
+    }
+
+    public static void sendMessage(String key, Player player) {
+        if (plugin == null) return;
+        plugin.sendMessage(key, player);
+    }
 }

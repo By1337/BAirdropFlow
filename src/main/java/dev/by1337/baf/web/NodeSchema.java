@@ -64,6 +64,23 @@ public final class NodeSchema {
         return this;
     }
 
+    public NodeSchema object(String key, String title, NodeSchema nested) {
+        JsonObject f = field(key, title, "object");
+        f.add("properties", nested.properties.deepCopy());
+        JsonArray nestedRequired = new JsonArray();
+        nested.required.forEach(value -> {
+            if (!value.getAsString().equals("type")) nestedRequired.add(value);
+        });
+        f.add("required", nestedRequired);
+        JsonObject defaults = new JsonObject();
+        nested.properties.entrySet().forEach(entry -> {
+            JsonObject property = entry.getValue().getAsJsonObject();
+            if (property.has("default")) defaults.add(entry.getKey(), property.get("default").deepCopy());
+        });
+        f.add("default", defaults);
+        return this;
+    }
+
     public NodeSchema choice(String key, String title, String defaultValue, String... choices) {
         JsonObject f = field(key, title, "string");
         f.addProperty("default", defaultValue);

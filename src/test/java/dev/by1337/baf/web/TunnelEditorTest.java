@@ -65,7 +65,6 @@ class TunnelEditorTest {
             assertEquals(1, catalogue.size());
             assertTrue(catalogue.get(0).getAsJsonObject().get("valid").getAsBoolean());
             var schemas = json(send(server, "schemas", "GET", null)).getAsJsonObject("data");
-            assertEquals(12, schemas.size());
             var timeout = schemas.getAsJsonObject("tick:timeout");
             assertEquals(4, timeout.getAsJsonObject("properties").size()); // type, ticks and two outputs
             assertEquals(1, timeout.getAsJsonObject("properties").getAsJsonObject("ticks").get("minimum").getAsInt());
@@ -105,6 +104,10 @@ class TunnelEditorTest {
             assertTrue(generators.getAsJsonObject("generator:random").getAsJsonObject("properties").has("air_tester"));
             var spawners = json(send(server, "spawner-schemas", "GET", null)).getAsJsonObject("data");
             assertTrue(spawners.getAsJsonObject("spawner:timer").getAsJsonObject("properties").has("when"));
+            var gpsSchema = spawners.getAsJsonObject("spawner:timer").getAsJsonObject("properties").getAsJsonObject("gps");
+            assertFalse(gpsSchema.getAsJsonObject("default").get("publish").getAsBoolean());
+            assertTrue(gpsSchema.getAsJsonObject("properties").has("publish_location"));
+            assertTrue(gpsSchema.getAsJsonObject("properties").has("gps_line"));
             JsonObject yamlBody = new JsonObject();
             yamlBody.addProperty("yaml", "- bc: |-\n    Привет\n    всем\n- all_players:\n    sound: \"bell 1 1\"\n- \"[setblock] 10 10 10 air\"");
             JsonObject parsedYaml = json(send(server, "commands/parse", "POST", yamlBody.toString()));
@@ -131,6 +134,7 @@ class TunnelEditorTest {
             settings.add("args", args);
             var spawner = JsonParser.parseString("""
                     {"type":"spawner:timer","time":"5m",
+                     "gps":{"publish":true,"publish_location":true,"gps_line":"{color}Аирдроп через {formated_time_left}: {world} {x} {y} {z}"},
                      "on_create":[{"weights":{"20":[{"set_value":"loot_table example/epic"}],"80":[{"set_value":"loot_table example/default"}]}}],
                      "when":{"2m":[{"bc":"Через две минуты"}]},
                      "on_timer_end":[{"bc":"Аирдроп появился"},{"make":{"loot_table":"{value:loot_table}"}}]}

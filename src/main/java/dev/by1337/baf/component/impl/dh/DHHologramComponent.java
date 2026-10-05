@@ -1,13 +1,12 @@
 package dev.by1337.baf.component.impl.dh;
 
 import dev.by1337.baf.Airdrop;
-import dev.by1337.baf.web.NodeSchema;
 import dev.by1337.baf.component.AbstractComponent;
 import dev.by1337.baf.component.AirdropComponent;
-import dev.by1337.baf.component.ComponentEvent;
 import dev.by1337.baf.component.ComponentFactory;
 import dev.by1337.baf.ref.CleanerSlot;
 import dev.by1337.baf.util.Vec3d;
+import dev.by1337.baf.web.NodeSchema;
 import dev.by1337.edsl.EventHandler;
 import dev.by1337.edsl.context.EventContext;
 import dev.by1337.yaml.decoder.RecordYamlDecoder;
@@ -34,7 +33,6 @@ public class DHHologramComponent extends AbstractComponent {
         exportEvent("update", this::onUpdate);
     }
 
-    @ComponentEvent("update")
     public void onUpdate(EventContext ctx) {
         try (var ignored = ctx.tracer().enter(name + " update {", "}")) {
             var holo = hologram.get();
@@ -45,7 +43,6 @@ public class DHHologramComponent extends AbstractComponent {
     }
 
     @Override
-    @ComponentEvent("create")
     public void onCreate(EventContext ctx) {
         try (var ignored = ctx.tracer().enter(name + " create {", "}")) {
             hologram.set(DHAPI.createHologram(UUID.randomUUID().toString(), new Location(
@@ -59,7 +56,6 @@ public class DHHologramComponent extends AbstractComponent {
     }
 
     @Override
-    @ComponentEvent("remove")
     public void onRemove(EventContext ctx) {
         try (var ignored = ctx.tracer().enter(name + " remove {", "}")) {
             hologram.cleanup();

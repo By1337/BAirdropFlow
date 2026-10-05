@@ -7,6 +7,7 @@ import dev.by1337.baf.component.system.AsyncTimerSystem;
 import dev.by1337.baf.component.system.TimerSystem;
 import dev.by1337.baf.config.Config;
 import dev.by1337.baf.generator.Generators;
+import dev.by1337.baf.gps.GPSRegistry;
 import dev.by1337.baf.loot.menu.LootMenu;
 import dev.by1337.baf.particle.ParticleGraphs;
 import dev.by1337.baf.spawner.AirdropSpawnerBoot;
@@ -20,12 +21,16 @@ import dev.by1337.bmenu.BMenu;
 import dev.by1337.bmenu.loader.MenuSubLoader;
 import dev.by1337.cmd.Command;
 import dev.by1337.cmd.CommandMsgError;
+import dev.by1337.cmd.argument.ArgumentString;
 import dev.by1337.core.command.bcmd.argument.ArgumentChoice;
 import dev.by1337.core.command.bcmd.requires.RequiresPermission;
 import dev.by1337.core.plugin.BasePlugin;
 import dev.by1337.core.util.io.ResourceUtil;
+import dev.by1337.core.util.text.minimessage.BMM;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 
 import java.io.File;
 
@@ -37,6 +42,7 @@ public class BAirdropFlow extends BasePlugin {
     WorldDataContainer<FakeBlockSetter> fakeBlocks;
     WorkflowRepository workflows;
     AirdropWeb web;
+    GPSRegistry gps;
 
     @Override
     public void onLoad() {
@@ -87,6 +93,8 @@ public class BAirdropFlow extends BasePlugin {
     @Override
     public void onEnable() {
         super.onEnable();
+        gps = new GPSRegistry(this);
+        addCloseHook(gps);
         worldData = new WorldDataContainer<>(this, w -> new WorldData(w, this));
         addCloseHook(worldData::close);
         fakeBlocks = new WorldDataContainer<>(this, w -> new FakeBlockSetter(this, w));
@@ -99,6 +107,29 @@ public class BAirdropFlow extends BasePlugin {
             web = new AirdropWeb(workflows, config.web, action -> Bukkit.getScheduler().runTask(this, action));
             addCloseHook(web);
         }
+        registerCommand(new Command<CommandSender>("gps").executor(
+                new ArgumentString<CommandSender>("id", null),
+                (sender, id) -> {
+                    if (!(sender instanceof Player player)) return;
+                    if (id != null && !id.isBlank()) {
+                        try {
+                            long value = Long.parseLong(id);
+                            if (gps.addWaypoint(player, value)) return;
+                        } catch (NumberFormatException ignored) {
+                        }
+                    }
+                    var lines = gps.getEntries();
+                    if (lines.isEmpty()) {
+                        //todo check global spawners
+                        sendMessage("gps_empty", player);
+                        return;
+                    }
+                    int x = 0;
+                    for (GPSRegistry.GPSEntry line : lines) {
+                        player.sendMessage(Component.text(++x + ". ").append(BMM.deserialize(line.getLine(), player.locale())));
+                        if (x > 25) return;
+                    }
+                }), null);
         registerCommand(new Command<CommandSender>("baf").executor(sender -> startWorkflow("default.yml"))
                 .sub(LootCommands.create())
                 .sub(new Command<CommandSender>("reload").requires(new RequiresPermission<>("baf.admin"))

@@ -1,4 +1,7 @@
 
 $lang: ru_RU
 
-hello: 'hello'
+gps_waypoint_added:
+  - 'Добавлена точка на {x} {y} {z} в <lang:bairdropflow.world.{world}.in>'
+gps_empty:
+  - 'Нет ближайших ивентов!'

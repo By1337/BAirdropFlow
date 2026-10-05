@@ -4,10 +4,11 @@ import dev.by1337.baf.BAF;
 import dev.by1337.baf.Workflow;
 import dev.by1337.baf.command.AirdropCommands;
 import dev.by1337.baf.entity.TickableEntity;
+import dev.by1337.baf.gps.GPSRegistry;
 import dev.by1337.baf.spawner.AirdropSpawner;
+import dev.by1337.baf.util.DurationFormatter;
 import dev.by1337.baf.util.time.DurationParser;
 import dev.by1337.baf.util.time.DurationRange;
-import dev.by1337.baf.world.WorldData;
 import dev.by1337.baf.web.NodeSchema;
 import dev.by1337.cmd.Command;
 import dev.by1337.cmd.CommandMsgError;
@@ -22,7 +23,6 @@ import dev.by1337.yaml.decoder.YamlDecoder;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +34,10 @@ import java.util.concurrent.CompletableFuture;
 public class TimerSpawner implements AirdropSpawner {
     public static final NodeSchema WEB_SCHEMA = NodeSchema.of("Таймер", "Выбирает вариант, объявляет появление и создаёт аирдроп по окончании отсчёта.")
             .duration("time", "Время до появления", "5m")
+            .object("gps", "GPS", NodeSchema.of("GPS", "Публикация отсчёта в GPS")
+                    .bool("publish", "Публиковать в GPS", false)
+                    .bool("publish_location", "Публиковать координаты", false)
+                    .text("gps_line", "Строка GPS", "", false))
             .events("on_create", "on_timer_end")
             .timeEvents("when", "Сообщения по оставшемуся времени");
     private static final Logger log = LoggerFactory.getLogger(TimerSpawner.class);
@@ -50,7 +54,8 @@ public class TimerSpawner implements AirdropSpawner {
             HANDLER.fieldOf("on_create", EMPTY_HANDLER),
             YamlDecoder.mapOf(DurationRange.DECODER, HANDLER)
                     .fieldOf("when"),
-            HANDLER.fieldOf("on_timer_end", EMPTY_HANDLER)
+            HANDLER.fieldOf("on_timer_end", EMPTY_HANDLER),
+            GPSRegistry.GPSConfig.DECODER.fieldOf("gps", GPSRegistry.GPSConfig.EMPTY)
     );
 
 
@@ -58,12 +63,14 @@ public class TimerSpawner implements AirdropSpawner {
     private final EventHandler on_create;
     private final Map<DurationRange, EventHandler> when;
     private final EventHandler on_timer_end;
+    private final GPSRegistry.GPSConfig gps;
 
-    public TimerSpawner(long duration, EventHandler onCreate, Map<DurationRange, EventHandler> when, EventHandler onTimerEnd) {
+    public TimerSpawner(long duration, EventHandler onCreate, Map<DurationRange, EventHandler> when, EventHandler onTimerEnd, GPSRegistry.GPSConfig gps) {
         this.duration = duration;
         on_create = onCreate;
         this.when = when;
         on_timer_end = onTimerEnd;
+        this.gps = gps;
     }
 
     @Override
@@ -72,13 +79,15 @@ public class TimerSpawner implements AirdropSpawner {
     }
 
     private class Ticker implements TickableEntity {
-        private final PlaceholderResolver<Ticker> PLACEHOLDERS = Placeholders.<Ticker>create()
+        private static final PlaceholderResolver<Ticker> PLACEHOLDERS = Placeholders.<Ticker>create()
                 .of("value", (key, v) -> v.values.get(key))
                 .withContext("time", (v) -> v.timeLeft / 1000)
+                .withContext("world", (v) -> v.world.getName())
+                .withContext("millis_left", (v) -> v.timeLeft)
+                .withContext("formated_time_left", (v) -> DurationFormatter.formatMillis(v.timeLeft))
                 .withContext("x", (v) -> v.location.getBlockX())
                 .withContext("y", (v) -> v.location.getBlockY())
-                .withContext("z", (v) -> v.location.getBlockZ())
-                ;
+                .withContext("z", (v) -> v.location.getBlockZ());
         private final Workflow workflow;
         private long timeLeft = duration;
         private int tick;
@@ -90,6 +99,7 @@ public class TimerSpawner implements AirdropSpawner {
         private final Map<String, String> values = new HashMap<>();
         private final PlaceholderResolver<EventContext> placeholders = PLACEHOLDERS.bindCtx(this);
         private volatile CompletableFuture<@Nullable Location> locFuture;
+        private GPSRegistry.GPSEntry gpsEntry;
 
         private Ticker(Workflow workflow) {
             this.workflow = workflow;
@@ -105,6 +115,14 @@ public class TimerSpawner implements AirdropSpawner {
                 init = true;
                 on_create.handleAndClose(makeContext());
             }
+            if (gpsEntry == null && location != null && gps.publish()){
+                gpsEntry = new GPSRegistry.GPSEntry(
+                        PLACEHOLDERS.bindCtx(this),
+                        gps.gps_line(),
+                        gps.publish_location() ? location : null
+                );
+                BAF.gps().publish(gpsEntry);
+            }
             if (tick++ % 20 == 0) {
                 timeLeft -= 1000;
                 if (timeLeft > 0) {
@@ -116,6 +134,9 @@ public class TimerSpawner implements AirdropSpawner {
                 } else {
                     removed = true;
                     on_timer_end.handleAndClose(makeContext());
+                    if (gpsEntry != null){
+                        BAF.gps().remove(gpsEntry.id());
+                    }
                 }
             }
         }
@@ -126,16 +147,11 @@ public class TimerSpawner implements AirdropSpawner {
 
         private boolean locationGen() {
             if (location == null) {
-                if (locFuture == null){
+                if (locFuture == null) {
                     locFuture = workflow.generator.tryGenerate(world);
                     locFuture.thenAccept(loc -> {
                         location = loc;
                         locFuture = null;
-                        if (location != null){
-                            for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
-                                onlinePlayer.teleportAsync(location);
-                            }
-                        }
                     });
                 }
                 if (location == null) {
