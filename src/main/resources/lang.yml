@@ -10,3 +10,11 @@ ru_RU:
   time.format.minutes: '{} мин.'
   time.format.minutes.seconds: '{} мин. {} сек.'
   time.format.seconds: '{} сек.'
+
+  world.world.name: 'Обычный мир'
+  world.world_the_end.name: 'Эндер мир'
+  world.world_the_nether.name: 'Незер мир'
+
+  world.world.in: 'Обычном мире'
+  world.world_the_end.in: 'Эндер мире'
+  world.world_the_nether.in: 'Незер мире'

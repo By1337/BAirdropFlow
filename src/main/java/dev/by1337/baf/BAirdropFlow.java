@@ -118,7 +118,7 @@ public class BAirdropFlow extends BasePlugin {
                             if (web == null) throw new CommandMsgError("Включите web.enabled в config.yml");
                             web.link().whenComplete((link, error) -> Bukkit.getScheduler().runTask(this, () -> {
                                 if (error != null)
-                                    sender.sendMessage("Не удалось получить ссылку: " + error.getMessage());
+                                    sender.sendMessage("Не удалось получить ссылку: " + error.getMessage() + " Возможно нужен VPN");
                                 else
                                     sender.sendMessage(net.kyori.adventure.text.Component.text("Открыть редактор аирдропов")
                                             .clickEvent(net.kyori.adventure.text.event.ClickEvent.openUrl(link))

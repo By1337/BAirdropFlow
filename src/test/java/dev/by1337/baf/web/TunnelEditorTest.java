@@ -122,8 +122,10 @@ class TunnelEditorTest {
             var settings = new JsonObject();
             var generator = new JsonObject();
             generator.addProperty("type", "generator:fixed");
-            generator.addProperty("at", "10;90;20");
+            generator.addProperty("at", "{position}");
             settings.add("generator", generator);
+            var defaults = JsonParser.parseString("{\"delay\":\"45\",\"position\":\"10;90;20\"}").getAsJsonObject();
+            settings.add("defaults", defaults);
             var args = new JsonObject();
             args.addProperty("loot_table", "example/default");
             settings.add("args", args);
@@ -138,7 +140,7 @@ class TunnelEditorTest {
             // Well above the old 64 KiB tunnel limit, with Cyrillic and control characters.
             String text = "Привет ❤️\t\n".repeat(9000);
             body.getAsJsonObject("nodes").getAsJsonObject("opening").addProperty("editor_note", text);
-            body.getAsJsonObject("nodes").getAsJsonObject("opening").addProperty("timer", 45);
+            body.getAsJsonObject("nodes").getAsJsonObject("opening").addProperty("timer", "{delay}");
             JsonArray actions = new JsonArray();
             JsonObject broadcast = new JsonObject();
             broadcast.addProperty("bc", "<gradient:#ff0000:#00ff00>Привет\nвсем</gradient>");
@@ -156,13 +158,15 @@ class TunnelEditorTest {
             JsonObject positions = new JsonObject();
             positions.add("opening", point);
             body.getAsJsonObject("metadata").add("nodes", positions);
+            body.getAsJsonObject("metadata").add("defaultsNode", point);
             assertEquals(original.get("revision").getAsString(), data(server).get("revision").getAsString());
             var saved = json(send(server, "airdrop", "POST", body.toString()));
             assertTrue(saved.get("ok").getAsBoolean(), saved.toString());
             assertTrue(Files.readString(dir.resolve("data/workflow/default.yml")).contains("minecraft:respawn_anchor[charges=4]"));
             JsonObject roundTrip = data(server);
             assertEquals(2, roundTrip.getAsJsonObject("config").getAsJsonObject("nodes").getAsJsonObject("commands").getAsJsonArray("on_run").size());
-            assertEquals(45, roundTrip.getAsJsonObject("config").getAsJsonObject("nodes").getAsJsonObject("opening").get("timer").getAsInt());
+            assertEquals("{delay}", roundTrip.getAsJsonObject("config").getAsJsonObject("nodes").getAsJsonObject("opening").get("timer").getAsString());
+            assertEquals(defaults, roundTrip.getAsJsonObject("config").getAsJsonObject("defaults"));
             assertEquals(generator, roundTrip.getAsJsonObject("config").getAsJsonObject("generator"));
             assertEquals(args, roundTrip.getAsJsonObject("config").getAsJsonObject("args"));
             assertEquals(spawner, roundTrip.getAsJsonObject("config").getAsJsonObject("spawner"));
@@ -171,6 +175,8 @@ class TunnelEditorTest {
             assertTrue(roundTrip.getAsJsonObject("config").getAsJsonObject("custom_field").get("preserved").getAsBoolean());
             assertTrue(roundTrip.getAsJsonObject("config").get("$web_meta").isJsonPrimitive());
             assertEquals(point, roundTrip.getAsJsonObject("metadata").getAsJsonObject("nodes").get("opening"));
+            assertEquals(point, roundTrip.getAsJsonObject("metadata").get("defaultsNode"));
+            assertTrue(Files.readString(dir.resolve("data/workflow/default.yml")).contains("{delay}"));
             assertNotEquals(original.get("revision"), roundTrip.get("revision"));
             try (var backups = Files.walk(dir.resolve("data/backups"))) {
                 var files = backups.filter(Files::isRegularFile).toList();

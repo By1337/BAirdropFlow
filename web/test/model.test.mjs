@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { GraphModel, connections } from '../src/model.js';
+import { GraphModel, connections, defaultsNodeId } from '../src/model.js';
 
 function fixture() {
   return { key:'events.yml', revision:'original', config:{ id:'demo', world:'world', custom:{ preserved:true }, nodes:{
@@ -152,4 +152,27 @@ test('disconnecting incoming links leaves surrounding commands and supports undo
   assert.equal(model.nodes.__init__.on_init[0].setblock,'{x} {y} {z} air');
   assert.equal(model.nodes.__init__.on_init.at(-1).bc,'last');
   model.undo();assert.equal(model.edges().filter(e=>e.target==='timer').length,3);
+});
+
+test('defaults project a single portless editor node and persist separately from executable nodes', () => {
+  const document = fixture(); document.config.defaults = {delay:'45'};
+  document.metadata.defaultsNode = {x:17,y:29};
+  const model = new GraphModel(document);
+  assert.equal(model.node(defaultsNodeId).type, 'web:defaults');
+  assert.equal(model.isWeb(defaultsNodeId), true);
+  assert.deepEqual(model.layout(defaultsNodeId), {x:17,y:29});
+  model.setDefaults({delay:'60',position:'0;100;0'});
+  model.setField('timer', 'timer', '{delay}');
+  const payload = model.payload();
+  assert.deepEqual(payload.settings.defaults, {delay:'60',position:'0;100;0'});
+  assert.equal(payload.nodes.timer.timer, '{delay}');
+  assert.equal(Object.hasOwn(payload.nodes, defaultsNodeId), false);
+  assert.equal(Object.hasOwn(payload.metadata.webNodes, defaultsNodeId), false);
+  assert.throws(() => model.connect('timer', 'on_tick', defaultsNodeId));
+  assert.throws(() => model.remove(defaultsNodeId));
+  model.undo(); model.undo(); assert.deepEqual(model.defaults, {delay:'45'});
+  model.redo(); assert.equal(model.defaults.delay,'60');
+  const loaded = new GraphModel({...document,config:{...document.config,...payload.settings,nodes:payload.nodes},metadata:payload.metadata});
+  assert.deepEqual(loaded.defaults,payload.settings.defaults);
+  assert.deepEqual(loaded.layout(defaultsNodeId),payload.metadata.defaultsNode);
 });

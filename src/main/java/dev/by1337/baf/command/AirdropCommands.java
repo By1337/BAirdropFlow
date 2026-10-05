@@ -72,19 +72,6 @@ public class AirdropCommands {
                             String node = (String) args.getOrThrow("node", "Use: [remove] <node>");
                             var drop = ctx.get(Airdrop.class);
                             var c = drop.components().get(node);
-                            if (c == null) {
-                                throw new CommandMsgError("Unknown node " + node);
-                            }
-                            c.markRemoved(ctx);
-                        })
-                )
-                .sub(new Command<EventContext>("[remove?]")
-                        .aliases("[rm?]")
-                        .argument(new ArgumentString<>("node"))
-                        .executor((ctx, args) -> {
-                            String node = (String) args.getOrThrow("node", "Use: [remove?] <node>");
-                            var drop = ctx.get(Airdrop.class);
-                            var c = drop.components().get(node);
                             if (c != null) {
                                 c.markRemoved(ctx);
                             }

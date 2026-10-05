@@ -12,7 +12,7 @@ import java.util.function.Consumer;
 
 /** Only replaces editor-owned fields after validation and a byte-for-byte backup. */
 public final class WorkflowFiles {
-    private static final Set<String> SETTINGS = Set.of("id", "world", "args", "generator", "spawner");
+    private static final Set<String> SETTINGS = Set.of("id", "world", "args", "generator", "spawner", "defaults");
     private final Path home;
     private final Path backups;
 

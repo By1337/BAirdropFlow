@@ -6,8 +6,7 @@ test('vector fields preserve the YAML vector format for integer and fractional c
   assert.deepEqual(splitVector('0;1.5;-2'), ['0', '1.5', '-2']);
   assert.equal(joinVector([' 3 ', '4', '-5'], false), '3;4;-5');
   assert.equal(joinVector(['0.25', '-1.5', '2'], true), '0.25;-1.5;2');
-  assert.throws(() => joinVector(['0.25', '1', '2'], false));
-  assert.throws(() => joinVector(['1e3', '1', '2'], false));
-  assert.throws(() => joinVector(['2147483648', '1', '2'], false));
-  assert.throws(() => joinVector(['0', '', '2'], true));
+  assert.equal(joinVector(['{x}', '1', '2'], false), '{x};1;2');
+  assert.equal(joinVector(['{position}'], false), '{position}');
+  assert.equal(joinVector(['0', '', '2'], true), '0;;2');
 });

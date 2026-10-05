@@ -57,3 +57,39 @@ test('the catalogue builds ready placeholders for each node from its schema, inc
   assert.deepEqual(entries.map(entry=>entry.value),['{ctx:tto.timer}','{ctx:tte.timer}','{ctx:breaker.count}']);
   assert.equal(entries[0].title,'Осталось секунд');
 });
+
+test('default rename updates exact usages throughout the document, counts repeats and supports undo', () => {
+  const model = new GraphModel({key:'defaults.yml',revision:'1',config:{
+    defaults:{delay:'45',other:'{delay}'},args:{text:'{delay} {delay} {delay2}'},
+    generator:{at:'{delay};0;0'},nodes:{timer:{type:'tick:timer',timer:'{delay}'}},
+    custom:{'{delay}':'{ctx:delay.timer}'},$web_meta:'{"text":"{delay}"}'
+  },metadata:{webNodes:{note:{type:'web:note',text:'{delay}'}}}});
+  const before = model.snapshot();
+  assert.equal(model.renameDefault('delay','wait'),7);
+  assert.deepEqual(model.defaults,{wait:'45',other:'{wait}'});
+  assert.equal(model.config.args.text,'{wait} {wait} {delay2}');
+  assert.equal(model.nodes.timer.timer,'{wait}');
+  assert.deepEqual(model.config.custom,{'{wait}':'{ctx:delay.timer}'});
+  assert.equal(model.webNodes.note.text,'{wait}');
+  assert.equal(model.payload().settings.defaults.wait,'45');
+  assert.ok(formatWorkflowYaml(model.config,model.metadata).includes('{wait}'));
+  model.undo(); assert.deepEqual(model.snapshot(),before);
+  model.redo(); assert.equal(model.nodes.timer.timer,'{wait}');
+});
+
+test('default rename collisions are atomic and unchanged names report zero', () => {
+  const model = new GraphModel({key:'defaults.yml',config:{defaults:{a:'1',b:'2'},nodes:{},custom:{'{a}':1,'{c}':2}},metadata:{}});
+  const before = model.snapshot();
+  assert.throws(() => model.renameDefault('a','b'),/уже существует/);
+  assert.throws(() => model.renameDefault('a','c'),/повторяющийся ключ/);
+  assert.deepEqual(model.snapshot(),before);
+  assert.equal(model.renameDefault('a','a'),0);
+  assert.equal(model.dirty,false);
+});
+
+test('node rename reports placeholder occurrences without counting serialized metadata twice or graph links', () => {
+  const model = new GraphModel({config:{nodes:{timer:{type:'tick:timer'},init:{on_init:[{create:'timer'},{bc:'{ctx:timer.timer} {ctx:timer.timer}'}]}},$web_meta:'{"text":"{ctx:timer.timer}"}'},metadata:{webNodes:{note:{type:'web:note',text:'{ctx:timer.timer}'}}}});
+  assert.equal(model.rename('timer','wait'),3);
+  assert.equal(model.rename('wait','wait'),0);
+  assert.equal(model.nodes.init.on_init[0].create,'wait');
+});

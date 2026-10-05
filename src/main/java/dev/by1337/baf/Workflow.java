@@ -7,6 +7,7 @@ import dev.by1337.baf.generator.Generator;
 import dev.by1337.baf.generator.impl.FixedGenerator;
 import dev.by1337.baf.spawner.AirdropSpawner;
 import dev.by1337.baf.util.Vec3i;
+import dev.by1337.plc.Placeholders;
 import dev.by1337.yaml.decoder.RecordYamlDecoder;
 import dev.by1337.yaml.decoder.YamlDecoder;
 import org.bukkit.Location;
@@ -24,7 +25,22 @@ public class Workflow {
             YamlDecoder.STRING_TO_STRING.fieldOf("args", Map.of()),
             YamlDecoder.STRING.fieldOf("world", "world"),
             AirdropSpawner.REGISTRY.decoder.fieldOf("spawner")
-    );
+    ).preDecode(yaml -> {
+        if (yaml.isMap()) {
+            var map = yaml.asYamlMap().getOrThrow().deepCopy();
+            if (map.has("defaults")) {
+                var defaults = YamlDecoder.STRING_TO_STRING.decode(map.get("defaults")).getOrThrow();
+                var placeholders = Placeholders.<Void>create();
+                defaults.forEach(placeholders::of);
+                var tmp = map.getRaw().remove("defaults");
+                var replacer = placeholders.bind(null);
+                map.deepReplace(replacer::setPlaceholders);
+                map.getRaw().put("defaults", tmp);
+                return map.get();
+            }
+        }
+        return yaml;
+    });
     private final String id;
     private final Map<String, ComponentFactory> nodes;
     public final Generator generator;

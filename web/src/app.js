@@ -1,10 +1,10 @@
 import {EventDslEditor, makeDescriptor} from './event-dsl-editor.js';
-import { GraphModel, clone } from './model.js';
+import { GraphModel, clone, defaultsNodeId } from './model.js';
 import { replaceEditableCommands, formatCommands, formatWorkflowYaml } from './command-yaml.js';
-import { validDuration, validTimeKey } from './spawner.js';
-import { splitVector, joinVector } from './vector.js';
+import { validTimeKey } from './spawner.js';
+import { joinVector } from './vector.js';
 import { highlightYaml } from './yaml-highlight.js';
-import { nodePlaceholders, renameNodePlaceholders } from './node-placeholders.js';
+import { nodePlaceholders, renameNodePlaceholders, renameLiteralPlaceholders, countPlaceholderUses } from './node-placeholders.js';
 const $ = selector => document.querySelector(selector);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const colors = { default:'#a898f4', tick:'#edc482', loot:'#63dec0', block:'#ff9da4', dh:'#84aaff', wg:'#a1c8ff' };
@@ -14,6 +14,7 @@ const nodeScroll = new Map();
 const nodeDrafts = new Map();
 const pendingCommandEdits = new Map();
 let graphListeners;
+let minimapDrag = null;
 let copyingYaml = false;
 const url = new URL(location.href), segments = location.pathname.split('/').filter(Boolean);
 let token = url.searchParams.get('token') ?? (segments.length >= 2 ? segments[0] : sessionStorage.getItem('baf-token')) ?? '';
@@ -83,7 +84,7 @@ async function openEditor(key) {
     model = new GraphModel(workflowDocument); selected = null; selectedEdge = null; linking = null; generatorError = ''; spawnerError = ''; invalidFields.clear(); nodeScroll.clear(); nodeDrafts.clear();
     history.replaceState(null, '', `#edit/${encodeURIComponent(key)}`);
     $('#breadcrumb').textContent = `Аирдропы / ${workflowDocument.config.id ?? key}`;
-    $('#app').innerHTML = `<section class="workspace"><div class="workspace-toolbar"><button id="back" class="secondary">←</button><button id="tab-graph" class="editor-tab">Сценарий</button><button id="tab-generator" class="editor-tab">Генератор локации</button><button id="tab-spawner" class="editor-tab">Спавнер и параметры</button><button id="add-node">+ Нода</button><button id="undo" title="Ctrl+Z">↶</button><button id="redo" title="Ctrl+Shift+Z">↷</button><button id="settings" class="optional">Настройки аирдропа</button><div class="spacer"></div><button id="reload-editor" title="Перезагрузить с диска">↻</button><button id="copy-yaml" class="secondary" title="Скопировать текущий YAML-файл без сохранения на сервере">Скопировать YAML</button><button id="save" class="primary">Сохранить</button></div><aside class="library"><div class="section-label">Компоненты</div><div id="node-library"></div><p>Добавьте компонент, затем потяните от выхода события к нужному входу другой ноды.</p><div class="section-label" style="margin-top:28px">Ноды сценария</div><div id="outline"></div></aside><div class="graph-shell"><svg class="graph" tabindex="0" aria-label="Схема аирдропа"></svg><div class="graph-hint" id="graph-hint">Перетаскивайте ноды · Колесо — масштаб · Фон — перемещение</div><div class="graph-controls"><button id="zoom-out" aria-label="Уменьшить">−</button><span id="zoom-value">100%</span><button id="zoom-in" aria-label="Увеличить">+</button><button id="fit" title="Показать весь граф">⤢</button></div></div><aside class="inspector" id="inspector"></aside><main class="generator-panel" id="generator-panel"></main><main class="spawner-panel" id="spawner-panel"></main><footer class="workspace-status"><span id="node-count"></span><span id="edge-count"></span><span id="warnings"></span><span id="save-state"></span></footer></section>`;
+    $('#app').innerHTML = `<section class="workspace"><div class="workspace-toolbar"><button id="back" class="secondary">←</button><button id="tab-graph" class="editor-tab">Сценарий</button><button id="tab-generator" class="editor-tab">Генератор локации</button><button id="tab-spawner" class="editor-tab">Спавнер и параметры</button><button id="add-node">+ Нода</button><button id="undo" title="Ctrl+Z">↶</button><button id="redo" title="Ctrl+Shift+Z">↷</button><button id="settings" class="optional">Настройки аирдропа</button><div class="spacer"></div><button id="reload-editor" title="Перезагрузить с диска">↻</button><button id="copy-yaml" class="secondary" title="Скопировать текущий YAML-файл без сохранения на сервере">Скопировать YAML</button><button id="save" class="primary">Сохранить</button></div><aside class="library"><div class="section-label">Компоненты</div><div id="node-library"></div><p>Добавьте компонент, затем потяните от выхода события к нужному входу другой ноды.</p><div class="section-label" style="margin-top:28px">Ноды сценария</div><div id="outline"></div></aside><div class="graph-shell"><svg class="graph" tabindex="0" aria-label="Схема аирдропа"></svg><svg id="minimap" class="graph-minimap" tabindex="0" role="img" aria-label="Миникарта схемы. Нажмите или перетащите для перемещения, стрелки — навигация."></svg><div class="graph-hint" id="graph-hint">Перетаскивайте ноды · Колесо — масштаб · Фон — перемещение</div><div class="graph-controls"><button id="zoom-out" aria-label="Уменьшить">−</button><span id="zoom-value">100%</span><button id="zoom-in" aria-label="Увеличить">+</button><button id="fit" title="Показать весь граф">⤢</button></div></div><aside class="inspector" id="inspector"></aside><main class="generator-panel" id="generator-panel"></main><main class="spawner-panel" id="spawner-panel"></main><footer class="workspace-status"><span id="node-count"></span><span id="edge-count"></span><span id="warnings"></span><span id="save-state"></span></footer></section>`;
     $('#node-library').innerHTML = Object.entries(schemas).map(([type, schema]) => `<button data-type="${escape(type)}" style="--node-color:${color(type)}">${escape(schema.title)}<small>${escape(type)}</small></button>`).join('');
     $('#node-library').querySelectorAll('button').forEach(button => button.onclick = () => addNode(button.dataset.type));
     $('#back').onclick = () => { if (leave()) { history.replaceState(null, '', '#'); loadHome(); } };
@@ -151,7 +152,7 @@ function drawGenerator() {
   const options = Object.entries(generatorSchemas).map(([type, entry]) => `<option value="${escape(type)}" ${type === generator.type ? 'selected' : ''}>${escape(entry.title)} · ${escape(type)}</option>`).join('');
   panel.innerHTML = `<div class="generator-card"><div class="eyebrow">МЕСТО ПОЯВЛЕНИЯ</div><h2>Генератор локации</h2><p>Генератор определяет координаты нового аирдропа в выбранном мире.</p><div class="field"><label>Тип генератора</label><select id="generator-type">${schema ? '' : `<option value="${escape(generator.type)}" selected>${escape(generator.type)} · неизвестный тип</option>`}${options}</select></div><p class="muted">${escape(schema?.description ?? 'Тип генератора не зарегистрирован. Его JSON можно отредактировать ниже.')}</p><p class="generator-error">${escape(generatorError)}</p>${Object.entries(schema?.properties ?? {}).filter(([key]) => key !== 'type').map(([key, field]) => {
     const value = generator[key] ?? field.default ?? '';
-    return `<div class="field"><label>${escape(field.title ?? key)}</label>${field['x-control'] === 'vector' ? vectorInputs(value, field['x-fractional'] === true, `data-generator-vector="${escape(key)}"`) : `<input data-generator-field="${escape(key)}" type="${field.type === 'integer' ? 'number' : 'text'}" value="${escape(value)}" ${field.minimum !== undefined ? `min="${field.minimum}"` : ''} ${field.type === 'integer' ? 'step="1"' : ''}>`}<small>${escape(field.description ?? '')}</small></div>`;
+    return `<div class="field"><label>${escape(field.title ?? key)}</label>${field['x-control'] === 'vector' ? vectorInputs(value, field['x-fractional'] === true, `data-generator-vector="${escape(key)}"`) : scalarInput(value,field,`data-generator-field="${escape(key)}"`)}<small>${escape(field.description ?? '')}</small></div>`;
   }).join('')}<details><summary class="section-label">Полный JSON генератора</summary><textarea id="raw-generator" rows="12" spellcheck="false">${escape(JSON.stringify(generator, null, 2))}</textarea><small>Неизвестные поля сохраняются.</small><button id="apply-generator-json" type="button">Применить JSON</button></details></div>`;
   $('#generator-type').onchange = event => editGenerator(() => {
     const type = event.target.value, selectedSchema = generatorSchemas[type];
@@ -161,11 +162,7 @@ function drawGenerator() {
   });
   panel.querySelectorAll('[data-generator-field]').forEach(input => input.onchange = () => editGenerator(() => {
     const key = input.dataset.generatorField, field = schema.properties[key];
-    let value = input.value;
-    if (field.type === 'integer') {
-      value = Number(value);
-      if (!input.value || !Number.isInteger(value) || field.minimum !== undefined && value < field.minimum) throw new Error(`Недопустимое число для «${field.title}»`);
-    }
+    const value = readScalar(input, field);
     generatorError = ''; model.setGenerator({...model.config.generator, [key]:value}); drawGenerator(); updateStatus();
   }));
   panel.querySelectorAll('[data-generator-vector]').forEach(container => {
@@ -209,7 +206,7 @@ function drawSpawner() {
   const section=(title,key)=>`<section class="spawner-section"><h3>${title}</h3><div data-event-section="${key}"></div></section>`;
   panel.innerHTML=`<div class="spawner-content"><div class="eyebrow">ЗАПУСК АИРДРОПА</div><h2>Спавнер и параметры</h2><p class="spawner-error">${escape(spawnerError)}</p><section class="spawner-section"><h3>Тип спавнера</h3><select id="spawner-type">${schema?'':`<option value="${escape(spawner.type)}" selected>${escape(spawner.type)}</option>`}${options}</select><small>${escape(schema?.description??'Неизвестный тип')}</small></section><section class="spawner-section"><h3>Параметры аирдропа</h3>${mapRows('args',model.config.args??{})}<button data-spawner-op="add-arg">+ Параметр</button></section>${supported?`<section class="spawner-section"><h3>Отсчёт</h3><div class="field"><label>Время до появления</label><input id="spawner-time" value="${escape(spawner.time??'5m')}"></div></section>${section('При запуске отсчёта','on_create')}<section class="spawner-section"><div class="spawner-section-head"><h3>Объявления по времени</h3><button data-spawner-op="add-time">+ Время</button></div><p>Момент или диапазон: 2m, 5s-1s.</p>${Object.entries(spawner.when??{}).map(([time])=>`<div class="spawner-card" data-time-card="${escape(time)}"><div class="spawner-card-head"><label>Осталось <input data-time-key value="${escape(time)}"></label><button data-spawner-op="remove-time">Удалить</button></div><div data-when-actions="${escape(time)}"></div></div>`).join('')}</section>${section('Когда время вышло','on_timer_end')}`:''}<section class="spawner-section"><details><summary>Полный JSON спавнера</summary><textarea id="raw-spawner" rows="16" spellcheck="false">${escape(JSON.stringify(spawner,null,2))}</textarea><button id="apply-spawner-json">Применить JSON</button></details></section></div>`;
   $('#spawner-type').onchange=e=>editSpawner(()=>{const type=e.target.value,selectedSchema=spawnerSchemas[type];if(!selectedSchema)throw new Error('Тип спавнера не найден');const next={type};for(const [key,field] of Object.entries(selectedSchema.properties??{}))if(key!=='type'&&Object.hasOwn(field,'default'))next[key]=clone(field.default);if(type==='spawner:timer')next.on_timer_end??=[{make:{}}];model.setSpawner(next);});
-  $('#spawner-time')?.addEventListener('change',e=>editSpawner(()=>{if(!validDuration(e.target.value))throw new Error('Время: например 5m');changeSpawner(next=>next.time=e.target.value);}));
+  $('#spawner-time')?.addEventListener('change',e=>editSpawner(()=>{changeSpawner(next=>next.time=e.target.value);}));
   $('#apply-spawner-json').onclick=()=>editSpawner(()=>{const value=JSON.parse($('#raw-spawner').value);if(!value||Array.isArray(value)||typeof value!=='object')throw new Error('Нужен объект');model.setSpawner(value);});
   const descriptors={make:makeDescriptor()};
   panel.querySelectorAll('[data-event-section]').forEach(host=>{const key=host.dataset.eventSection;mountActions(host,spawner[key],value=>changeSpawner(next=>next[key]=value),descriptors);});
@@ -245,10 +242,10 @@ function updateStatus() {
   $('#save-state').textContent = model.dirty ? '● Есть несохранённые изменения' : 'Все изменения сохранены';
   $('#undo').disabled = !model.undoStack.length; $('#redo').disabled = !model.redoStack.length;
 }
-const protectedNode = name => ['__init__','__destroy__'].includes(name);
+const protectedNode = name => ['__init__','__destroy__',defaultsNodeId].includes(name);
 function inputsFor(name, edges = model.edges()) {
   const node = model.node(name);
-  if (node.type === 'web:note') return [];
+  if (model.isWeb(name)) return [];
   if (name === '__destroy__') return [{key:'destroy',label:'destroy',action:'destroy'}];
   if (node.type === 'default:commands') return [{key:'create',label:'run',action:'create'}];
   const inputs = [{key:'create', label:'create', action:'create'}];
@@ -278,30 +275,20 @@ const edgeColor = action => ({remove:'#ff9da4',destroy:'#ff727f',call:'#84aaff',
 function curve(x,y,tx,ty) { const d=Math.max(70,Math.abs(tx-x)*.45); return `M${x},${y} C${x+d},${y} ${tx-d},${ty} ${tx},${ty}`; }
 const handlerList = value => value === undefined || value === null ? [] : Array.isArray(value) ? value : [value];
 function vectorInputs(value, fractional, attributes = '') {
-  const parts = splitVector(value);
-  return `<div class="vector-inputs" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px" ${attributes}>${['x','y','z'].map((axis, index) => `<label style="min-width:0;font-size:11px">${axis.toUpperCase()}<input data-vector-axis="${axis}" type="number" step="${fractional ? 'any' : '1'}" value="${escape(parts[index] ?? '')}"></label>`).join('')}</div>`;
+  return `<div class="vector-inputs" ${attributes}><input data-vector-axis="value" type="text" value="${escape(value)}" placeholder="X;Y;Z или {имя}"></div>`;
 }
 function readVector(container, fractional) {
   return joinVector([...container.querySelectorAll('[data-vector-axis]')].map(input => input.value), fractional);
 }
 function scalarInput(value, field, attributes) {
-  if (field.enum || field.type === 'boolean') {
-    const choices=field.enum ?? [true,false];
-    return `<select ${attributes}>${choices.map(choice=>`<option value="${escape(choice)}" ${String(value)===String(choice)?'selected':''}>${escape(choice)}</option>`).join('')}</select>`;
-  }
-  const numeric=['integer','number'].includes(field.type);
-  return `<input ${attributes} type="${numeric?'number':'text'}" value="${escape(value)}" ${numeric?`step="${field.type==='integer'?'1':'any'}"`:''} ${field.minimum!==undefined?`min="${field.minimum}"`:''} ${field.maximum!==undefined?`max="${field.maximum}"`:''}>`;
+  return `<input ${attributes} type="text" value="${escape(value)}">`;
 }
 function readScalar(input, field) {
-  if (field.type==='boolean') return input.value==='true';
-  if (!['integer','number'].includes(field.type)) return input.value;
-  const value=Number(input.value);
-  if (!input.value.trim() || !Number.isFinite(value) || field.type==='integer'&&!Number.isInteger(value) ||
-    field.minimum!==undefined&&value<field.minimum || field.maximum!==undefined&&value>field.maximum) {
-    throw new Error(`Введите допустимое ${field.type==='integer'?'целое число':'число'}${field.minimum!==undefined?` от ${field.minimum}`:''}${field.maximum!==undefined?` до ${field.maximum}`:''}`);
-  }
-  return value;
+  if (field.type === 'boolean' && ['true','false'].includes(input.value)) return input.value === 'true';
+  if (['integer','number'].includes(field.type) && input.value.trim() && Number.isFinite(Number(input.value))) return Number(input.value);
+  return input.value;
 }
+
 function nodeFields(name,node,schema) {
   const known=new Set(['type']);
   const fields=Object.entries(schema.properties??{}).filter(([key])=>key!=='type'&&!key.startsWith('on_')).map(([key,field])=>{
@@ -339,6 +326,7 @@ function drawGraph() {
   const cards = Object.entries(nodes).map(([name,node]) => {
     const p=model.layout(name), width=nodeWidth(name), height=heightFor(name,ports.get(name)), title=model.title(name), selectedClass=selected===name?' selected':'';
     const resize=`<g data-resize="${escape(name)}" class="note-resize"><title>Изменить размер</title><rect x="${width-25}" y="${height-25}" width="25" height="25" fill="transparent"/><path d="M${width-18},${height-6} L${width-6},${height-18} M${width-12},${height-6} L${width-6},${height-12}"/></g>`;
+    if (name === defaultsNodeId) return `<g class="node${selectedClass}" data-node="${escape(name)}" transform="translate(${p.x},${p.y})"><rect class="node-card" rx="10" width="${width}" height="${height}"/><text class="node-name" x="18" y="29">${escape(title)}</text><text class="node-type" x="18" y="47">defaults</text><foreignObject x="14" y="65" width="${width-28}" height="${height-90}"><div xmlns="http://www.w3.org/1999/xhtml" class="node-fields" data-scroll-node="${escape(name)}">${defaultsEditor()}</div></foreignObject>${resize}</g>`;
     if (node.type==='web:note') return `<g class="node note${selectedClass}" data-node="${escape(name)}" transform="translate(${p.x},${p.y})"><rect class="node-card" rx="10" width="${width}" height="${height}"/><path d="M10,1 H${width-10}" stroke="${p.color||'#d8b773'}" stroke-width="3"/><text class="node-name" x="18" y="29">${escape(title)}</text><text class="note-kind" x="18" y="47">NOTE · только редактор</text><foreignObject x="18" y="65" width="${width-36}" height="${height-90}"><div xmlns="http://www.w3.org/1999/xhtml" class="node-fields note-editor" data-scroll-node="${escape(name)}"><textarea data-note-text="${escape(name)}" placeholder="Текст заметки">${escape(nodeDrafts.get(JSON.stringify([name,'text'])) ?? node.text ?? '')}</textarea></div></foreignObject>${resize}</g>`;
     const inputs=ports.get(name), outputs=outputsFor(name), schema=schemaFor(node), tint=p.color || color(node.type);
     const portMarkup=inputs.map((input,i)=>`<g class="input-port" data-target="${escape(name)}" data-input="${escape(input.key)}"><title>${escape(input.action==='call'?`call: ${input.event} ${name}`:`${input.action}: ${name}`)}</title><circle class="port-hit" cx="0" cy="${82+i*26}" r="13"/><circle class="port port-${input.action}" cx="0" cy="${82+i*26}" r="6"/><text class="input-label" x="17" y="${86+i*26}">${escape(input.label)}</text></g>`).join('')+
@@ -357,11 +345,13 @@ function drawGraph() {
     preview=`<path class="connection-preview" d="${curve(x,y,linking.point.x,linking.point.y)}" marker-end="url(#arrow-preview)"/><circle class="preview-tip" cx="${linking.point.x}" cy="${linking.point.y}" r="5"/>`;
   }
   $('.graph').innerHTML=`<defs>${['create','remove','destroy','call','preview'].map(action=>`<marker id="arrow-${action}" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="${action==='preview'?'#e2fff5':edgeColor(action)}"/></marker>`).join('')}</defs><g id="scene" transform="translate(${graphView.x},${graphView.y}) scale(${graphView.zoom})">${curves}${cards}${handles.join('')}${preview}</g>`;
+  drawMinimap();
   $('#zoom-value').textContent=`${Math.round(graphView.zoom*100)}%`;
   $('#graph-hint').textContent=linking?(linking.edge?'Отпустите на другом входе · На пустом месте — отвязать · Esc — отмена':'Тяните к входу create, remove, destroy или событию · Esc — отмена'):'Потяните от выхода к входу · Конец стрелки — отсоединить · ПКМ — меню';
   $('#graph-hint').classList.toggle('active',!!linking);
   $('.graph').classList.toggle('connecting',!!linking);
   $('.graph').querySelectorAll('.node-fields').forEach(el=>el.scrollTop=nodeScroll.get(el.dataset.scrollNode)||0);
+  bindDefaultsEditor($('.graph'));
   $('.graph').querySelectorAll('[data-note-text]').forEach(input => {
     input.oninput = () => nodeDrafts.set(JSON.stringify([input.dataset.noteText,'text']), input.value);
     input.onchange = () => {
@@ -438,6 +428,7 @@ function cancelGesture() {
 function setupGraph() {
   const svg=$('.graph');
   graphListeners?.abort(); graphListeners=new AbortController();
+  setupMinimap();
   let fieldPointer = null;
   svg.onpointerdown=event=> {
     if (event.button!==0) return;
@@ -498,6 +489,58 @@ function setupGraph() {
     showContext(event.clientX,event.clientY,{node:node?.dataset.node,edge:edge?model.edges().find(e=>e.id===edge.dataset.edge):null,position:graphPoint(event)});
   };
 }
+function minimapViewport() {
+  const shell = $('.graph-shell');
+  return {x:-graphView.x/graphView.zoom, y:-graphView.y/graphView.zoom, width:shell.clientWidth/graphView.zoom, height:shell.clientHeight/graphView.zoom};
+}
+function drawMinimap() {
+  const svg = $('#minimap'); if (!svg || !model || !graphView) return;
+  const viewport = minimapViewport(); if (!viewport.width || !viewport.height) return;
+  const nodes = Object.entries(model.allNodes()).map(([name,node]) => ({name,node,...model.layout(name),width:nodeWidth(name),height:heightFor(name)}));
+  const bounds = [...nodes,viewport];
+  const x = Math.min(...bounds.map(p=>p.x)), y = Math.min(...bounds.map(p=>p.y));
+  const width = Math.max(...bounds.map(p=>p.x+p.width))-x, height = Math.max(...bounds.map(p=>p.y+p.height))-y;
+  const padding = Math.max(width,height)*.06;
+  if (!minimapDrag) svg.setAttribute('viewBox', `${x-padding} ${y-padding} ${width+padding*2} ${height+padding*2}`);
+  svg.innerHTML = `<title>Миникарта · нажмите или перетащите, чтобы переместить область просмотра</title>${nodes.map(p=>`<rect class="minimap-node${p.name===selected?' selected':''}" x="${p.x}" y="${p.y}" width="${p.width}" height="${p.height}" rx="12" fill="${escape(p.color||color(p.node.type))}"><title>${escape(model.title(p.name))}</title></rect>`).join('')}<rect class="minimap-viewport" x="${viewport.x}" y="${viewport.y}" width="${viewport.width}" height="${viewport.height}"/>`;
+}
+function setupMinimap() {
+  const svg = $('#minimap'); minimapDrag = null;
+  const moveTo = (x,y) => {
+    graphView.x = -x*graphView.zoom; graphView.y = -y*graphView.zoom;
+    model.metadata.viewport = clone(graphView); model.dirty = true; drawGraph(); updateStatus();
+  };
+  svg.onpointerdown = event => {
+    if (event.button !== 0 || drag || linking) return;
+    event.preventDefault(); closeContext(); svg.focus();
+    const inverse = svg.getScreenCTM()?.inverse(); if (!inverse) return;
+    const point = new DOMPoint(event.clientX,event.clientY).matrixTransform(inverse), view = minimapViewport();
+    const inside = point.x>=view.x && point.x<=view.x+view.width && point.y>=view.y && point.y<=view.y+view.height;
+    minimapDrag = {pointerId:event.pointerId,inverse,offsetX:inside?point.x-view.x:view.width/2,offsetY:inside?point.y-view.y:view.height/2};
+    svg.setPointerCapture(event.pointerId);
+    if (!inside) moveTo(point.x-minimapDrag.offsetX,point.y-minimapDrag.offsetY);
+  };
+  svg.onpointermove = event => {
+    if (!minimapDrag || event.pointerId !== minimapDrag.pointerId) return;
+    const point = new DOMPoint(event.clientX,event.clientY).matrixTransform(minimapDrag.inverse);
+    moveTo(point.x-minimapDrag.offsetX,point.y-minimapDrag.offsetY);
+  };
+  const finish = event => {
+    if (!minimapDrag || event.pointerId !== minimapDrag.pointerId) return;
+    minimapDrag = null;
+    if (svg.hasPointerCapture(event.pointerId)) svg.releasePointerCapture(event.pointerId);
+    drawMinimap();
+  };
+  svg.onpointerup = finish; svg.onpointercancel = finish; svg.onlostpointercapture = finish;
+  svg.onkeydown = event => {
+    const direction = {ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[event.key];
+    if (!direction) return;
+    event.preventDefault(); event.stopPropagation(); const view = minimapViewport();
+    moveTo(view.x+direction[0]*view.width*.15,view.y+direction[1]*view.height*.15);
+  };
+  const observer = new ResizeObserver(drawMinimap); observer.observe($('.graph-shell'));
+  graphListeners.signal.addEventListener('abort',()=>observer.disconnect(),{once:true});
+}
 function closeContext() { $('#graph-context')?.remove(); }
 function showContext(x,y,context) {
   closeContext(); const menu=document.createElement('div'); menu.id='graph-context';menu.className='graph-context';menu.setAttribute('role','menu');document.body.append(menu);
@@ -509,7 +552,7 @@ function showContext(x,y,context) {
     item('Удалить связь',()=>{model.removeEdge(edge);selectedEdge=null;refresh();},true);
   } else if (context.node) {
     const name=context.node;selected=name;selectedEdge=null;refresh();heading(model.title(name));
-    item('Изменить название',()=>{$('#node-title')?.focus();$('#node-title')?.select();});
+    if (name !== defaultsNodeId) item('Изменить название',()=>{$('#node-title')?.focus();$('#node-title')?.select();});
     if (inputsFor(name).length) item('Отвязать входящие связи',()=>{model.disconnectIncoming(name);refresh();});
     outputsFor(name).forEach(output=>item(`Связать: ${output}`,()=>{linking={source:name,output,click:true,point:context.position};drawGraph();}));
     if (!protectedNode(name)) item('Удалить ноду',()=>{model.remove(name);selected=null;refresh();},true);
@@ -621,12 +664,15 @@ function drawInspector() {
       const [nodeName,field]=JSON.parse(key);
       return [JSON.stringify([nodeName===old?name:nodeName,field]),convert(value)];
     });
+    const draftsBefore = new Map(nodeDrafts);
     const drafts=remap([...nodeDrafts],value=>renameNodePlaceholders(value,old,name));
     const errors=remap([...invalidFields],entry=>({...entry,value:renameNodePlaceholders(entry.value,old,name)}));
-    model.rename(old, name);
+    const draftCount = draftUsageDifference(`{ctx:${old}.`, draftsBefore);
+    const count = model.rename(old, name) + draftCount;
     nodeDrafts.clear(); for (const [key,value] of drafts) nodeDrafts.set(key,value);
     invalidFields.clear(); for (const [key,value] of errors) invalidFields.set(key,value);
     selected = name; refresh();
+    if (name !== old) toast(`Переименовано ${count} использований плейсхолдеров`);
   });
   $('#delete-node').onclick = () => safe(() => { if (confirm(`Удалить ноду «${selected}» и ссылки на неё?`)) { model.remove(selected); selected = null; refresh(); } });
   panel.querySelectorAll('[data-field]').forEach(input => input.onchange = () => {
@@ -649,7 +695,51 @@ function drawInspector() {
   });
   drawInspectorEdges();
 }
+function draftUsageDifference(token, drafts, errors = invalidFields) {
+  const overrides = new Map(drafts);
+  for (const [key, entry] of errors) if (entry.value !== undefined) overrides.set(key, entry.value);
+  let count = 0;
+  for (const [encoded, value] of overrides) {
+    const [name, field] = JSON.parse(encoded), saved = model.node(name)?.[field];
+    count += countPlaceholderUses(value, token) - countPlaceholderUses(saved, token);
+  }
+  return count;
+}
+function defaultsEditor() {
+  return `<div data-defaults-editor><p>Используйте {имя} в полях конфига.</p>${Object.entries(model.defaults).map(([key,value]) => `<div class="node-field defaults-row" data-default-row="${escape(key)}"><input data-default-key value="${escape(key)}" placeholder="name" aria-label="Имя defaults"><input data-default-value value="${escape(value)}" placeholder="value" aria-label="Значение defaults"><button type="button" data-default-remove title="Удалить" aria-label="Удалить">×</button></div>`).join('')}<button type="button" data-default-add>+ Значение</button></div>`;
+}
+function bindDefaultsEditor(panel) {
+  panel.querySelectorAll('[data-defaults-editor]').forEach(editor => {
+    const commit = () => safe(() => {
+      const entries = [...editor.querySelectorAll('[data-default-row]')].map(row => [row.dataset.defaultRow, row.querySelector('[data-default-value]').value]);
+      if (entries.some(([key]) => !key) || new Set(entries.map(([key]) => key)).size !== entries.length) throw new Error('Имена defaults должны быть заполнены и уникальны');
+      model.setDefaults(Object.fromEntries(entries)); refresh();
+    });
+    editor.querySelectorAll('[data-default-value]').forEach(input => input.onchange = commit);
+    editor.querySelectorAll('[data-default-key]').forEach(input => input.onchange = () => safe(() => {
+      const old = input.closest('[data-default-row]').dataset.defaultRow, name = input.value.trim();
+      if (name === old) return;
+      const oldToken = `{${old}}`, newToken = `{${name}}`;
+      const drafts = new Map([...nodeDrafts].map(([key,value]) => [key,renameLiteralPlaceholders(value,oldToken,newToken)]));
+      const errors = new Map([...invalidFields].map(([key,entry]) => [key,{...entry,value:renameLiteralPlaceholders(entry.value,oldToken,newToken)}]));
+      const draftCount = draftUsageDifference(oldToken,nodeDrafts);
+      const count = model.renameDefault(old,name) + draftCount;
+      nodeDrafts.clear(); for (const [key,value] of drafts) nodeDrafts.set(key,value);
+      invalidFields.clear(); for (const [key,value] of errors) invalidFields.set(key,value);
+      refresh(); toast(`Переименовано ${count} использований плейсхолдеров`);
+    }));
+    editor.querySelectorAll('[data-default-remove]').forEach(button => button.onclick = () => { button.closest('[data-default-row]').remove(); commit(); });
+    editor.querySelector('[data-default-add]').onclick = () => {
+      const values = {...model.defaults}; let key = 'value', i = 1; while (Object.hasOwn(values,key)) key = `value_${i++}`;
+      values[key] = ''; model.setDefaults(values); refresh();
+    };
+  });
+}
 function drawWebInspector() {
+  if (selected === defaultsNodeId) {
+    $('#inspector').innerHTML = `<div class="section-label">Defaults</div><h2>Значения конфига</h2>${defaultsEditor()}`;
+    bindDefaultsEditor($('#inspector')); return;
+  }
   const node=model.node(selected);
   $('#inspector').innerHTML=`<div class="section-label">Заметка</div><div class="inspector-title"><h2>Заметка</h2><button id="delete-web" class="danger icon-button" title="Удалить">×</button></div><p>Потяните нижний правый угол, чтобы изменить размер.</p><div class="field"><label for="node-title">Название</label><input id="node-title" value="${escape(node.title)}"></div><div class="field"><label for="node-color">Цвет ноды</label><input id="node-color" type="color" value="${escape(node.color||'#edc482')}"></div><div class="field"><label>Текст заметки</label><textarea id="note-text" rows="12">${escape(node.text)}</textarea></div><div class="note-size">${Math.round(node.width)} × ${Math.round(node.height)}</div>`;
   $('#node-title').onchange=event=>{model.setTitle(selected,event.target.value);refresh();};
@@ -676,7 +766,7 @@ async function addNode(type) {
   });
 }
 async function editSettings() {
-  const {generator, spawner, args, ...data} = model.payload().settings;
+  const {generator, spawner, args, defaults, ...data} = model.payload().settings;
   const result = await dialog(`<h2>Настройки аирдропа</h2><p>Идентификатор и мир. Генератор, спавнер и параметры аирдропа редактируются на вкладках.</p><textarea class="settings-json" name="settings" spellcheck="false">${escape(JSON.stringify(data, null, 2))}</textarea>`, 'Применить');
   if (!result) return;
   safe(() => {
@@ -739,7 +829,7 @@ async function copyYaml() {
       const control=active.dataset.control;
       let value=active.value;
       if (['integer','number'].includes(control) && value!=='' && Number.isFinite(Number(value))) value=Number(value);
-      else if (control==='boolean') value=value==='true';
+      else if (control==='boolean' && ['true','false'].includes(value)) value=value==='true';
       else if (control==='lines') value=value ? value.split('\n') : [];
       else if (control==='json') { try { value=JSON.parse(value); } catch { /* Keep the raw draft. */ } }
       config.nodes[selected][active.dataset.field]=value;

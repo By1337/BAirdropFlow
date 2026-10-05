@@ -1,7 +1,8 @@
-import { renameNodePlaceholders } from './node-placeholders.js';
+import { renameNodePlaceholders, renameLiteralPlaceholders, countPlaceholderUses } from './node-placeholders.js';
 
 export const clone = value => structuredClone(value);
-export const settingsKeys = ['id', 'world', 'args', 'generator', 'spawner'];
+export const defaultsNodeId = '{web:defaults}';
+export const settingsKeys = ['id', 'world', 'args', 'generator', 'spawner', 'defaults'];
 const validName = name => name.trim() === name && !!name && name.length <= 128 && !/[\s.{}%"'\\]/u.test(name) && !['__proto__', 'prototype', 'constructor'].includes(name);
 const object = value => value && typeof value === 'object' && !Array.isArray(value);
 const command = /^\[(create|remove\??|rm\??|call\??|destroy)\](?:\s+(.+))?$/;
@@ -77,6 +78,8 @@ export class GraphModel {
     if (!object(this.metadata.nodes)) this.metadata.nodes = {};
     const view = this.metadata.viewport ?? {};
     this.metadata.viewport = { x: Number.isFinite(view.x) ? view.x : 48, y: Number.isFinite(view.y) ? view.y : 48, zoom: Number.isFinite(view.zoom) ? Math.min(2, Math.max(.25, view.zoom)) : 1 };
+    const defaultsLayout = this.metadata.defaultsNode ?? {};
+    this.metadata.defaultsNode = { ...defaultsLayout, x: Number.isFinite(defaultsLayout.x) ? defaultsLayout.x : -380, y: Number.isFinite(defaultsLayout.y) ? defaultsLayout.y : 0 };
     this.undoStack = []; this.redoStack = []; this.dirty = false;
     Object.keys(this.nodes).forEach((name, i) => {
       const point = this.metadata.nodes[name] ?? {};
@@ -85,16 +88,17 @@ export class GraphModel {
   }
   get nodes() { return this.config.nodes; }
   get webNodes() { return this.metadata.webNodes; }
-  allNodes() { return {...this.nodes, ...this.webNodes}; }
-  node(name) { return this.nodes[name] ?? this.webNodes[name]; }
-  layout(name) { return this.metadata.nodes[name] ?? this.webNodes[name]; }
-  title(name) { return this.layout(name)?.title || name; }
+  get defaults() { return this.config.defaults ?? {}; }
+  allNodes() { return {...this.nodes, ...this.webNodes, [defaultsNodeId]: {type:'web:defaults'}}; }
+  node(name) { if (name === defaultsNodeId) return {type:'web:defaults'}; return this.nodes[name] ?? this.webNodes[name]; }
+  layout(name) { if (name === defaultsNodeId) return this.metadata.defaultsNode; return this.metadata.nodes[name] ?? this.webNodes[name]; }
+  title(name) { return this.layout(name)?.title || (name === defaultsNodeId ? 'Defaults' : name); }
   setTitle(name, title) { this.change(() => this.layout(name).title = title); }
   setColor(name, color) {
     if (color && !/^#[0-9a-fA-F]{6}$/.test(color)) throw new Error('Нужен цвет в формате #RRGGBB');
     this.change(() => { if (color) this.layout(name).color = color; else delete this.layout(name).color; });
   }
-  isWeb(name) { return Object.hasOwn(this.webNodes, name); }
+  isWeb(name) { return name === defaultsNodeId || Object.hasOwn(this.webNodes, name); }
   newId() { let id; do { id = 'web_' + [...crypto.getRandomValues(new Uint8Array(6))].map(n => n.toString(16).padStart(2,'0')).join(''); } while (this.node(id)); return id; }
   edges() { return connections(this.nodes); }
   addWeb(type, position, title = '') {
@@ -107,7 +111,27 @@ export class GraphModel {
   setField(name, field, value) { this.change(() => this.nodes[name][field] = value); }
   setGenerator(value) { this.change(() => this.config.generator = clone(value)); }
   setSpawner(value) { this.change(() => this.config.spawner = clone(value)); }
+  setDefaults(value) { this.change(() => this.config.defaults = clone(value)); }
   setArgs(value) { this.change(() => this.config.args = clone(value)); }
+
+  placeholderUses(token) {
+    // $web_meta in config is the original serialized metadata, not another usage.
+    const {$web_meta, ...config} = this.config;
+    return countPlaceholderUses(config, token) + countPlaceholderUses(this.metadata, token);
+  }
+  renameDefault(old, name) {
+    if (name === old) return 0;
+    if (!name || name.trim() !== name) throw new Error('Заполните имя defaults');
+    if (!Object.hasOwn(this.defaults, old)) throw new Error('Поле defaults не найдено');
+    if (Object.hasOwn(this.defaults, name)) throw new Error('Имя defaults уже существует');
+    const oldToken = `{${old}}`, newToken = `{${name}}`, count = this.placeholderUses(oldToken);
+    this.change(() => {
+      this.config.defaults = Object.fromEntries(Object.entries(this.defaults).map(([key,value]) => [key === old ? name : key, value]));
+      this.config = renameLiteralPlaceholders(this.config, oldToken, newToken);
+      this.metadata = renameLiteralPlaceholders(this.metadata, oldToken, newToken);
+    });
+    return count;
+  }
 
   snapshot() { return clone({ config: this.config, metadata: this.metadata }); }
   remember(before) {
@@ -135,9 +159,10 @@ export class GraphModel {
   }
   rename(old, name) {
     if (!validName(name)) throw new Error('Имя ноды: без пробелов, точек, кавычек и плейсхолдеров');
-    if (name === old) return;
+    if (name === old) return 0;
     if (this.node(name)) throw new Error('Нода с таким именем уже существует');
     if (['__init__', '__destroy__'].includes(old)) throw new Error('Служебную ноду нельзя переименовать');
+    const count = this.placeholderUses(`{ctx:${old}.`);
     this.change(() => {
       for (const edge of connections(this.nodes)) {
         if (edge.target !== old || edge.dynamic) continue;
@@ -155,8 +180,10 @@ export class GraphModel {
       this.nodes[name] = this.nodes[old]; delete this.nodes[old];
       this.metadata.nodes[name] = this.metadata.nodes[old]; delete this.metadata.nodes[old];
     });
+    return count;
   }
   remove(name) {
+    if (name === defaultsNodeId) throw new Error('Defaults — служебная нода');
     if (this.isWeb(name)) { this.change(() => delete this.webNodes[name]); return; }
     if (['__init__', '__destroy__'].includes(name)) throw new Error('Служебную ноду нельзя удалить');
     this.change(() => {
