@@ -26,6 +26,9 @@ public class TimeoutComponent extends AbstractComponent implements TimerSystem.T
 
     @Override
     public void onCreate(EventContext ctx) {
+        try (var ignored = ctx.tracer().enter(name + " on_create {", "}")) {
+            config.onCreate.handle(ctx);
+        }
     }
 
     @Override
@@ -51,23 +54,30 @@ public class TimeoutComponent extends AbstractComponent implements TimerSystem.T
     public static class Config implements ComponentFactory {
         public static final NodeSchema WEB_SCHEMA = NodeSchema.of("Таймаут", "Ожидает заданное число тиков. remove отменяет ожидание без on_timer_end. По истечении времени: on_timer_end, затем on_remove.")
                 .integer("ticks", "Время ожидания, тиков", 1200, 1, false)
-                .events("on_remove", "on_timer_end")
+                .events("on_create", "on_remove", "on_timer_end")
                 .inputs("create", "remove");
 
         public static final YamlDecoder<Config> DECODER = RecordYamlDecoder.mapOf(
                 Config::new,
                 YamlDecoder.INT.fieldOf("ticks", 1200),
+                HANDLER.fieldOf("on_create", EMPTY_HANDLER),
                 HANDLER.fieldOf("on_remove", EMPTY_HANDLER),
                 HANDLER.fieldOf("on_timer_end", EMPTY_HANDLER)
         );
 
         private final int ticks;
+        private final EventHandler onCreate;
         private final EventHandler onRemove;
         private final EventHandler onTimerEnd;
 
         public Config(int ticks, EventHandler onRemove, EventHandler onTimerEnd) {
+            this(ticks, EMPTY_HANDLER, onRemove, onTimerEnd);
+        }
+
+        public Config(int ticks, EventHandler onCreate, EventHandler onRemove, EventHandler onTimerEnd) {
             if (ticks < 1) throw new IllegalArgumentException("Timeout ticks must be positive");
             this.ticks = ticks;
+            this.onCreate = onCreate;
             this.onRemove = onRemove;
             this.onTimerEnd = onTimerEnd;
         }

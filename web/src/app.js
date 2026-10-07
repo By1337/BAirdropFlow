@@ -10,6 +10,7 @@ const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&am
 const colors = { default:'#a898f4', tick:'#edc482', loot:'#63dec0', block:'#ff9da4', dh:'#84aaff', wg:'#a1c8ff' };
 const color = type => type === 'default:commands' ? '#8996aa' : colors[String(type).split(':')[0]] ?? '#9aaac4';
 let model, schemas = {}, generatorSchemas = {}, spawnerSchemas = {}, selected, selectedEdge, linking, graphView, drag, invalidFields = new Map(), catalogue = [], editorTab = 'graph', generatorError = '', spawnerError = '';
+const selectedNodes = new Set();
 const nodeScroll = new Map();
 const nodeDrafts = new Map();
 const pendingCommandEdits = new Map();
@@ -54,7 +55,7 @@ function leave() { return !model?.dirty || confirm('Есть несохранё�
 $('.brand').onclick = event => { event.preventDefault(); if (leave()) { history.replaceState(null, '', '#'); loadHome(); } };
 window.addEventListener('beforeunload', event => { if (model?.dirty) { event.preventDefault(); event.returnValue = ''; } });
 async function loadHome() {
-  model = null; selected = null; selectedEdge = null; linking = null; generatorError = ''; spawnerError = ''; invalidFields.clear(); nodeDrafts.clear();
+  model = null; selectNode(null); selectedEdge = null; linking = null; generatorError = ''; spawnerError = ''; invalidFields.clear(); nodeDrafts.clear();
   $('#breadcrumb').textContent = 'Все аирдропы';
   $('#app').innerHTML = '<div class="loading"><span class="spinner"></span>Загрузка аирдропов…</div>';
   try {
@@ -81,10 +82,10 @@ async function openEditor(key) {
     if (!Object.keys(schemas).length) schemas = await api('schemas');
     if (!Object.keys(generatorSchemas).length) generatorSchemas = await api('generator-schemas');
     if (!Object.keys(spawnerSchemas).length) spawnerSchemas = await api('spawner-schemas');
-    model = new GraphModel(workflowDocument); selected = null; selectedEdge = null; linking = null; generatorError = ''; spawnerError = ''; invalidFields.clear(); nodeScroll.clear(); nodeDrafts.clear();
+    model = new GraphModel(workflowDocument); selectNode(null); selectedEdge = null; linking = null; generatorError = ''; spawnerError = ''; invalidFields.clear(); nodeScroll.clear(); nodeDrafts.clear();
     history.replaceState(null, '', `#edit/${encodeURIComponent(key)}`);
     $('#breadcrumb').textContent = `Аирдропы / ${workflowDocument.config.id ?? key}`;
-    $('#app').innerHTML = `<section class="workspace"><div class="workspace-toolbar"><button id="back" class="secondary">←</button><button id="tab-graph" class="editor-tab">Сценарий</button><button id="tab-generator" class="editor-tab">Генератор локации</button><button id="tab-spawner" class="editor-tab">Спавнер и параметры</button><button id="add-node">+ Нода</button><button id="undo" title="Ctrl+Z">↶</button><button id="redo" title="Ctrl+Shift+Z">↷</button><button id="settings" class="optional">Настройки аирдропа</button><div class="spacer"></div><button id="reload-editor" title="Перезагрузить с диска">↻</button><button id="copy-yaml" class="secondary" title="Скопировать текущий YAML-файл без сохранения на сервере">Скопировать YAML</button><button id="save" class="primary">Сохранить</button></div><aside class="library"><div class="section-label">Компоненты</div><div id="node-library"></div><p>Добавьте компонент, затем потяните от выхода события к нужному входу другой ноды.</p><div class="section-label" style="margin-top:28px">Ноды сценария</div><div id="outline"></div></aside><div class="graph-shell"><svg class="graph" tabindex="0" aria-label="Схема аирдропа"></svg><svg id="minimap" class="graph-minimap" tabindex="0" role="img" aria-label="Миникарта схемы. Нажмите или перетащите для перемещения, стрелки — навигация."></svg><div class="graph-hint" id="graph-hint">Перетаскивайте ноды · Колесо — масштаб · Фон — перемещение</div><div class="graph-controls"><button id="zoom-out" aria-label="Уменьшить">−</button><span id="zoom-value">100%</span><button id="zoom-in" aria-label="Увеличить">+</button><button id="fit" title="Показать весь граф">⤢</button></div></div><aside class="inspector" id="inspector"></aside><main class="generator-panel" id="generator-panel"></main><main class="spawner-panel" id="spawner-panel"></main><footer class="workspace-status"><span id="node-count"></span><span id="edge-count"></span><span id="warnings"></span><span id="save-state"></span></footer></section>`;
+    $('#app').innerHTML = `<section class="workspace"><div class="workspace-toolbar"><button id="back" class="secondary">←</button><button id="tab-graph" class="editor-tab">Сценарий</button><button id="tab-generator" class="editor-tab">Генератор локации</button><button id="tab-spawner" class="editor-tab">Спавнер и параметры</button><button id="add-node">+ Нода</button><button id="undo" title="Ctrl+Z">↶</button><button id="redo" title="Ctrl+Shift+Z">↷</button><button id="settings" class="optional">Настройки аирдропа</button><div class="spacer"></div><button id="reload-editor" title="Перезагрузить с диска">↻</button><button id="copy-yaml" class="secondary" title="Скопировать текущий YAML-файл без сохранения на сервере">Скопировать YAML</button><button id="save" class="primary">Сохранить</button></div><aside class="library"><div class="section-label">Компоненты</div><div id="node-library"></div><p>Добавьте компонент, затем потяните от выхода события к нужному входу другой ноды.</p><div class="section-label" style="margin-top:28px">Ноды сценария</div><div id="outline"></div></aside><div class="graph-shell"><svg class="graph" tabindex="0" aria-label="Схема аирдропа"></svg><svg id="minimap" class="graph-minimap" tabindex="0" role="img" aria-label="Миникарта схемы. Нажмите или перетащите для перемещения, стрелки — навигация."></svg><div class="graph-hint" id="graph-hint">Shift+ЛКМ на пустом месте — выделение рамкой · Колесо — масштаб</div><div class="graph-controls"><button id="zoom-out" aria-label="Уменьшить">−</button><span id="zoom-value">100%</span><button id="zoom-in" aria-label="Увеличить">+</button><button id="fit" title="Показать весь граф">⤢</button></div></div><aside class="inspector" id="inspector"></aside><main class="generator-panel" id="generator-panel"></main><main class="spawner-panel" id="spawner-panel"></main><footer class="workspace-status"><span id="node-count"></span><span id="edge-count"></span><span id="warnings"></span><span id="save-state"></span></footer></section>`;
     $('#node-library').innerHTML = Object.entries(schemas).map(([type, schema]) => `<button data-type="${escape(type)}" style="--node-color:${color(type)}">${escape(schema.title)}<small>${escape(type)}</small></button>`).join('');
     $('#node-library').querySelectorAll('button').forEach(button => button.onclick = () => addNode(button.dataset.type));
     $('#back').onclick = () => { if (leave()) { history.replaceState(null, '', '#'); loadHome(); } };
@@ -229,17 +230,38 @@ function drawSpawner() {
 }
 
 const eventsFor = node => [...new Set([...(schemaFor(node)['x-events'] ?? []), ...Object.keys(node).filter(key => key.startsWith('on_'))])];
+function selectNode(name, {toggle = false, preserve = false} = {}) {
+  if (!name) { selectedNodes.clear(); selected = null; return; }
+  if (toggle) {
+    if (selectedNodes.delete(name)) {
+      if (selected === name) selected = [...selectedNodes].at(-1) ?? null;
+      return;
+    }
+  } else if (!preserve || !selectedNodes.has(name)) selectedNodes.clear();
+  selectedNodes.add(name);
+  selected = name;
+}
+function selectionBounds() {
+  const boxes = [...selectedNodes].filter(name => model.node(name)).map(name => ({
+    ...model.layout(name), width:nodeWidth(name), height:heightFor(name)
+  }));
+  if (!boxes.length) return null;
+  const x = Math.min(...boxes.map(box => box.x)) - 12, y = Math.min(...boxes.map(box => box.y)) - 12;
+  return {x, y, width:Math.max(...boxes.map(box => box.x + box.width)) - x + 12,
+    height:Math.max(...boxes.map(box => box.y + box.height)) - y + 12};
+}
 function refresh() {
   if (!model) return;
   graphView = clone(model.metadata.viewport);
   for (const key of invalidFields.keys()) if (!model.node(JSON.parse(key)[0])) invalidFields.delete(key);
-  if (selected && !model.node(selected)) selected = null;
+  for (const name of selectedNodes) if (!model.node(name)) selectedNodes.delete(name);
+  if (selected && !model.node(selected)) selected = [...selectedNodes].at(-1) ?? null;
   if (selectedEdge) selectedEdge = model.edges().find(edge => edge.id === selectedEdge.id) ?? null;
   drawGraph(); drawInspector();
   if (editorTab === 'generator') drawGenerator();
   if (editorTab === 'spawner') drawSpawner();
-  $('#outline').innerHTML = Object.entries(model.allNodes()).map(([name, node]) => `<button class="outline-node ${selected === name ? 'active' : ''}" data-name="${escape(name)}"><span style="color:${model.layout(name).color || color(node.type)}">●</span> ${escape(model.title(name))}</button>`).join('');
-  $('#outline').querySelectorAll('button').forEach(button => button.onclick = () => { selected = button.dataset.name; selectedEdge = null; refresh(); });
+  $('#outline').innerHTML = Object.entries(model.allNodes()).map(([name, node]) => `<button class="outline-node ${selectedNodes.has(name) ? 'active' : ''}" data-name="${escape(name)}"><span style="color:${model.layout(name).color || color(node.type)}">●</span> ${escape(model.title(name))}</button>`).join('');
+  $('#outline').querySelectorAll('button').forEach(button => button.onclick = event => { selectNode(button.dataset.name, {toggle:event.shiftKey}); selectedEdge = null; refresh(); });
   updateStatus();
 }
 function updateStatus() {
@@ -332,7 +354,7 @@ function drawGraph() {
     return `<g class="wire${selectedClass}" data-edge="${escape(edge.id)}"><path class="edge-hit" d="${d}"/><path class="edge" d="${d}" stroke="${stroke}" marker-end="url(#arrow-${edge.action})"/><text class="edge-label" x="${(x+hx)/2}" y="${(y+hy)/2-8}">${escape(edge.action==='call'?edge.event:edge.action)}</text></g>`;
   }).join('');
   const cards = Object.entries(nodes).map(([name,node]) => {
-    const p=model.layout(name), width=nodeWidth(name), height=heightFor(name,ports.get(name)), title=model.title(name), selectedClass=selected===name?' selected':'';
+    const p=model.layout(name), width=nodeWidth(name), height=heightFor(name,ports.get(name)), title=model.title(name), selectedClass=selectedNodes.has(name)?' selected':'';
     const resize=`<g data-resize="${escape(name)}" class="note-resize"><title>Изменить размер</title><rect x="${width-25}" y="${height-25}" width="25" height="25" fill="transparent"/><path d="M${width-18},${height-6} L${width-6},${height-18} M${width-12},${height-6} L${width-6},${height-12}"/></g>`;
     if (name === defaultsNodeId) return `<g class="node${selectedClass}" data-node="${escape(name)}" transform="translate(${p.x},${p.y})"><rect class="node-card" rx="10" width="${width}" height="${height}"/><text class="node-name" x="18" y="29">${escape(title)}</text><text class="node-type" x="18" y="47">defaults</text><foreignObject x="14" y="65" width="${width-28}" height="${height-90}"><div xmlns="http://www.w3.org/1999/xhtml" class="node-fields" data-scroll-node="${escape(name)}">${defaultsEditor()}</div></foreignObject>${resize}</g>`;
     if (node.type==='web:note') return `<g class="node note${selectedClass}" data-node="${escape(name)}" transform="translate(${p.x},${p.y})"><rect class="node-card" rx="10" width="${width}" height="${height}"/><path d="M10,1 H${width-10}" stroke="${p.color||'#d8b773'}" stroke-width="3"/><text class="node-name" x="18" y="29">${escape(title)}</text><text class="note-kind" x="18" y="47">NOTE · только редактор</text><foreignObject x="18" y="65" width="${width-36}" height="${height-90}"><div xmlns="http://www.w3.org/1999/xhtml" class="node-fields note-editor" data-scroll-node="${escape(name)}"><textarea data-note-text="${escape(name)}" placeholder="Текст заметки">${escape(nodeDrafts.get(JSON.stringify([name,'text'])) ?? node.text ?? '')}</textarea></div></foreignObject>${resize}</g>`;
@@ -352,12 +374,17 @@ function drawGraph() {
     const point=model.layout(linking.source), x=point.x+nodeWidth(linking.source), y=point.y+82+outputsFor(linking.source).indexOf(linking.output)*26;
     preview=`<path class="connection-preview" d="${curve(x,y,linking.point.x,linking.point.y)}" marker-end="url(#arrow-preview)"/><circle class="preview-tip" cx="${linking.point.x}" cy="${linking.point.y}" r="5"/>`;
   }
-  $('.graph').innerHTML=`<defs>${['create','remove','destroy','call','preview'].map(action=>`<marker id="arrow-${action}" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="${action==='preview'?'#e2fff5':edgeColor(action)}"/></marker>`).join('')}</defs><g id="scene" transform="translate(${graphView.x},${graphView.y}) scale(${graphView.zoom})">${curves}${cards}${handles.join('')}${preview}</g>`;
+  const groupBounds = selectedNodes.size > 1 && drag?.kind !== 'select' ? selectionBounds() : null;
+  const groupFrame = groupBounds ? `<rect class="selection-group" data-selection-drag x="${groupBounds.x}" y="${groupBounds.y}" width="${groupBounds.width}" height="${groupBounds.height}" rx="8"/>` : '';
+  const box = drag?.kind === 'select' ? drag.box : null;
+  const marquee = box ? `<rect class="selection-marquee" x="${box.x}" y="${box.y}" width="${box.width}" height="${box.height}"/>` : '';
+  $('.graph').innerHTML=`<defs>${['create','remove','destroy','call','preview'].map(action=>`<marker id="arrow-${action}" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="${action==='preview'?'#e2fff5':edgeColor(action)}"/></marker>`).join('')}</defs><g id="scene" transform="translate(${graphView.x},${graphView.y}) scale(${graphView.zoom})">${curves}${groupFrame}${cards}${handles.join('')}${preview}${marquee}</g>`;
   drawMinimap();
   $('#zoom-value').textContent=`${Math.round(graphView.zoom*100)}%`;
-  $('#graph-hint').textContent=linking?(linking.edge?'Отпустите на другом входе · На пустом месте — отвязать · Esc — отмена':'Тяните к входу create, remove, destroy или событию · Esc — отмена'):'Потяните от выхода к входу · Конец стрелки — отсоединить · ПКМ — меню';
+  $('#graph-hint').textContent=linking?(linking.edge?'Отпустите на другом входе · На пустом месте — отвязать · Esc — отмена':'Тяните к входу create, remove, destroy или событию · Esc — отмена'):(selectedNodes.size > 1 ? 'Тяните выделенную группу · ЛКМ снаружи — снять выделение · Shift+ЛКМ — рамка' : 'Shift+ЛКМ на пустом месте — выделение рамкой · ПКМ — меню');
   $('#graph-hint').classList.toggle('active',!!linking);
   $('.graph').classList.toggle('connecting',!!linking);
+  $('.graph').classList.toggle('group-selection',selectedNodes.size > 1 && drag?.kind !== 'select');
   $('.graph').querySelectorAll('.node-fields').forEach(el=>el.scrollTop=nodeScroll.get(el.dataset.scrollNode)||0);
   bindDefaultsEditor($('.graph'));
   $('.graph').querySelectorAll('[data-note-text]').forEach(input => {
@@ -430,6 +457,11 @@ function finishLink(port) {
   else model.connect(linking.source,linking.output,target,input.action,input.event);
 }
 function cancelGesture() {
+  if (drag?.kind === 'select') {
+    selectedNodes.clear();
+    for (const name of drag.selectionBefore) selectedNodes.add(name);
+    selected = drag.selectedBefore;
+  }
   if (drag?.before) { model.config=drag.before.config; model.metadata=drag.before.metadata; model.dirty=drag.dirtyBefore; }
   drag=null; linking=null; closeContext(); if (model) refresh();
 }
@@ -441,12 +473,24 @@ function setupGraph() {
   svg.onpointerdown=event=> {
     if (event.button!==0) return;
     fieldPointer = null;
-    if (event.target.closest('.node-fields')) { fieldPointer=event.pointerId; selected=event.target.closest('[data-node]')?.dataset.node??selected;selectedEdge=null;drawInspector();return; }
+    const fieldNode = event.target.closest('[data-node]')?.dataset.node;
+    const groupBody = selectedNodes.size > 1 && selectedNodes.has(fieldNode);
+    if (event.target.closest('.node-fields') && !groupBody) { fieldPointer=event.pointerId; selectNode(fieldNode??selected, {preserve:true});selectedEdge=null;drawInspector();return; }
     closeContext();
     const port=event.target.closest('[data-target][data-input]');
     if (linking?.click) { if (port) safe(()=>finishLink(port)); linking=null; refresh(); return; }
     const output=event.target.closest('[data-output]'), end=event.target.closest('[data-reconnect]'), wire=event.target.closest('[data-edge]'), resize=event.target.closest('[data-resize]'), node=event.target.closest('[data-node]');
-    if (output) linking={source:output.dataset.source,output:output.dataset.output,point:graphPoint(event),startX:event.clientX,startY:event.clientY};
+    const group = event.target.closest('[data-selection-drag]');
+    if (event.shiftKey && !node) {
+      const start = graphPoint(event);
+      drag = {kind:'select', start, box:{x:start.x,y:start.y,width:0,height:0},
+        selectionBefore:[...selectedNodes], selectedBefore:selected,
+        boxes:Object.keys(model.allNodes()).map(name => ({name,...model.layout(name),width:nodeWidth(name),height:heightFor(name)}))};
+      selectNode(null); selectedEdge = null;
+    } else if (group) {
+      drag = {kind:'node', startX:event.clientX, startY:event.clientY,
+        points:new Map([...selectedNodes].map(name => [name, clone(model.layout(name))])), before:model.snapshot(),dirtyBefore:model.dirty};
+    } else if (output) linking={source:output.dataset.source,output:output.dataset.output,point:graphPoint(event),startX:event.clientX,startY:event.clientY};
     else if (end) {
       const edge=model.edges().find(e=>e.id===end.dataset.reconnect);
       linking={source:edge.source,output:edge.output,edge,point:graphPoint(event),startX:event.clientX,startY:event.clientY};
@@ -455,14 +499,20 @@ function setupGraph() {
       if (edge) {
         const end=endpoints(edge),point=graphPoint(event);
         if (port||Math.hypot(point.x-end.tx,point.y-end.ty)<60) linking={source:edge.source,output:edge.output,edge,point,startX:event.clientX,startY:event.clientY};
-        else { selectedEdge=edge;selected=null;refresh();return; }
-      } else {selected=node?.dataset.node??null;refresh();return;}
+        else { selectedEdge=edge;selectNode(null);refresh();return; }
+      } else {selectNode(node?.dataset.node??null);refresh();return;}
     } else {
       selectedEdge=null;
       if (node) {
-        selected=node.dataset.node;
-        drag={kind:resize?'resize':'node',name:selected,startX:event.clientX,startY:event.clientY,point:{...clone(model.layout(selected)),width:nodeWidth(selected),height:heightFor(selected)},before:model.snapshot(),dirtyBefore:model.dirty};
-      } else { selected=null; drag={kind:'pan',startX:event.clientX,startY:event.clientY,point:clone(graphView),before:model.snapshot(),dirtyBefore:model.dirty}; }
+        if (event.shiftKey && !resize) {
+          selectNode(node.dataset.node, {toggle:true});
+          event.preventDefault(); refresh(); return;
+        }
+        selectNode(node.dataset.node, {preserve:true});
+        drag={kind:resize?'resize':'node',name:selected,startX:event.clientX,startY:event.clientY,
+          points:new Map([...selectedNodes].map(name => [name, clone(model.layout(name))])),
+          point:{...clone(model.layout(selected)),width:nodeWidth(selected),height:heightFor(selected)},before:model.snapshot(),dirtyBefore:model.dirty};
+      } else { selectNode(null); drag={kind:'pan',startX:event.clientX,startY:event.clientY,point:clone(graphView),before:model.snapshot(),dirtyBefore:model.dirty}; }
       drawInspector();
     }
     svg.setPointerCapture(event.pointerId); event.preventDefault(); drawGraph();
@@ -470,8 +520,21 @@ function setupGraph() {
   svg.onpointermove=event=> {
     if (linking) { linking.point=graphPoint(event); drawGraph(); const target=targetAt(event); target?.classList.add('drop-target'); return; }
     if (!drag) return;
+    if (drag.kind === 'select') {
+      const point = graphPoint(event), start = drag.start;
+      const box = drag.box = {x:Math.min(start.x,point.x),y:Math.min(start.y,point.y),
+        width:Math.abs(point.x-start.x),height:Math.abs(point.y-start.y)};
+      selectNode(null);
+      for (const node of drag.boxes) {
+        if (box.width > 0 && box.height > 0 && node.x < box.x + box.width && node.x + node.width > box.x
+            && node.y < box.y + box.height && node.y + node.height > box.y) {
+          selectedNodes.add(node.name); selected = node.name;
+        }
+      }
+      drawGraph(); return;
+    }
     const dx=(event.clientX-drag.startX)/graphView.zoom, dy=(event.clientY-drag.startY)/graphView.zoom;
-    if (drag.kind==='node') Object.assign(model.layout(drag.name),{x:drag.point.x+dx,y:drag.point.y+dy});
+    if (drag.kind==='node') for (const [name, point] of drag.points) Object.assign(model.layout(name),{x:point.x+dx,y:point.y+dy});
     else if (drag.kind==='resize') Object.assign(model.layout(drag.name),{width:Math.min(760,Math.max(260,drag.point.width+dx)),height:Math.min(780,Math.max(model.node(drag.name).type==='web:note'?140:bodyTop(drag.name)+70,drag.point.height+dy))});
     else {graphView.x=drag.point.x+dx*graphView.zoom;graphView.y=drag.point.y+dy*graphView.zoom;model.metadata.viewport=clone(graphView);}
     drawGraph();
@@ -484,7 +547,7 @@ function setupGraph() {
       else if (linking.edge && moved) {model.removeEdge(linking.edge);toast('Связь отсоединена. Ctrl+Z — вернуть.');}
       linking=null;
     }
-    if (drag) {model.remember(drag.before);drag=null;}
+    if (drag) {if (drag.kind !== 'select') model.remember(drag.before);drag=null;}
     if (svg.hasPointerCapture(event.pointerId)) svg.releasePointerCapture(event.pointerId);
     refresh();
   };
@@ -510,7 +573,7 @@ function drawMinimap() {
   const width = Math.max(...bounds.map(p=>p.x+p.width))-x, height = Math.max(...bounds.map(p=>p.y+p.height))-y;
   const padding = Math.max(width,height)*.06;
   if (!minimapDrag) svg.setAttribute('viewBox', `${x-padding} ${y-padding} ${width+padding*2} ${height+padding*2}`);
-  svg.innerHTML = `<title>Миникарта · нажмите или перетащите, чтобы переместить область просмотра</title>${nodes.map(p=>`<rect class="minimap-node${p.name===selected?' selected':''}" x="${p.x}" y="${p.y}" width="${p.width}" height="${p.height}" rx="12" fill="${escape(p.color||color(p.node.type))}"><title>${escape(model.title(p.name))}</title></rect>`).join('')}<rect class="minimap-viewport" x="${viewport.x}" y="${viewport.y}" width="${viewport.width}" height="${viewport.height}"/>`;
+  svg.innerHTML = `<title>Миникарта · нажмите или перетащите, чтобы переместить область просмотра</title>${nodes.map(p=>`<rect class="minimap-node${selectedNodes.has(p.name)?' selected':''}" x="${p.x}" y="${p.y}" width="${p.width}" height="${p.height}" rx="12" fill="${escape(p.color||color(p.node.type))}"><title>${escape(model.title(p.name))}</title></rect>`).join('')}<rect class="minimap-viewport" x="${viewport.x}" y="${viewport.y}" width="${viewport.width}" height="${viewport.height}"/>`;
 }
 function setupMinimap() {
   const svg = $('#minimap'); minimapDrag = null;
@@ -556,14 +619,14 @@ function showContext(x,y,context) {
   const item=(text,action,danger=false)=>{const button=document.createElement('button');button.type='button';button.setAttribute('role','menuitem');button.textContent=text;if(danger)button.className='danger';button.onclick=()=>{closeContext();safe(action);};menu.append(button);};
   if (context.edge) {
     const edge=context.edge; heading('Связь');
-    item('Переподключить',()=>{selectedEdge=edge;selected=null;linking={source:edge.source,output:edge.output,edge,click:true,point:context.position};refresh();});
+    item('Переподключить',()=>{selectedEdge=edge;selectNode(null);linking={source:edge.source,output:edge.output,edge,click:true,point:context.position};refresh();});
     item('Удалить связь',()=>{model.removeEdge(edge);selectedEdge=null;refresh();},true);
   } else if (context.node) {
-    const name=context.node;selected=name;selectedEdge=null;refresh();heading(model.title(name));
+    const name=context.node;selectNode(name, {preserve:true});selectedEdge=null;refresh();heading(model.title(name));
     if (name !== defaultsNodeId) item('Изменить название',()=>{$('#node-title')?.focus();$('#node-title')?.select();});
     if (inputsFor(name).length) item('Отвязать входящие связи',()=>{model.disconnectIncoming(name);refresh();});
     outputsFor(name).forEach(output=>item(`Связать: ${output}`,()=>{linking={source:name,output,click:true,point:context.position};drawGraph();}));
-    if (!protectedNode(name)) item('Удалить ноду',()=>{model.remove(name);selected=null;refresh();},true);
+    if (!protectedNode(name)) item('Удалить ноду',()=>{model.remove(name);selectNode(null);refresh();},true);
   } else {
     heading('Добавить здесь');
     item('Заметка · Note',()=>quickAdd('web:note',context.position));
@@ -575,8 +638,8 @@ function showContext(x,y,context) {
   menu.querySelector('button')?.focus({preventScroll:true});
 }
 function quickAdd(type,position) {
-  if (type.startsWith('web:')) selected=model.addWeb(type,position);
-  else {const stem=type.split(':').at(-1).replace(/[^\w-]/g,'node');let id=stem,i=1;while(model.node(id))id=stem+'_'+i++;model.add(id,type,schemas[type],position);selected=id;}
+  if (type.startsWith('web:')) selectNode(model.addWeb(type,position));
+  else {const stem=type.split(':').at(-1).replace(/[^\w-]/g,'node');let id=stem,i=1;while(model.node(id))id=stem+'_'+i++;model.add(id,type,schemas[type],position);selectNode(id);}
   selectedEdge=null;refresh();
 }
 document.addEventListener('pointerdown',event=>{if(!event.target.closest('#graph-context'))closeContext();});
@@ -679,10 +742,11 @@ function drawInspector() {
     const count = model.rename(old, name) + draftCount;
     nodeDrafts.clear(); for (const [key,value] of drafts) nodeDrafts.set(key,value);
     invalidFields.clear(); for (const [key,value] of errors) invalidFields.set(key,value);
+    if (name !== old && selectedNodes.delete(old)) selectedNodes.add(name);
     selected = name; refresh();
     if (name !== old) toast(`Переименовано ${count} использований плейсхолдеров`);
   });
-  $('#delete-node').onclick = () => safe(() => { if (confirm(`Удалить ноду «${selected}» и ссылки на неё?`)) { model.remove(selected); selected = null; refresh(); } });
+  $('#delete-node').onclick = () => safe(() => { if (confirm(`Удалить ноду «${selected}» и ссылки на неё?`)) { model.remove(selected); selectNode(null); refresh(); } });
   panel.querySelectorAll('[data-field]').forEach(input => input.onchange = () => {
     const field = input.dataset.field, control = input.dataset.control, container = input.closest('.field');
     try {
@@ -752,7 +816,7 @@ function drawWebInspector() {
   $('#inspector').innerHTML=`<div class="section-label">Заметка</div><div class="inspector-title"><h2>Заметка</h2><button id="delete-web" class="danger icon-button" title="Удалить">×</button></div><p>Потяните нижний правый угол, чтобы изменить размер.</p><div class="field"><label for="node-title">Название</label><input id="node-title" value="${escape(node.title)}"></div><div class="field"><label for="node-color">Цвет ноды</label><input id="node-color" type="color" value="${escape(node.color||'#edc482')}"></div><div class="field"><label>Текст заметки</label><textarea id="note-text" rows="12">${escape(node.text)}</textarea></div><div class="note-size">${Math.round(node.width)} × ${Math.round(node.height)}</div>`;
   $('#node-title').onchange=event=>{model.setTitle(selected,event.target.value);refresh();};
   $('#node-color').oninput=event=>{model.setColor(selected,event.target.value);drawGraph();updateStatus();};
-  $('#delete-web').onclick=()=>{model.remove(selected);selected=null;refresh();};
+  $('#delete-web').onclick=()=>{model.remove(selected);selectNode(null);refresh();};
   $('#note-text').onchange=event=>{model.change(()=>model.webNodes[selected].text=event.target.value);nodeDrafts.delete(JSON.stringify([selected,'text']));drawGraph();updateStatus();};
 }
 
@@ -769,8 +833,8 @@ async function addNode(type) {
   safe(() => {
     const name = String(result.get('name')).trim(), selectedType = result.get('type');
     const position = { x:(($('.graph-shell').clientWidth / 2) - graphView.x) / graphView.zoom - 130, y:(($('.graph-shell').clientHeight / 2) - graphView.y) / graphView.zoom - 60 };
-    if (selectedType.startsWith('web:')) selected=model.addWeb(selectedType,position,name);
-    else { model.add(name,selectedType,schemas[selectedType],position); selected=name; } selectedEdge = null; refresh();
+    if (selectedType.startsWith('web:')) selectNode(model.addWeb(selectedType,position,name));
+    else { model.add(name,selectedType,schemas[selectedType],position); selectNode(name); } selectedEdge = null; refresh();
   });
 }
 async function editSettings() {
@@ -884,7 +948,7 @@ window.addEventListener('keydown', event => {
   if (['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)) return;
   if (event.key === 'Escape') { cancelGesture(); return; }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? model.redo() : model.undo(); generatorError = ''; spawnerError = ''; invalidFields.clear(); nodeDrafts.clear(); refresh(); }
-  if (event.key === 'Delete') safe(() => { if (selectedEdge) { model.removeEdge(selectedEdge); selectedEdge = null; refresh(); } else if (selected && confirm(`Удалить ноду «${selected}»?`)) { model.remove(selected); selected = null; refresh(); } });
+  if (event.key === 'Delete') safe(() => { if (selectedEdge) { model.removeEdge(selectedEdge); selectedEdge = null; refresh(); } else if (selected && confirm(`Удалить ноду «${selected}»?`)) { model.remove(selected); selectNode(null); refresh(); } });
 });
 const initialKey = location.hash.startsWith('#edit/') ? decodeURIComponent(location.hash.slice(6)) : null;
 if (initialKey && token) openEditor(initialKey); else loadHome();

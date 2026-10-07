@@ -48,6 +48,19 @@ class TimeoutComponentTest {
     }
 
     @Test
+    void creationRunsOnCreateBeforeTheTimeoutStartsTicking() {
+        var config = new TimeoutComponent.Config(1,
+                ignored -> events.add("create"),
+                ignored -> events.add("remove"),
+                ignored -> events.add("end"));
+        var component = (TimeoutComponent) config.create(airdrop, "ttl");
+        airdrop.components().add(component, ctx);
+        assertEquals(List.of("create"), events);
+        component.onSyncTick(ctx);
+        assertEquals(List.of("create", "end", "remove"), events);
+    }
+
+    @Test
     void expiresOnExactlyTheConfiguredTickAndFiresEachOutputOnce() {
         var component = create(3, ignored -> events.add("end"));
         assertTrue(events.isEmpty());

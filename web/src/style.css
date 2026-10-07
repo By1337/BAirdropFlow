@@ -73,3 +73,8 @@
 .minimap-node.selected{opacity:1;stroke:var(--teal);stroke-width:2}
 .minimap-viewport{fill:#63dec018;stroke:var(--teal);stroke-width:1.5;vector-effect:non-scaling-stroke;pointer-events:none}
 @media(max-width:550px){.graph-minimap{right:10px;bottom:12px;width:130px;height:86px}}
+
+.selection-marquee{fill:#63dec020;stroke:var(--teal);stroke-width:1.5;vector-effect:non-scaling-stroke;pointer-events:none}
+.selection-group{fill:#63dec006;stroke:#63dec099;stroke-width:1;stroke-dasharray:6 4;vector-effect:non-scaling-stroke;cursor:grab}
+.graph.group-selection .node.selected foreignObject{pointer-events:none}
+.graph.group-selection .node.selected{cursor:grab}
