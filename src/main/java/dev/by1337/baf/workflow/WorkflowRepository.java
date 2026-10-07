@@ -53,6 +53,16 @@ public final class WorkflowRepository {
         return workflows.get(key);
     }
 
+    public Workflow getById(String id) {
+        Workflow result = null;
+        for (Workflow workflow : workflows.values()) {
+            if (!workflow.id().equals(id)) continue;
+            if (result != null) throw new IllegalArgumentException("Duplicate workflow id: " + id);
+            result = workflow;
+        }
+        return result;
+    }
+
     public Set<String> keys() {
         return Collections.unmodifiableSet(workflows.keySet());
     }

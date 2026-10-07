@@ -11,6 +11,8 @@ import dev.by1337.baf.gps.GPSRegistry;
 import dev.by1337.baf.loot.menu.LootMenu;
 import dev.by1337.baf.particle.ParticleGraphs;
 import dev.by1337.baf.spawner.AirdropSpawnerBoot;
+import dev.by1337.baf.spawner.global.GlobalSpawners;
+import dev.by1337.baf.util.DurationFormatter;
 import dev.by1337.baf.web.AirdropWeb;
 import dev.by1337.baf.workflow.WorkflowFiles;
 import dev.by1337.baf.workflow.WorkflowRepository;
@@ -27,6 +29,8 @@ import dev.by1337.core.command.bcmd.requires.RequiresPermission;
 import dev.by1337.core.plugin.BasePlugin;
 import dev.by1337.core.util.io.ResourceUtil;
 import dev.by1337.core.util.text.minimessage.BMM;
+import dev.by1337.edsl.context.EventContext;
+import dev.by1337.plc.Placeholders;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
@@ -43,6 +47,7 @@ public class BAirdropFlow extends BasePlugin {
     WorkflowRepository workflows;
     AirdropWeb web;
     GPSRegistry gps;
+    GlobalSpawners globalSpawners;
 
     @Override
     public void onLoad() {
@@ -103,6 +108,15 @@ public class BAirdropFlow extends BasePlugin {
         manager.enable();
         addCloseHook(new TimerSystem(this, manager).start());
         addCloseHook(new AsyncTimerSystem(this, manager).start());
+        if (!new File(getDataFolder(), "spawner").exists()) {
+            ResourceUtil.saveIfNotExist("spawner/by_time.yml", this);
+        }
+        globalSpawners = new GlobalSpawners();
+        try {
+            globalSpawners.load(getDataFolder().toPath().resolve("spawner"), workflows, manager, log::warn);
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("Не удалось загрузить глобальные спавнеры", e);
+        }
         if (config.web.enabled()) {
             web = new AirdropWeb(workflows, config.web, action -> Bukkit.getScheduler().runTask(this, action));
             addCloseHook(web);
@@ -120,8 +134,11 @@ public class BAirdropFlow extends BasePlugin {
                     }
                     var lines = gps.getEntries();
                     if (lines.isEmpty()) {
-                        //todo check global spawners
-                        sendMessage("gps_empty", player);
+                        long seconds = globalSpawners.getSecondsUntilNextEvent();
+                        if (seconds < 0) sendMessage("gps_empty", player);
+                        else sendMessage("gps_next_event", player, Placeholders.<EventContext>create()
+                                .of("seconds", Long.toString(seconds))
+                                .of("formated_time_left", DurationFormatter.formatSeconds(seconds)));
                         return;
                     }
                     int x = 0;

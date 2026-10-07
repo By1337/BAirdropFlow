@@ -2,6 +2,7 @@ package dev.by1337.baf;
 
 import dev.by1337.baf.interact.InteractManager;
 import dev.by1337.baf.gps.GPSRegistry;
+import dev.by1337.baf.spawner.global.GlobalSpawners;
 import dev.by1337.baf.particle.ParticleGraphs;
 import dev.by1337.baf.loot.LootTables;
 import dev.by1337.baf.world.WorldData;
@@ -35,6 +36,10 @@ public class BAF {
 
     public static GPSRegistry gps() {
         return plugin.gps;
+    }
+
+    public static GlobalSpawners globalSpawners() {
+        return plugin.globalSpawners;
     }
 
     public static EventContext newContext(PlaceholderResolver<EventContext> p) {

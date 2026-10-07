@@ -78,6 +78,11 @@ public class TimerSpawner implements AirdropSpawner {
         return new Ticker(workflow);
     }
 
+    @Override
+    public boolean isGpsPublish() {
+        return gps.publish();
+    }
+
     private class Ticker implements TickableEntity {
         private static final PlaceholderResolver<Ticker> PLACEHOLDERS = Placeholders.<Ticker>create()
                 .of("value", (key, v) -> v.values.get(key))

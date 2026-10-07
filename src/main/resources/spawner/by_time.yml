@@ -1,0 +1,15 @@
+type: default:by_time
+
+time_zone: 'Europe/Moscow'
+
+publish_gps: true
+
+workflows:
+  # Без дня недели — каждый день. Значения — id из конфигов workflow.
+  "20:00": example:default
+  "21:00": # или весовой рандом
+    example:default: 10
+    # example:default2: 20 # Добавьте после создания аирдропа с таким id.
+  # Необязательный день недели: MONDAY, TUESDAY, WEDNESDAY, THURSDAY,
+  # FRIDAY, SATURDAY, SUNDAY. Время задаётся в time_zone.
+  # "SATURDAY 18:00": example:default

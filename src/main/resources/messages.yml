@@ -5,3 +5,5 @@ gps_waypoint_added:
   - 'Добавлена точка на {x} {y} {z} в <lang:bairdropflow.world.{world}.in>'
 gps_empty:
   - 'Нет ближайших ивентов!'
+gps_next_event:
+  - 'Следующий ивент через {formated_time_left}'
