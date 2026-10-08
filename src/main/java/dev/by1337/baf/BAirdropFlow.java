@@ -32,6 +32,7 @@ import dev.by1337.core.util.text.minimessage.BMM;
 import dev.by1337.edsl.context.EventContext;
 import dev.by1337.plc.Placeholders;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -168,9 +169,9 @@ public class BAirdropFlow extends BasePlugin {
                                 if (error != null)
                                     sender.sendMessage("Не удалось получить ссылку: " + error.getMessage() + " Возможно нужен VPN");
                                 else
-                                    sender.sendMessage(net.kyori.adventure.text.Component.text("Открыть редактор аирдропов")
-                                            .clickEvent(net.kyori.adventure.text.event.ClickEvent.openUrl(link))
-                                            .hoverEvent(net.kyori.adventure.text.Component.text(link)));
+                                    sender.sendMessage(Component.text("Открыть редактор аирдропов")
+                                            .clickEvent(ClickEvent.openUrl(link))
+                                            .hoverEvent(Component.text(link)));
                             }));
                         }))
                 .sub(new Command<CommandSender>("particle_web").requires(new RequiresPermission<>("baf.web.admin"))

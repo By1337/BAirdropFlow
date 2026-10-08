@@ -126,7 +126,7 @@ nodes:
   schematic:
     type: schematic:paster
     path: ../WorldEdit/schematics/asteroid.schem
-    offset: 0;-1;0
+    offsets: 0;-1;0
     no_replace:
     - bedrock
     no_place:

@@ -8,6 +8,13 @@ weight_lore:
   - "<gold>Вес: <yellow>{weight}"
   - "<gray>ЛКМ +1, ПКМ -1"
   - "<gray>Shift: шаг 10; вес 0 отключает предмет"
+count_lore:
+  - ""
+  - "<gold>Количество: <yellow>{min_count}–{max_count}"
+  - "<gray>ЛКМ +1, ПКМ -1: минимум"
+  - "<gray>Shift + ЛКМ/ПКМ: максимум +1/-1"
+  - "<gray>0/0: исходное количество стака"
+  - "<gray>ЛКМ включает диапазон из количества стака"
 items:
   help:
     slot: 45
@@ -17,13 +24,14 @@ items:
       - "<gray>Режим предметов: кладите и забирайте стаки."
       - "<gray>Новый предмет получает вес 100."
       - "<gray>Режим весов: меняйте веса кликами."
+      - "<gray>Режим количества: меняйте минимум и максимум."
       - "<gray>Закрытие и смена страницы сохраняют таблицу."
   mode:
     slot: 46
     material: comparator
-    name: "<gold>Переключить предметы / веса"
+    name: "<gold>Переключить режим"
     lore:
-      - "<gray>Редактирование весов: <yellow>{weight_mode}"
+      - "<gray>Режим: <yellow>{edit_mode}"
     on_click:
       - '[toggle_weights]'
   previous_page:

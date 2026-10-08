@@ -47,7 +47,7 @@ class LootTablesTest {
         Files.writeString(file, "{}");
         LootTables registry = new LootTables();
         registry.load(file.toFile());
-        LootEntry entry = new LootEntry(new ItemHolder(new byte[] {1, 2, 3}), 2.5);
+        LootEntry entry = new LootEntry(new ItemHolder(new byte[] {1, 2, 3}), 2.5, 2, 9);
         registry.set("loot/example", new LootTable(List.of(entry), 7));
         registry.save();
         LootTables reloaded = new LootTables();
@@ -55,6 +55,8 @@ class LootTablesTest {
         LootTable table = reloaded.get("loot/example");
         assertEquals(7, table.rolls());
         assertEquals(2.5, table.items().get(0).weight());
+        assertEquals(2, table.items().get(0).minCount());
+        assertEquals(9, table.items().get(0).maxCount());
         assertEquals(entry.itemHolder().asBase64(), table.items().get(0).itemHolder().asBase64());
         reloaded.remove("loot/example");
         reloaded.save();

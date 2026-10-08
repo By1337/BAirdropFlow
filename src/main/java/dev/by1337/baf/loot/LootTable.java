@@ -63,7 +63,7 @@ public class LootTable {
         for (int i = 0; i < rolls; i++) {
             LootEntry entry = selectItem();
             if (entry == null) break;
-            result.add(entry.itemHolder().getItemStack());
+            result.add(entry.generate());
         }
         return result;
     }
