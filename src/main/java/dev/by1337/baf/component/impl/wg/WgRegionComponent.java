@@ -10,12 +10,14 @@ import com.sk89q.worldguard.protection.regions.ProtectedCuboidRegion;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 import com.sk89q.worldguard.protection.regions.RegionContainer;
 import dev.by1337.baf.Airdrop;
-import dev.by1337.baf.web.NodeSchema;
 import dev.by1337.baf.component.AbstractComponent;
 import dev.by1337.baf.component.AirdropComponent;
 import dev.by1337.baf.component.ComponentFactory;
+import dev.by1337.baf.config.value.StringValue;
+import dev.by1337.baf.config.value.Vec3iValue;
 import dev.by1337.baf.ref.CleanerSlot;
 import dev.by1337.baf.util.Vec3i;
+import dev.by1337.baf.web.NodeSchema;
 import dev.by1337.edsl.EventHandler;
 import dev.by1337.edsl.context.EventContext;
 import dev.by1337.yaml.decoder.RecordYamlDecoder;
@@ -43,21 +45,22 @@ public class WgRegionComponent extends AbstractComponent {
 
     @Override
     public void onCreate(EventContext ctx) {
+        var size = config.size.getVector(airdrop);
         try (var ignored = ctx.tracer().enter(name + " create {", "}")) {
             WGUtil.setRegion(
                     airdrop.world(),
-                    config.flags,
+                    config.flags.stream().map(value -> value.getString(airdrop)).toList(),
                     new ProtectedCuboidRegion(
                             randName,
                             BlockVector3.at(
-                                    airdrop.x() - config.size.x(),
-                                    airdrop.y() - config.size.y(),
-                                    airdrop.z() - config.size.z()
+                                    airdrop.x() - size.x(),
+                                    airdrop.y() - size.y(),
+                                    airdrop.z() - size.z()
                             ),
                             BlockVector3.at(
-                                    airdrop.x() + config.size.x(),
-                                    airdrop.y() + config.size.y(),
-                                    airdrop.z() + config.size.z()
+                                    airdrop.x() + size.x(),
+                                    airdrop.y() + size.y(),
+                                    airdrop.z() + size.z()
                             )
                     )
             );
@@ -85,19 +88,23 @@ public class WgRegionComponent extends AbstractComponent {
 
         public static final YamlDecoder<Config> DECODER = RecordYamlDecoder.mapOf(
                 Config::new,
-                Vec3i.DECODER.fieldOf("size", new Vec3i(1, 1, 1)),
-                YamlDecoder.STRINGS.fieldOf("flags", List.of()),
+                Vec3iValue.DECODER.fieldOf("size", new Vec3iValue(new Vec3i(1, 1, 1))),
+                StringValue.DECODER.listOf().fieldOf("flags", List.of()),
                 HANDLER.fieldOf("on_create", EMPTY_HANDLER),
                 HANDLER.fieldOf("on_remove", EMPTY_HANDLER)
         );
-        private final Vec3i size;
-        private final List<String> flags;
+        private final Vec3iValue size;
+        private final List<StringValue> flags;
         private final EventHandler onCreate;
         private final EventHandler onRemove;
 
         public Config(Vec3i size, List<String> flags, EventHandler onCreate, EventHandler onRemove) {
+            this(new Vec3iValue(size), flags.stream().map(StringValue::new).toList(), onCreate, onRemove);
+        }
+
+        public Config(Vec3iValue size, List<StringValue> flags, EventHandler onCreate, EventHandler onRemove) {
             this.size = size;
-            this.flags = flags;
+            this.flags = List.copyOf(flags);
             this.onCreate = onCreate;
             this.onRemove = onRemove;
         }

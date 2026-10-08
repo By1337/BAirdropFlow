@@ -10,7 +10,8 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class LootMenuTextTest {
-    @Test void restoresLivePlaceholdersInCachedTextAndPreservesFormatting() {
+    @Test
+    void restoresLivePlaceholdersInCachedTextAndPreservesFormatting() {
         Component cached = Component.text("Страница: {current_page}", NamedTextColor.GOLD);
         var restored = LootMenuText.dynamicText(cached);
         assertTrue(restored instanceof RawTextComponentLike);
@@ -26,7 +27,8 @@ class LootMenuTextTest {
         assertSame(raw, LootMenuText.dynamicText(raw));
     }
 
-    @Test void keepsStaticTextAndExistingDynamicTextUntouched() {
+    @Test
+    void keepsStaticTextAndExistingDynamicTextUntouched() {
         Component fixed = Component.text("Сохранить");
         assertSame(fixed, LootMenuText.dynamicText(fixed));
         var raw = new RawTextComponentLike("<gold>{edit_mode}");

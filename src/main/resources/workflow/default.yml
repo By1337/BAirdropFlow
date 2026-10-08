@@ -147,7 +147,7 @@ nodes:
       - create: bossbar
     on_remove:
       - remove: bossbar
-    on_update: []
+    on_update: [ ]
   tte:
     type: tick:timer
     timer: '{time_to_end}'
@@ -155,7 +155,7 @@ nodes:
       - create: tte_holo
     on_tick:
       - call: update tte_holo
-    on_timer_end: []
+    on_timer_end: [ ]
     on_remove:
       - remove: tte_holo
       - destroy: ''
@@ -180,7 +180,7 @@ nodes:
       - create: commands_2
     on_create:
       - create: animation_1
-    on_remove: []
+    on_remove: [ ]
     take_cooldown_ticks: 10
     fill_duration_ticks: 100
     obfuscation_materials:
@@ -196,9 +196,9 @@ nodes:
     type: particle:animation
     animation: example
     ticks: -1
-    on_create: []
-    on_remove: []
-    on_timer_end: []
+    on_create: [ ]
+    on_remove: [ ]
+    on_timer_end: [ ]
     offsets: 0.5;0;0.5
   commands:
     type: default:commands
@@ -215,9 +215,9 @@ nodes:
     animation: explosion
     offsets: 0.5;0;0.5
     ticks: 30
-    on_create: []
-    on_remove: []
-    on_timer_end: []
+    on_create: [ ]
+    on_remove: [ ]
+    on_timer_end: [ ]
   commands_2:
     type: default:commands
     on_run:
@@ -239,19 +239,19 @@ nodes:
     radius: 64
     color: red
     overlay: progress
-    flags: []
+    flags: [ ]
     progress: 1
     time: '{ctx:tto.timer}'
     progress_from_time: true
-    on_create: []
-    on_remove: []
+    on_create: [ ]
+    on_remove: [ ]
   bossbar_1:
     type: default:bossbar
     title: '&cAirdrop&f до удаления {ctx:bossbar_1.time}'
     radius: 64
     color: red
     overlay: progress
-    flags: []
+    flags: [ ]
     progress: 1
     time: '{ctx:tte.timer}'
     progress_from_time: true
@@ -273,7 +273,7 @@ nodes:
     ticks: '{click_wait}'
     on_create:
       - create: click
-    on_remove: []
+    on_remove: [ ]
     on_timer_end:
       - destroy: ''
   click:
@@ -282,7 +282,7 @@ nodes:
     count: 1
     on_create:
       - create: hologram
-    on_click: []
+    on_click: [ ]
     on_clicked:
       - remove: timeout
       - create: commands_3
@@ -294,9 +294,9 @@ nodes:
     lines:
       - '&cAirdrop'
       - '&cНе активирован'
-    on_create: []
-    on_update: []
-    on_remove: []
+    on_create: [ ]
+    on_update: [ ]
+    on_remove: [ ]
   commands_3:
     type: default:commands
     on_run:

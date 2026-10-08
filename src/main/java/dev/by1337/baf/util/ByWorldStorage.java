@@ -27,10 +27,12 @@ public final class ByWorldStorage<T> {
     public T remove(World world) {
         return storage.remove(world);
     }
+
     public Collection<T> values() {
         return storage.values();
     }
-    public void clear(){
+
+    public void clear() {
         storage.clear();
     }
 }

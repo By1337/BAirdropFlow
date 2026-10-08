@@ -5,6 +5,8 @@ import dev.by1337.baf.BAF;
 import dev.by1337.baf.component.AbstractComponent;
 import dev.by1337.baf.component.AirdropComponent;
 import dev.by1337.baf.component.ComponentFactory;
+import dev.by1337.baf.config.value.BooleanValue;
+import dev.by1337.baf.config.value.StringValue;
 import dev.by1337.baf.gps.GPSRegistry;
 import dev.by1337.baf.ref.CleanerSlot;
 import dev.by1337.baf.web.NodeSchema;
@@ -36,7 +38,7 @@ public class GPSComponent extends AbstractComponent {
     public void onCreate(EventContext ctx) {
         try (var ignored = ctx.tracer().enter(name + " create {", "}")) {
             var value = new GPSRegistry.GPSEntry(Airdrop.PLACEHOLDERS.bindCtx(airdrop),
-                    config.gps_line(), config.publish_location() ? airdrop.location() : null);
+                    config.gps_line().source(), config.publish_location().getBoolean(airdrop) ? airdrop.location() : null);
             entry.set(value);
             registry.publish(value);
             config.on_create().handle(ctx);
@@ -51,8 +53,12 @@ public class GPSComponent extends AbstractComponent {
         }
     }
 
-    public record Config(boolean publish_location, String gps_line,
+    public record Config(BooleanValue publish_location, StringValue gps_line,
                          EventHandler on_create, EventHandler on_remove) implements ComponentFactory {
+        public Config(boolean publishLocation, String gpsLine, EventHandler onCreate, EventHandler onRemove) {
+            this(new BooleanValue(publishLocation), new StringValue(gpsLine), onCreate, onRemove);
+        }
+
         public static final NodeSchema WEB_SCHEMA = NodeSchema.of("GPS", "Публикует аирдроп в GPS. Запись удаляется при снятии ноды или очистке аирдропа.")
                 .placeholder("gps_id", "gps id", "id в /gps <id>")
                 .bool("publish_location", "Публиковать координаты", true)
@@ -62,8 +68,8 @@ public class GPSComponent extends AbstractComponent {
 
         public static final YamlDecoder<Config> DECODER = RecordYamlDecoder.mapOf(
                 Config::new,
-                YamlDecoder.BOOL.fieldOf("publish_location", true),
-                YamlDecoder.STRING.fieldOf("gps_line", ""),
+                BooleanValue.DECODER.fieldOf("publish_location", new BooleanValue(true)),
+                StringValue.DECODER.fieldOf("gps_line", new StringValue("")),
                 HANDLER.fieldOf("on_create", EMPTY_HANDLER),
                 HANDLER.fieldOf("on_remove", EMPTY_HANDLER)
         );

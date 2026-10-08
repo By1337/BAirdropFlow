@@ -41,11 +41,12 @@ public class RegionFile {
         //return chunks[chunkIndex] = data;
         return data;
     }
+
     public synchronized void write(ChunkData data) throws IOException {
         int localChunkX = data.x & 15;
         int localChunkZ = data.z & 15;
         int chunkIndex = (localChunkZ << 4) | localChunkX;
-       // chunks[chunkIndex] = data;
+        // chunks[chunkIndex] = data;
         int offset = MAX_CHUNK_SIZE * chunkIndex;
         accessFile.seek(offset);
         long start = accessFile.getFilePointer();

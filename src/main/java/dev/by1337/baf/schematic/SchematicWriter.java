@@ -17,6 +17,7 @@ public class SchematicWriter {
         fakeBlockSetter = BAF.fakeBlocks().getIn(world);
         this.at = at;
     }
+
     public void writeSchematic(Schematic schematic) {
         schematic.schematicFile().stream().forEach(pair -> {
             if (schematic.no_place().contains(pair.getRight().getMaterial())) return;

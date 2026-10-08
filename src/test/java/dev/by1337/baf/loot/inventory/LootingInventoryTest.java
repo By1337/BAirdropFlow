@@ -7,7 +7,9 @@ import org.bukkit.Material;
 import org.bukkit.event.inventory.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
 import org.mockbukkit.mockbukkit.entity.PlayerMock;
@@ -101,7 +103,8 @@ class LootingInventoryTest {
     void partialShiftTransferKeepsTheRemainderHiddenAndFullInventoryDoesNotStartCooldown() {
         create(10, true);
         // MockBukkit addItem also uses armor/offhand slots, so fill those for this test.
-        for (int i = 0; i < player.getInventory().getSize(); i++) player.getInventory().setItem(i, new ItemStack(Material.STONE, 64));
+        for (int i = 0; i < player.getInventory().getSize(); i++)
+            player.getInventory().setItem(i, new ItemStack(Material.STONE, 64));
         player.getInventory().setItem(0, new ItemStack(Material.DIAMOND, 60));
         loot.fill(List.of(new ItemStack(Material.DIAMOND, 13)));
         int slot = occupiedSlot();

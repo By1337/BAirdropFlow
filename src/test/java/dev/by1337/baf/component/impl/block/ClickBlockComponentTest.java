@@ -16,15 +16,15 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
+import org.mockito.MockedStatic;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mockStatic;
 
 class ClickBlockComponentTest {
     private ServerMock server;
@@ -38,7 +38,8 @@ class ClickBlockComponentTest {
 
     @BeforeAll
     static void initializeContext() {
-        try (var ignored = new EventContext(false)) {}
+        try (var ignored = new EventContext(false)) {
+        }
     }
 
     @BeforeEach
@@ -68,9 +69,15 @@ class ClickBlockComponentTest {
     private ClickBlockComponent create(int count) {
         var config = new ClickBlockComponent.Config(new Vec3i(1, 2, 3), count,
                 ctx -> outputs.add("create"),
-                ctx -> { assertSame(player, ctx.source()); return outputs.add("click"); },
+                ctx -> {
+                    assertSame(player, ctx.source());
+                    return outputs.add("click");
+                },
                 ctx -> outputs.add("remove"),
-                ctx -> { assertSame(player, ctx.source()); return outputs.add("clicked"); });
+                ctx -> {
+                    assertSame(player, ctx.source());
+                    return outputs.add("clicked");
+                });
         var component = (ClickBlockComponent) config.create(airdrop, "click");
         airdrop.components().add(component, context);
         return component;
@@ -80,6 +87,23 @@ class ClickBlockComponentTest {
         var event = new PlayerInteractEvent(player, action, null, target, BlockFace.UP, hand);
         server.getPluginManager().callEvent(event);
         return event;
+    }
+
+    @Test
+    void resolvesOffsetsAndCountFromAirdropArgumentsBeforeRegisteringTheBlock() {
+        airdrop.args().put("offsets", "1;2;3");
+        airdrop.args().put("clicks", "2");
+        var config = ClickBlockComponent.Config.DECODER.decode(dev.by1337.yaml.YamlValue.wrap(java.util.Map.of(
+                "offsets", "{args:offsets}", "count", "{args:clicks}"))).getOrThrow();
+        var component = (ClickBlockComponent) config.create(airdrop, "dynamic");
+        try (var unbound = new EventContext(false)) {
+            airdrop.components().add(component, unbound);
+        }
+        assertEquals(2, component.getPlaceholder("count"));
+        click(block, Action.LEFT_CLICK_BLOCK, EquipmentSlot.HAND);
+        assertEquals(1, component.getPlaceholder("count"));
+        click(block, Action.LEFT_CLICK_BLOCK, EquipmentSlot.HAND);
+        assertTrue(component.isRemoved());
     }
 
     @Test

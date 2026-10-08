@@ -35,17 +35,19 @@ public abstract class PutableMenu extends AbstractMenu {
         putableSlots.add(slot);
         playerItems[slot] = EMPTY;
     }
+
     public void addPutableSlot(int... slots) {
         for (int slot : slots) {
             putableSlots.add(slot);
             playerItems[slot] = EMPTY;
         }
     }
+
     protected boolean isPutableSlot(int slot) {
         return putableSlots.contains(slot);
     }
 
-    protected void hasMutableClick(){
+    protected void hasMutableClick() {
 
     }
 
@@ -70,7 +72,8 @@ public abstract class PutableMenu extends AbstractMenu {
         }
         return result;
     }
-    public void removeIf(Predicate<ItemStack> tester){
+
+    public void removeIf(Predicate<ItemStack> tester) {
         var inv = getInventory();
         var it = putableSlots.intIterator();
         while (it.hasNext()) {
@@ -81,7 +84,8 @@ public abstract class PutableMenu extends AbstractMenu {
             }
         }
     }
-    public void replaceAll(Function<ItemStack, @Nullable ItemStack> map){
+
+    public void replaceAll(Function<ItemStack, @Nullable ItemStack> map) {
         var inv = getInventory();
         var it = putableSlots.intIterator();
         while (it.hasNext()) {
@@ -93,7 +97,7 @@ public abstract class PutableMenu extends AbstractMenu {
         }
     }
 
-    public void forEach(Consumer<ItemStack> map){
+    public void forEach(Consumer<ItemStack> map) {
         var inv = getInventory();
         var it = putableSlots.intIterator();
         while (it.hasNext()) {

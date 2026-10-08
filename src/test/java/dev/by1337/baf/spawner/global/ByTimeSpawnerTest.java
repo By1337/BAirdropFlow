@@ -7,19 +7,31 @@ import dev.by1337.yaml.YamlMap;
 import org.junit.jupiter.api.Test;
 
 import java.time.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class ByTimeSpawnerTest {
     private static final ZoneId MOSCOW = ZoneId.of("Europe/Moscow");
 
     private static final class TestClock extends Clock {
         Instant now = Instant.parse("2026-10-05T16:59:59.500Z"); // Monday 19:59:59.5 MSK
-        public ZoneId getZone() { return ZoneOffset.UTC; }
-        public Clock withZone(ZoneId zone) { return this; }
-        public Instant instant() { return now; }
+
+        public ZoneId getZone() {
+            return ZoneOffset.UTC;
+        }
+
+        public Clock withZone(ZoneId zone) {
+            return this;
+        }
+
+        public Instant instant() {
+            return now;
+        }
     }
 
     private Workflow workflow(boolean gps) {

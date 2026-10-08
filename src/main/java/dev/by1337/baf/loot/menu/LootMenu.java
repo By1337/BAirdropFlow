@@ -12,8 +12,8 @@ import dev.by1337.bmenu.menu.Menu;
 import dev.by1337.bmenu.menu.command.MenuCommands;
 import dev.by1337.cmd.Command;
 import dev.by1337.cmd.CommandMsgError;
-import dev.by1337.core.util.text.minimessage.MiniMessage;
 import dev.by1337.core.BCore;
+import dev.by1337.core.util.text.minimessage.MiniMessage;
 import dev.by1337.plc.PlaceholderResolver;
 import dev.by1337.plc.Placeholders;
 import dev.by1337.yaml.codec.PipelineYamlCodecBuilder;
@@ -21,16 +21,21 @@ import dev.by1337.yaml.codec.YamlCodec;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
-import org.bukkit.NamespacedKey;
 import org.bukkit.Material;
-import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
-import org.bukkit.event.inventory.*;
+import org.bukkit.event.inventory.InventoryAction;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import java.util.stream.IntStream;
 
 public class LootMenu extends PutableMenu {
@@ -38,11 +43,16 @@ public class LootMenu extends PutableMenu {
     private static final NamespacedKey WEIGHT = new NamespacedKey("baf", "loot_weight");
     private static final NamespacedKey MIN_COUNT = new NamespacedKey("baf", "loot_min_count");
     private static final NamespacedKey MAX_COUNT = new NamespacedKey("baf", "loot_max_count");
+
     private enum EditMode {
         ITEMS("Предметы"), WEIGHTS("Веса"), COUNTS("Количество");
         private final String title;
-        EditMode(String title) { this.title = title; }
+
+        EditMode(String title) {
+            this.title = title;
+        }
     }
+
     private static final PlaceholderResolver<LootMenu> PLACEHOLDERS = Placeholders.<LootMenu>create()
             .withContext("current_page", v -> v.currentPage + 1)
             .withContext("max_page", v -> Math.max(v.currentPage, v.draft.maxPage()) + 1)
@@ -117,8 +127,12 @@ public class LootMenu extends PutableMenu {
             // Later refreshes keep the same PutableMenu markers and do not touch these slots.
             if (isOpened()) {
                 new BukkitRunnable() {
-                    @Override public void run() {
-                        if (closed || !isOpened()) { cancel(); return; }
+                    @Override
+                    public void run() {
+                        if (closed || !isOpened()) {
+                            cancel();
+                            return;
+                        }
                         for (int slot : cfg.itemSlots) {
                             ItemStack item = getInventory().getItem(slot);
                             if (item != null && !item.getType().isAir()) return;

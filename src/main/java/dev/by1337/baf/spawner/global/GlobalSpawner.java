@@ -14,7 +14,9 @@ public interface GlobalSpawner extends TickableEntity {
 
     boolean isGpsPublish();
 
-    /** Seconds until the next GPS-published workflow spawner starts, or -1 if unavailable. */
+    /**
+     * Seconds until the next GPS-published workflow spawner starts, or -1 if unavailable.
+     */
     long getSecondsUntilNextEvent();
 
     @Override

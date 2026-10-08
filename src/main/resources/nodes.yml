@@ -9,8 +9,8 @@ nodes:
       - bedrock
     replace:
       barrier: air
-    on_create: []
-    on_remove: []
+    on_create: [ ]
+    on_remove: [ ]
 
 
 
@@ -33,10 +33,10 @@ nodes:
   timer:
     type: tick:timer
     timer: 30
-    on_create: []
-    on_tick: []
-    on_timer_end: []
-    on_remove: []
+    on_create: [ ]
+    on_tick: [ ]
+    on_timer_end: [ ]
+    on_remove: [ ]
 
   # TTL ожидания: create запускает отсчёт, remove отменяет его.
   # 1200 тиков = 60 секунд при 20 TPS. Только по истечении TTL удаляем аирдроп.
@@ -44,7 +44,7 @@ nodes:
   ttl:
     type: tick:timeout
     ticks: 1200
-    on_remove: []
+    on_remove: [ ]
     on_timer_end:
       - destroy: ''
 
@@ -54,9 +54,9 @@ nodes:
     animation: example
     offsets: 0;0;0
     ticks: 100
-    on_create: []
-    on_timer_end: []
-    on_remove: []
+    on_create: [ ]
+    on_timer_end: [ ]
+    on_remove: [ ]
 
   commands:
     type: default:commands
@@ -72,10 +72,10 @@ nodes:
     title: '<gold>До открытия: <white>{ctx:bossbar.time}'
     color: green
     overlay: progress
-    flags: [] # darken_screen, play_boss_music, create_world_fog
+    flags: [ ] # darken_screen, play_boss_music, create_world_fog
     progress: 1.0 # используется при progress_from_time: false
     time: '{ctx:timer.timer}' # пустая строка отключает источник времени
     progress_from_time: true
-    on_create: []
-    on_update: []
-    on_remove: []
+    on_create: [ ]
+    on_update: [ ]
+    on_remove: [ ]

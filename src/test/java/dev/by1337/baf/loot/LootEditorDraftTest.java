@@ -3,16 +3,19 @@ package dev.by1337.baf.loot;
 import dev.by1337.baf.loot.item.ItemHolder;
 import dev.by1337.baf.loot.menu.LootEditorDraft;
 import org.junit.jupiter.api.Test;
+
 import java.util.Arrays;
 import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class LootEditorDraftTest {
-    private final LootEntry a = new LootEntry(new ItemHolder(new byte[] {1}), 1);
-    private final LootEntry b = new LootEntry(new ItemHolder(new byte[] {2}), 2);
-    private final LootEntry c = new LootEntry(new ItemHolder(new byte[] {3}), 3);
+    private final LootEntry a = new LootEntry(new ItemHolder(new byte[]{1}), 1);
+    private final LootEntry b = new LootEntry(new ItemHolder(new byte[]{2}), 2);
+    private final LootEntry c = new LootEntry(new ItemHolder(new byte[]{3}), 3);
 
-    @Test void fullPageExposesEmptyPageForInsertion() {
+    @Test
+    void fullPageExposesEmptyPageForInsertion() {
         LootEditorDraft draft = new LootEditorDraft(List.of(a, b), 2);
         assertEquals(1, draft.maxPage());
         assertEquals(Arrays.asList(null, null), draft.page(1));
@@ -21,7 +24,8 @@ class LootEditorDraftTest {
         assertEquals(1, draft.maxPage());
     }
 
-    @Test void removingFirstPageSlotDoesNotMoveOtherPageEntries() {
+    @Test
+    void removingFirstPageSlotDoesNotMoveOtherPageEntries() {
         LootEditorDraft draft = new LootEditorDraft(List.of(a, b, c), 2);
         draft.replacePage(0, Arrays.asList(null, b));
         assertSame(c, draft.page(1).get(0));
@@ -31,7 +35,8 @@ class LootEditorDraftTest {
         assertEquals(1, draft.maxPage());
     }
 
-    @Test void weightsTravelWithEntriesAcrossPages() {
+    @Test
+    void weightsTravelWithEntriesAcrossPages() {
         LootEditorDraft draft = new LootEditorDraft(List.of(a, b, c), 2);
         draft.replacePage(0, Arrays.asList(c, b));
         draft.replacePage(1, Arrays.asList(a, null));
@@ -40,7 +45,8 @@ class LootEditorDraftTest {
         assertEquals(1, draft.page(1).get(0).weight());
     }
 
-    @Test void emptyDraftHasOnePageAndPageReadsAreCopies() {
+    @Test
+    void emptyDraftHasOnePageAndPageReadsAreCopies() {
         LootEditorDraft draft = new LootEditorDraft(List.of(), 2);
         assertEquals(0, draft.maxPage());
         List<LootEntry> page = draft.page(0);

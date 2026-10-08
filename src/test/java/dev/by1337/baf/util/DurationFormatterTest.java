@@ -3,8 +3,8 @@ package dev.by1337.baf.util;
 import dev.by1337.yaml.YamlMap;
 import org.junit.jupiter.api.Test;
 
-import java.util.Map;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 

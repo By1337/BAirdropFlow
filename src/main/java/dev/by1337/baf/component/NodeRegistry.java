@@ -16,7 +16,7 @@ public final class NodeRegistry extends DecoderRegistry<ComponentFactory> {
         NamespacedKey key = NamespacedKey.fromString(type);
         if (key == null) throw new IllegalArgumentException("Invalid component type " + type);
         super.register(key, decoder);
-        schemas.put(type, schema.json(type));
+        schemas.put(type, schema.jsonWithPlaceholders(type));
     }
 
     @Override

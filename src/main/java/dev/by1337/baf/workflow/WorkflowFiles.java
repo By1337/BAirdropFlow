@@ -1,16 +1,23 @@
 package dev.by1337.baf.workflow;
 
-import com.google.gson.*;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import dev.by1337.baf.web.JsonValues;
 import dev.by1337.yaml.YamlMap;
 
 import java.io.IOException;
 import java.nio.file.*;
 import java.security.MessageDigest;
-import java.util.*;
+import java.util.HexFormat;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import java.util.function.Consumer;
 
-/** Only replaces editor-owned fields after validation and a byte-for-byte backup. */
+/**
+ * Only replaces editor-owned fields after validation and a byte-for-byte backup.
+ */
 public final class WorkflowFiles {
     private static final Set<String> SETTINGS = Set.of("id", "world", "args", "generator", "spawner", "defaults");
     private final Path home;
@@ -25,7 +32,13 @@ public final class WorkflowFiles {
         Files.createDirectories(home);
         try (var files = Files.walk(home)) {
             return files.filter(Files::isRegularFile).filter(p -> p.toString().endsWith(".yml") || p.toString().endsWith(".yaml"))
-                    .filter(p -> { try { return p.toRealPath().startsWith(home.toRealPath()); } catch (IOException e) { return false; } })
+                    .filter(p -> {
+                        try {
+                            return p.toRealPath().startsWith(home.toRealPath());
+                        } catch (IOException e) {
+                            return false;
+                        }
+                    })
                     .map(p -> home.relativize(p).toString().replace('\\', '/')).sorted().toList();
         }
     }
@@ -65,9 +78,14 @@ public final class WorkflowFiles {
         Path temporary = Files.createTempFile(path.getParent(), ".airdrop-", ".tmp");
         try {
             Files.write(temporary, bytes);
-            try { Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE); }
-            catch (AtomicMoveNotSupportedException e) { Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING); }
-        } finally { Files.deleteIfExists(temporary); }
+            try {
+                Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } finally {
+            Files.deleteIfExists(temporary);
+        }
         return result;
     }
 
@@ -80,7 +98,8 @@ public final class WorkflowFiles {
         candidate.set("$web_meta", JsonValues.GSON.toJson(metadata));
         if (settings != null) {
             for (var entry : settings.entrySet()) {
-                if (!SETTINGS.contains(entry.getKey())) throw new IllegalArgumentException("Нельзя менять поле " + entry.getKey());
+                if (!SETTINGS.contains(entry.getKey()))
+                    throw new IllegalArgumentException("Нельзя менять поле " + entry.getKey());
                 candidate.set(entry.getKey(), JsonValues.raw(entry.getValue()));
             }
         }
@@ -89,25 +108,34 @@ public final class WorkflowFiles {
     }
 
     private static String revision(byte[] bytes) {
-        try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)); }
-        catch (java.security.NoSuchAlgorithmException e) { throw new IllegalStateException(e); }
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     public record Document(String key, String revision, YamlMap yaml) {
         public JsonObject json() {
             JsonObject result = new JsonObject();
-            result.addProperty("key", key); result.addProperty("revision", revision);
+            result.addProperty("key", key);
+            result.addProperty("revision", revision);
             result.add("config", JsonValues.GSON.toJsonTree(yaml.getRaw()));
             Object rawMeta = yaml.getRaw("$web_meta");
             JsonElement meta;
-            try { meta = rawMeta instanceof String s ? JsonParser.parseString(s) : JsonValues.GSON.toJsonTree(rawMeta); }
-            catch (RuntimeException e) { meta = new JsonObject(); }
+            try {
+                meta = rawMeta instanceof String s ? JsonParser.parseString(s) : JsonValues.GSON.toJsonTree(rawMeta);
+            } catch (RuntimeException e) {
+                meta = new JsonObject();
+            }
             result.add("metadata", meta != null && meta.isJsonObject() ? meta : new JsonObject());
             return result;
         }
     }
 
     public static final class ConflictException extends IllegalStateException {
-        public ConflictException() { super("Конфиг изменился. Перезагрузите его перед сохранением."); }
+        public ConflictException() {
+            super("Конфиг изменился. Перезагрузите его перед сохранением.");
+        }
     }
 }

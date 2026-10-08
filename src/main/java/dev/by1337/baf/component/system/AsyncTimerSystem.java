@@ -1,8 +1,6 @@
 package dev.by1337.baf.component.system;
 
 import dev.by1337.baf.AirdropManager;
-import dev.by1337.baf.BAF;
-import dev.by1337.edsl.context.EventContext;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
 import org.slf4j.Logger;
@@ -49,7 +47,7 @@ public class AsyncTimerSystem implements Closeable {
     }
 
     @FunctionalInterface
-    public interface Tickable{
+    public interface Tickable {
         void onAsyncTick();
     }
 }

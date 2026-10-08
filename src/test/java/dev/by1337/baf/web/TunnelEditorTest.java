@@ -77,10 +77,11 @@ class TunnelEditorTest {
             var bossbar = schemas.getAsJsonObject("default:bossbar");
             assertTrue(bossbar.getAsJsonObject("x-placeholders").has("time"));
             var bossbarFields = bossbar.getAsJsonObject("properties");
-            assertEquals("boolean", bossbarFields.getAsJsonObject("progress_from_time").get("type").getAsString());
-            assertEquals("number", bossbarFields.getAsJsonObject("radius").get("type").getAsString());
+            assertEquals(JsonParser.parseString("[\"boolean\",\"string\"]"), bossbarFields.getAsJsonObject("progress_from_time").get("type"));
+            assertEquals(JsonParser.parseString("[\"number\",\"string\"]"), bossbarFields.getAsJsonObject("radius").get("type"));
             assertEquals(1D, bossbarFields.getAsJsonObject("progress").get("maximum").getAsDouble());
-            assertEquals(7, bossbarFields.getAsJsonObject("color").getAsJsonArray("enum").size());
+            assertEquals(7, bossbarFields.getAsJsonObject("color").getAsJsonArray("anyOf").get(0).getAsJsonObject().getAsJsonArray("enum").size());
+            assertEquals("[{%]", bossbarFields.getAsJsonObject("color").getAsJsonArray("anyOf").get(1).getAsJsonObject().get("pattern").getAsString());
             var particleSchema = schemas.getAsJsonObject("particle:animation");
             assertTrue(particleSchema.getAsJsonObject("properties").has("animation"));
             assertTrue(particleSchema.getAsJsonObject("properties").has("ticks"));
@@ -131,6 +132,9 @@ class TunnelEditorTest {
             settings.add("defaults", defaults);
             var args = new JsonObject();
             args.addProperty("loot_table", "example/default");
+            args.addProperty("rolls", "90");
+            args.addProperty("offset", "0;1;0");
+            args.addProperty("mask", "gray_dye");
             settings.add("args", args);
             var spawner = JsonParser.parseString("""
                     {"type":"spawner:timer","time":"5m",
@@ -143,6 +147,11 @@ class TunnelEditorTest {
             body.add("settings", settings);
             // Well above the old 64 KiB tunnel limit, with Cyrillic and control characters.
             String text = "Привет ❤️\t\n".repeat(9000);
+            var dynamicLoot = JsonParser.parseString("""
+                    {"type":"loot:looter","loot_table":"{args:loot_table}","rolls":"{args:rolls}",
+                     "offsets":"{args:offset}","obfuscation_materials":["{args:mask}"],"fill_duration_ticks":"200"}
+                    """).getAsJsonObject();
+            body.getAsJsonObject("nodes").add("dynamic_loot", dynamicLoot);
             body.getAsJsonObject("nodes").getAsJsonObject("opening").addProperty("editor_note", text);
             body.getAsJsonObject("nodes").getAsJsonObject("opening").addProperty("timer", "{delay}");
             JsonArray actions = new JsonArray();
@@ -168,6 +177,7 @@ class TunnelEditorTest {
             assertTrue(saved.get("ok").getAsBoolean(), saved.toString());
             assertTrue(Files.readString(dir.resolve("data/workflow/default.yml")).contains("minecraft:respawn_anchor[charges=4]"));
             JsonObject roundTrip = data(server);
+            assertEquals(dynamicLoot, roundTrip.getAsJsonObject("config").getAsJsonObject("nodes").getAsJsonObject("dynamic_loot"));
             assertEquals(2, roundTrip.getAsJsonObject("config").getAsJsonObject("nodes").getAsJsonObject("commands").getAsJsonArray("on_run").size());
             assertEquals("{delay}", roundTrip.getAsJsonObject("config").getAsJsonObject("nodes").getAsJsonObject("opening").get("timer").getAsString());
             assertEquals(defaults, roundTrip.getAsJsonObject("config").getAsJsonObject("defaults"));

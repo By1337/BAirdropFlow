@@ -1,20 +1,23 @@
 package dev.by1337.baf.component.impl.loot;
 
 import dev.by1337.baf.Airdrop;
-import dev.by1337.baf.web.NodeSchema;
 import dev.by1337.baf.BAF;
 import dev.by1337.baf.component.AbstractComponent;
 import dev.by1337.baf.component.AirdropComponent;
 import dev.by1337.baf.component.ComponentFactory;
+import dev.by1337.baf.config.value.IntValue;
+import dev.by1337.baf.config.value.MaterialValue;
+import dev.by1337.baf.config.value.StringValue;
+import dev.by1337.baf.config.value.Vec3iValue;
 import dev.by1337.baf.interact.InteractListener;
 import dev.by1337.baf.loot.LootTable;
 import dev.by1337.baf.loot.inventory.LootingInventory;
 import dev.by1337.baf.ref.CleanerSlot;
 import dev.by1337.baf.util.Vec3i;
+import dev.by1337.baf.web.NodeSchema;
 import dev.by1337.core.util.text.minimessage.MiniMessage;
 import dev.by1337.edsl.EventHandler;
 import dev.by1337.edsl.context.EventContext;
-import dev.by1337.yaml.decoder.BukkitYamlDecoders;
 import dev.by1337.yaml.decoder.RecordYamlDecoder;
 import dev.by1337.yaml.decoder.YamlDecoder;
 import org.bukkit.Material;
@@ -62,29 +65,38 @@ public class LooterComponent extends AbstractComponent {
 
     @Override
     public void onCreate(EventContext ctx) {
+        var offsets = config.offsets.getVector(airdrop);
+        int cooldown = config.takeCooldownTicks.getInt(airdrop);
+        int fillTicks = config.fillDurationTicks.getInt(airdrop);
+        int rolls = config.rolls.getInt(airdrop);
+        var materials = config.obfuscationMaterials.stream().map(value -> value.getMaterial(airdrop)).toList();
+        if (materials.stream().anyMatch(m -> !m.isItem() || m.isAir()))
+            throw new IllegalArgumentException("Obfuscation materials must be non-air items");
+        String maskName = config.obfuscationName.getString(airdrop);
+        String lootId = config.lootTable.getString(airdrop);
         try (var ignored = ctx.tracer().enter(name + " create {", "}")) {
             clickHolder.set(BAF.blockInteract().registerBlockClick(
                     airdrop.world(),
-                    airdrop.x() + config.offsets.x(),
-                    airdrop.y() + config.offsets.y(),
-                    airdrop.z() + config.offsets.z(),
+                    airdrop.x() + offsets.x(),
+                    airdrop.y() + offsets.y(),
+                    airdrop.z() + offsets.z(),
                     LooterComponent.this::on
             ));
             inventoryHolder.set(new LootingInventory(
                     54,
-                    MiniMessage.deserialize(ctx.setPlaceholders(config.title)),
-                    airdrop.location().add(config.offsets.x(), config.offsets.y(), config.offsets.z()),
+                    MiniMessage.deserialize(config.title.getString(airdrop)),
+                    airdrop.location().add(offsets.x(), offsets.y(), offsets.z()),
                     airdrop.manager().plugin(),
-                    config.takeCooldownTicks, config.obfuscationMaterials,
-                    config.obfuscationName == null ? null : MiniMessage.deserialize(ctx.setPlaceholders(config.obfuscationName))
+                    cooldown, materials,
+                    maskName.isEmpty() ? null : MiniMessage.deserialize(maskName)
             ));
-            LootTable lootTable = airdrop.manager().lootTables().get(ctx.setPlaceholders(config.lootTable));
+            LootTable lootTable = airdrop.manager().lootTables().get(lootId);
             if (lootTable == null) {
-                log.error("Unknown loot table {}", ctx.setPlaceholders(config.lootTable));
+                log.error("Unknown loot table {}", lootId);
             } else {
                 var inv = inventoryHolder.get();
                 if (inv == null) return;
-                inv.fill(lootTable.generate(config.rolls), config.fillDurationTicks);
+                inv.fill(lootTable.generate(rolls), fillTicks);
             }
             config.create.handle(ctx);
         }
@@ -115,29 +127,29 @@ public class LooterComponent extends AbstractComponent {
 
         public static final YamlDecoder<Config> DECODER = RecordYamlDecoder.mapOf(
                 Config::new,
-                Vec3i.DECODER.fieldOf("offsets", new Vec3i(0, 0, 0)),
-                YamlDecoder.STRING.fieldOf("loot_table"),
+                Vec3iValue.DECODER.fieldOf("offsets", new Vec3iValue(Vec3i.ZERO)),
+                StringValue.DECODER.fieldOf("loot_table"),
                 HANDLER.fieldOf("on_create", EMPTY_HANDLER),
                 HANDLER.fieldOf("on_open", EMPTY_HANDLER),
                 HANDLER.fieldOf("on_remove", EMPTY_HANDLER),
-                YamlDecoder.STRING.fieldOf("title", "&7Title"),
-                YamlDecoder.INT.fieldOf("take_cooldown_ticks", -1),
-                YamlDecoder.INT.fieldOf("fill_duration_ticks", 0),
-                BukkitYamlDecoders.material().listOf().fieldOf("obfuscation_materials", List.of()),
-                YamlDecoder.STRING.fieldOf("obfuscation_name", ""),
-                YamlDecoder.INT.fieldOf("rolls", 1)
+                StringValue.DECODER.fieldOf("title", new StringValue("&7Title")),
+                IntValue.DECODER.fieldOf("take_cooldown_ticks", new IntValue(-1)),
+                IntValue.DECODER.fieldOf("fill_duration_ticks", new IntValue(0)),
+                MaterialValue.DECODER.listOf().fieldOf("obfuscation_materials", List.of()),
+                StringValue.DECODER.fieldOf("obfuscation_name", new StringValue("")),
+                IntValue.DECODER.fieldOf("rolls", new IntValue(1))
         );
-        private final Vec3i offsets;
-        private final String lootTable;
-        private final int rolls;
+        private final Vec3iValue offsets;
+        private final StringValue lootTable;
+        private final IntValue rolls;
         private final EventHandler create;
         private final EventHandler open;
         private final EventHandler remove;
-        private final String title;
-        private final int takeCooldownTicks;
-        private final int fillDurationTicks;
-        private final List<Material> obfuscationMaterials;
-        private final String obfuscationName;
+        private final StringValue title;
+        private final IntValue takeCooldownTicks;
+        private final IntValue fillDurationTicks;
+        private final List<MaterialValue> obfuscationMaterials;
+        private final StringValue obfuscationName;
 
         public Config(Vec3i offsets, String lootTable, EventHandler create, EventHandler open, EventHandler remove, String title) {
             this(offsets, lootTable, create, open, remove, title, -1, 0, List.of(), "");
@@ -153,16 +165,23 @@ public class LooterComponent extends AbstractComponent {
         public Config(Vec3i offsets, String lootTable, EventHandler create, EventHandler open, EventHandler remove,
                       String title, int takeCooldownTicks, int fillDurationTicks,
                       List<Material> obfuscationMaterials, String obfuscationName, int rolls) {
-            if (rolls < 0) throw new IllegalArgumentException("rolls must be >= 0");
-            this.rolls = rolls;
-            if (takeCooldownTicks < -1) throw new IllegalArgumentException("take_cooldown_ticks must be >= -1");
-            if (fillDurationTicks < 0) throw new IllegalArgumentException("fill_duration_ticks must be >= 0");
-            if (obfuscationMaterials.stream().anyMatch(m -> !m.isItem() || m.isAir()))
-                throw new IllegalArgumentException("Obfuscation materials must be non-air items");
-            this.takeCooldownTicks = takeCooldownTicks;
-            this.fillDurationTicks = fillDurationTicks;
+            this(new Vec3iValue(offsets), new StringValue(lootTable), create, open, remove, new StringValue(title),
+                    new IntValue(takeCooldownTicks), new IntValue(fillDurationTicks),
+                    obfuscationMaterials.stream().map(MaterialValue::new).toList(), new StringValue(obfuscationName), new IntValue(rolls));
+        }
+
+        public Config(Vec3iValue offsets, StringValue lootTable, EventHandler create, EventHandler open, EventHandler remove,
+                      StringValue title, IntValue takeCooldownTicks, IntValue fillDurationTicks,
+                      List<MaterialValue> obfuscationMaterials, StringValue obfuscationName, IntValue rolls) {
+            this.rolls = rolls.checked(v -> v >= 0, "rolls must be >= 0");
+            this.takeCooldownTicks = takeCooldownTicks.checked(v -> v >= -1, "take_cooldown_ticks must be >= -1");
+            this.fillDurationTicks = fillDurationTicks.checked(v -> v >= 0, "fill_duration_ticks must be >= 0");
+            for (var material : obfuscationMaterials) {
+                if (material.isConstant() && (!material.getMaterial(null).isItem() || material.getMaterial(null).isAir()))
+                    throw new IllegalArgumentException("Obfuscation materials must be non-air items");
+            }
             this.obfuscationMaterials = List.copyOf(obfuscationMaterials);
-            this.obfuscationName = obfuscationName.isEmpty() ? null : obfuscationName;
+            this.obfuscationName = obfuscationName;
             this.offsets = offsets;
             this.lootTable = lootTable;
             this.create = create;

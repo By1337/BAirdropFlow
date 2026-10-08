@@ -15,18 +15,15 @@ public class WildcardMatcher {
                     pattern.charAt(pIdx) == text.charAt(tIdx))) {
                 pIdx++;
                 tIdx++;
-            }
-            else if (pIdx < pLen && pattern.charAt(pIdx) == '*') {
+            } else if (pIdx < pLen && pattern.charAt(pIdx) == '*') {
                 starIdx = pIdx;
                 matchIdx = tIdx;
                 pIdx++;
-            }
-            else if (starIdx != -1) {
+            } else if (starIdx != -1) {
                 pIdx = starIdx + 1;
                 matchIdx++;
                 tIdx = matchIdx;
-            }
-            else {
+            } else {
                 return false;
             }
         }

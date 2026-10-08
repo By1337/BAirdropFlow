@@ -3,16 +3,23 @@ package dev.by1337.baf.loot;
 import dev.by1337.baf.loot.item.ItemHolder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class LootTablesTest {
-    @TempDir Path dir;
-    private static LootTable table() { return new LootTable(List.of()); }
+    @TempDir
+    Path dir;
 
-    @Test void replacementAndRemovalMaintainReverseLookup() {
+    private static LootTable table() {
+        return new LootTable(List.of());
+    }
+
+    @Test
+    void replacementAndRemovalMaintainReverseLookup() {
         LootTables registry = new LootTables();
         LootTable first = table();
         LootTable second = table();
@@ -26,7 +33,8 @@ class LootTablesTest {
         assertTrue(registry.ids().isEmpty());
     }
 
-    @Test void onlySessionOwnerCanUnlockTable() {
+    @Test
+    void onlySessionOwnerCanUnlockTable() {
         LootTables registry = new LootTables();
         LootTable table = table();
         registry.set("test", table);
@@ -42,12 +50,13 @@ class LootTablesTest {
         assertSame(table, registry.remove("test"));
     }
 
-    @Test void roundTripsWeightsAndItemBytesWithoutRolls() throws Exception {
+    @Test
+    void roundTripsWeightsAndItemBytesWithoutRolls() throws Exception {
         Path file = dir.resolve("loot.yml");
         Files.writeString(file, "{}");
         LootTables registry = new LootTables();
         registry.load(file.toFile());
-        LootEntry entry = new LootEntry(new ItemHolder(new byte[] {1, 2, 3}), 2.5, 2, 9);
+        LootEntry entry = new LootEntry(new ItemHolder(new byte[]{1, 2, 3}), 2.5, 2, 9);
         registry.set("loot/example", new LootTable(List.of(entry)));
         registry.save();
         LootTables reloaded = new LootTables();
@@ -62,10 +71,13 @@ class LootTablesTest {
         reloaded.save();
         registry.load(file.toFile());
         assertTrue(registry.ids().isEmpty());
-        try (var files = Files.list(dir)) { assertTrue(files.noneMatch(v -> v.toString().endsWith(".tmp"))); }
+        try (var files = Files.list(dir)) {
+            assertTrue(files.noneMatch(v -> v.toString().endsWith(".tmp")));
+        }
     }
 
-    @Test void legacyRollsAreIgnoredAndRemovedOnSave() throws Exception {
+    @Test
+    void legacyRollsAreIgnoredAndRemovedOnSave() throws Exception {
         Path file = dir.resolve("loot.yml");
         Files.writeString(file, "example:\n  rolls: 90\n  items: []\n");
         LootTables registry = new LootTables();
@@ -75,7 +87,8 @@ class LootTablesTest {
         assertFalse(Files.readString(file).contains("rolls:"));
     }
 
-    @Test void invalidFileDoesNotReplaceLoadedTablesOrOverwriteFile() throws Exception {
+    @Test
+    void invalidFileDoesNotReplaceLoadedTablesOrOverwriteFile() throws Exception {
         Path file = dir.resolve("loot.yml");
         Files.writeString(file, "{}");
         LootTables registry = new LootTables();

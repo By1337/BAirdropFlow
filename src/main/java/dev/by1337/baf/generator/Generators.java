@@ -1,8 +1,9 @@
 package dev.by1337.baf.generator;
 
+import com.google.gson.JsonObject;
 import dev.by1337.baf.generator.impl.FixedGenerator;
 import dev.by1337.baf.generator.impl.RandomGenerator;
-import com.google.gson.JsonObject;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 

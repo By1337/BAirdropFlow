@@ -120,7 +120,7 @@ public class TimerSpawner implements AirdropSpawner {
                 init = true;
                 on_create.handleAndClose(makeContext());
             }
-            if (gpsEntry == null && location != null && gps.publish()){
+            if (gpsEntry == null && location != null && gps.publish()) {
                 gpsEntry = new GPSRegistry.GPSEntry(
                         PLACEHOLDERS.bindCtx(this),
                         gps.gps_line(),
@@ -139,7 +139,7 @@ public class TimerSpawner implements AirdropSpawner {
                 } else {
                     removed = true;
                     on_timer_end.handleAndClose(makeContext());
-                    if (gpsEntry != null){
+                    if (gpsEntry != null) {
                         BAF.gps().remove(gpsEntry.id());
                     }
                 }

@@ -11,18 +11,14 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryDragEvent;
-import org.bukkit.event.inventory.InventoryAction;
-import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.inventory.InventoryOpenEvent;
+import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
 
@@ -68,7 +64,9 @@ public class LootingInventory implements Listener, InventoryHolder {
         fill(list, 0);
     }
 
-    /** Every stack gets one insertion attempt; a full inventory discards that attempt. */
+    /**
+     * Every stack gets one insertion attempt; a full inventory discards that attempt.
+     */
     public void fill(List<ItemStack> list, int durationTicks) {
         if (durationTicks < 0) throw new IllegalArgumentException("Invalid fill duration");
         if (fillTask != null) {
@@ -200,7 +198,9 @@ public class LootingInventory implements Listener, InventoryHolder {
                 taken = real.getAmount();
             }
             // Deposits, dropping masks and creative cloning are intentionally unavailable.
-            default -> { return; }
+            default -> {
+                return;
+            }
         }
         if (taken <= 0) return;
         int remaining = real.getAmount() - taken;

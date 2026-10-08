@@ -51,7 +51,7 @@ public class TimerSystem implements Closeable {
     }
 
     @FunctionalInterface
-    public interface Tickable{
+    public interface Tickable {
         void onSyncTick(EventContext ctx);
     }
 }

@@ -73,7 +73,7 @@ public class FakeBlockSetter implements Listener, Closeable {
 
     public void undo(int x, int y, int z) {
         if (!isInBound(y)) return;
-       // Location loc = new Location(world, x, y, z);
+        // Location loc = new Location(world, x, y, z);
         location.set(x, y, z);
         long blockPos = Vec3i.asLong(x, y, z);
         var original = originals.remove(blockPos);

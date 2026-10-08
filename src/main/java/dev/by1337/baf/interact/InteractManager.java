@@ -118,14 +118,14 @@ public class InteractManager {
         }
 
         public void put(String world, int x, int y, int z, T t) {
-           var map = storage.computeIfAbsent(world, k -> new Long2ObjectOpenHashMap<>());
-           long key = asLong(x, y, z);
-           var set = map.get(key);
-           if (set == null){
-               set = Collections.newSetFromMap(new IdentityHashMap<>());
-               map.put(key, set);
-           }
-           set.add(t);
+            var map = storage.computeIfAbsent(world, k -> new Long2ObjectOpenHashMap<>());
+            long key = asLong(x, y, z);
+            var set = map.get(key);
+            if (set == null) {
+                set = Collections.newSetFromMap(new IdentityHashMap<>());
+                map.put(key, set);
+            }
+            set.add(t);
         }
 
         public Set<T> get(String world, int x, int y, int z) {

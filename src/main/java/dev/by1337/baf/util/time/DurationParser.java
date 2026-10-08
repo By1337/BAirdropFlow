@@ -6,8 +6,8 @@ public class DurationParser {
     public static final YamlDecoder<Long> MILLIS = YamlDecoder.STRING.map(DurationParser::parseMillis);
 
     public static long parseMillis(String s) {
-       final StringBuilder number = new StringBuilder();
-       final StringBuilder type = new StringBuilder();
+        final StringBuilder number = new StringBuilder();
+        final StringBuilder type = new StringBuilder();
         long out = 0;
         char[] arr = s.toCharArray();
 

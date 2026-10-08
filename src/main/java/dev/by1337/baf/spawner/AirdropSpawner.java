@@ -8,5 +8,6 @@ public interface AirdropSpawner {
     DecoderRegistry<AirdropSpawner> REGISTRY = new DecoderRegistry<>();
 
     TickableEntity create(Workflow workflow);
+
     boolean isGpsPublish();
 }

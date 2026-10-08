@@ -7,8 +7,8 @@ import dev.by1337.yaml.YamlValue;
 import net.kyori.adventure.bossbar.BossBar;
 import org.bukkit.Location;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
@@ -29,7 +29,8 @@ class BossBarComponentTest {
     @BeforeAll
     static void initializeContextWithoutPlaceholderApi() {
         // These tests provide their own resolver; no PlaceholderAPI plugin is running in MockBukkit.
-        try (var ignored = new EventContext(false)) {}
+        try (var ignored = new EventContext(false)) {
+        }
     }
 
     @BeforeEach
@@ -143,6 +144,31 @@ class BossBarComponentTest {
         component = create(Map.of("time", "{ctx:missing.timer}"));
         assertTrue(component.isRemoved());
         assertTrue(player.getBossBars().isEmpty());
+    }
+
+    @Test
+    void appearanceParametersResolveThroughAirdropAndUpdateWithItsArguments() {
+        PlayerMock viewer = player(5, 64, 0);
+        airdrop.args().putAll(Map.of("radius", "10", "progress", "0.5", "color", "red",
+                "overlay", "progress", "flag", "darken_screen", "from_time", "false"));
+        var settings = Map.<String, Object>of("radius", "{args:radius}", "progress", "{args:progress}",
+                "color", "{args:color}", "overlay", "{args:overlay}", "flags", List.of("{args:flag}"),
+                "progress_from_time", "{args:from_time}");
+        var config = BossBarComponent.Config.DECODER.decode(YamlValue.wrap(settings)).getOrThrow();
+        var component = (BossBarComponent) config.create(airdrop, "bar");
+        try (var unbound = new EventContext(false)) {
+            airdrop.components().add(component, unbound);
+            var bar = viewer.getBossBars().iterator().next();
+            assertEquals(.5F, bar.progress());
+            assertEquals(BossBar.Color.RED, bar.color());
+            airdrop.args().putAll(Map.of("radius", "3", "progress", "0.25", "color", "blue", "overlay", "notched_10"));
+            component.onSyncTick(unbound);
+            assertTrue(viewer.getBossBars().isEmpty());
+            assertEquals(.25F, bar.progress());
+            assertEquals(BossBar.Color.BLUE, bar.color());
+            assertEquals(BossBar.Overlay.NOTCHED_10, bar.overlay());
+            component.markRemoved(unbound);
+        }
     }
 
     @Test

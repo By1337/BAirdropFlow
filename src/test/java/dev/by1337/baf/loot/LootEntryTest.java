@@ -14,12 +14,22 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class LootEntryTest {
-    @BeforeEach void setup() { MockBukkit.mock(); }
-    @AfterEach void cleanup() { MockBukkit.unmock(); }
+    @BeforeEach
+    void setup() {
+        MockBukkit.mock();
+    }
 
-    private ItemHolder item() { return new ItemHolder(new ItemStack(Material.DIAMOND, 12)); }
+    @AfterEach
+    void cleanup() {
+        MockBukkit.unmock();
+    }
 
-    @Test void generationUsesInclusiveRangeAndLeavesOriginalStackUntouched() {
+    private ItemHolder item() {
+        return new ItemHolder(new ItemStack(Material.DIAMOND, 12));
+    }
+
+    @Test
+    void generationUsesInclusiveRangeAndLeavesOriginalStackUntouched() {
         ItemHolder item = item();
         LootTable table = new LootTable(List.of(new LootEntry(item, 1, 2, 4)));
         var amounts = new HashSet<Integer>();
@@ -32,7 +42,8 @@ class LootEntryTest {
         assertEquals(12, item.getItemStack().getAmount());
     }
 
-    @Test void generationCountIsSuppliedPerCallWithoutChangingTheTable() {
+    @Test
+    void generationCountIsSuppliedPerCallWithoutChangingTheTable() {
         LootTable table = new LootTable(List.of(new LootEntry(item(), 1)));
         assertEquals(90, table.generate(90).size());
         assertEquals(3, table.generate(3).size());
@@ -40,8 +51,9 @@ class LootEntryTest {
         assertEquals(1, table.items().size());
     }
 
-    @Test void disabledRangePreservesStackAndEqualBoundsGiveFixedCount() {
-        for (int[] range : List.of(new int[] {0, 0}, new int[] {0, 5}, new int[] {5, 0})) {
+    @Test
+    void disabledRangePreservesStackAndEqualBoundsGiveFixedCount() {
+        for (int[] range : List.of(new int[]{0, 0}, new int[]{0, 5}, new int[]{5, 0})) {
             assertEquals(12, new LootEntry(item(), 1, range[0], range[1]).generate().getAmount());
         }
         assertEquals(7, new LootEntry(item(), 1, 7, 7).generate().getAmount());
@@ -49,7 +61,8 @@ class LootEntryTest {
                 new LootEntry(item(), 1, Integer.MAX_VALUE, Integer.MAX_VALUE).generate().getAmount());
     }
 
-    @Test void rejectsInvalidRangesAndResolvesEntryPlaceholders() {
+    @Test
+    void rejectsInvalidRangesAndResolvesEntryPlaceholders() {
         assertThrows(IllegalArgumentException.class, () -> new LootEntry(item(), 1, -1, 2));
         assertThrows(IllegalArgumentException.class, () -> new LootEntry(item(), 1, 1, -2));
         assertThrows(IllegalArgumentException.class, () -> new LootEntry(item(), 1, 4, 2));

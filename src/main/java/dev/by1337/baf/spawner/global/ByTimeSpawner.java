@@ -12,7 +12,10 @@ import org.slf4j.LoggerFactory;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.format.ResolverStyle;
-import java.util.*;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -123,7 +126,9 @@ public final class ByTimeSpawner implements GlobalSpawner {
         return available.isEmpty() ? null : new WeightedItemSelector<>(available).getRandomItem();
     }
 
-    /** A bare time repeats daily; DAY HH:mm repeats weekly in the configured zone. */
+    /**
+     * A bare time repeats daily; DAY HH:mm repeats weekly in the configured zone.
+     */
     public record Schedule(DayOfWeek day, LocalTime time) {
         private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm")
                 .withResolverStyle(ResolverStyle.STRICT);

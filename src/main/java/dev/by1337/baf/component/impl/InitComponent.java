@@ -1,11 +1,11 @@
 package dev.by1337.baf.component.impl;
 
 import dev.by1337.baf.Airdrop;
-import dev.by1337.baf.web.NodeSchema;
 import dev.by1337.baf.component.AbstractComponent;
 import dev.by1337.baf.component.AirdropComponent;
 import dev.by1337.baf.component.ComponentFactory;
 import dev.by1337.baf.component.ComponentHolder;
+import dev.by1337.baf.web.NodeSchema;
 import dev.by1337.edsl.EventHandler;
 import dev.by1337.edsl.context.EventContext;
 import dev.by1337.yaml.decoder.RecordYamlDecoder;

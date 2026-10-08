@@ -6,6 +6,9 @@ import dev.by1337.baf.component.AbstractComponent;
 import dev.by1337.baf.component.AirdropComponent;
 import dev.by1337.baf.component.ComponentFactory;
 import dev.by1337.baf.component.system.TimerSystem;
+import dev.by1337.baf.config.value.IntValue;
+import dev.by1337.baf.config.value.StringValue;
+import dev.by1337.baf.config.value.Vec3dValue;
 import dev.by1337.baf.util.Vec3d;
 import dev.by1337.baf.web.NodeSchema;
 import dev.by1337.edsl.EventHandler;
@@ -21,22 +24,28 @@ import org.bukkit.entity.Player;
 public class ParticleComponent extends AbstractComponent implements TimerSystem.Tickable {
     private static final double VIEW_DISTANCE_SQUARED = 30 * 30;
     private final Config config;
-    private final Location location;
+    private Location location;
+    private final Airdrop airdrop;
+    private int lifetime;
     private EmitterGraph graph;
     private int tick;
 
     private ParticleComponent(Config config, String name, Airdrop airdrop) {
         super(name, airdrop.components());
         this.config = config;
-        this.location = airdrop.location().add(config.offsets.x(), config.offsets.y(), config.offsets.z());
+        this.airdrop = airdrop;
     }
 
     @Override
     public void onCreate(EventContext ctx) {
         try (var ignored = ctx.tracer().enter(name + " on_create {", "}")) {
-            graph = BAF.particleGraphs().get(config.animation);
+            var offsets = config.offsets.getVector(airdrop);
+            location = airdrop.location().add(offsets.x(), offsets.y(), offsets.z());
+            lifetime = config.ticks.getInt(airdrop);
+            String animation = config.animation.getString(airdrop);
+            graph = BAF.particleGraphs().get(animation);
             if (graph == null) {
-                BAF.plugin().getSLF4JLogger().warn("Unknown particle animation '{}' in node {}", config.animation, name);
+                BAF.plugin().getSLF4JLogger().warn("Unknown particle animation '{}' in node {}", animation, name);
                 markRemoved(ctx);
                 return;
             }
@@ -53,7 +62,7 @@ public class ParticleComponent extends AbstractComponent implements TimerSystem.
 
     @Override
     public void onSyncTick(EventContext ctx) {
-        if (config.ticks != -1 && tick >= config.ticks) {
+        if (lifetime != -1 && tick >= lifetime) {
             try (var ignored = ctx.tracer().enter(name + " on_timer_end {", "}")) {
                 config.onTimerEnd.handle(ctx);
                 if (!isRemoved()) markRemoved(ctx);
@@ -83,28 +92,31 @@ public class ParticleComponent extends AbstractComponent implements TimerSystem.
 
         public static final YamlDecoder<Config> DECODER = RecordYamlDecoder.mapOf(
                 Config::new,
-                YamlDecoder.STRING.fieldOf("animation"),
-                Vec3d.DECODER.fieldOf("offsets", new Vec3d(0, 0, 0)),
-                YamlDecoder.INT.fieldOf("ticks", 100),
+                StringValue.DECODER.fieldOf("animation"),
+                Vec3dValue.DECODER.fieldOf("offsets", new Vec3dValue(new Vec3d(0, 0, 0))),
+                IntValue.DECODER.fieldOf("ticks", new IntValue(100)),
                 HANDLER.fieldOf("on_create", EMPTY_HANDLER),
                 HANDLER.fieldOf("on_remove", EMPTY_HANDLER),
                 HANDLER.fieldOf("on_timer_end", EMPTY_HANDLER)
         );
-        private final String animation;
-        private final Vec3d offsets;
-        private final int ticks;
+        private final StringValue animation;
+        private final Vec3dValue offsets;
+        private final IntValue ticks;
         private final EventHandler onCreate;
         private final EventHandler onRemove;
         private final EventHandler onTimerEnd;
 
         public Config(String animation, Vec3d offsets, int ticks, EventHandler onCreate, EventHandler onRemove, EventHandler onTimerEnd) {
-            if (animation == null || animation.isBlank())
-                throw new IllegalArgumentException("Particle animation ID is empty");
-            if (ticks < 1 && ticks != -1)
-                throw new IllegalArgumentException("Particle lifetime must be positive or -1");
+            this(new StringValue(animation), new Vec3dValue(offsets), new IntValue(ticks), onCreate, onRemove, onTimerEnd);
+        }
+
+        public Config(StringValue animation, Vec3dValue offsets, IntValue ticks, EventHandler onCreate, EventHandler onRemove, EventHandler onTimerEnd) {
+
             this.animation = animation;
+            if (animation.isConstant() && animation.getString(null).isBlank())
+                throw new IllegalArgumentException("Particle animation ID is empty");
             this.offsets = offsets;
-            this.ticks = ticks;
+            this.ticks = ticks.checked(v -> v > 0 || v == -1, "Particle lifetime must be positive or -1");
             this.onCreate = onCreate;
             this.onRemove = onRemove;
             this.onTimerEnd = onTimerEnd;

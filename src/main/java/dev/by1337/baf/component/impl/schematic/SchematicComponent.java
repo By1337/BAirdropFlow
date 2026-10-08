@@ -4,7 +4,7 @@ import dev.by1337.baf.Airdrop;
 import dev.by1337.baf.component.AbstractComponent;
 import dev.by1337.baf.component.AirdropComponent;
 import dev.by1337.baf.component.ComponentFactory;
-import dev.by1337.baf.component.ComponentHolder;
+import dev.by1337.baf.config.value.Vec3iValue;
 import dev.by1337.baf.ref.CleanerSlot;
 import dev.by1337.baf.schematic.Schematic;
 import dev.by1337.baf.schematic.SchematicWriter;
@@ -30,7 +30,8 @@ public class SchematicComponent extends AbstractComponent {
     @Override
     public void onCreate(EventContext ctx) {
         try (var ignored = ctx.tracer().enter(name + " create {", "}")) {
-            SchematicWriter writer = new SchematicWriter(airdrop.world(), new Vec3i(airdrop.x(), airdrop.y(), airdrop.z()));
+            var position = new Vec3i(airdrop.x(), airdrop.y(), airdrop.z()).add(config.offsets.getVector(airdrop));
+            SchematicWriter writer = new SchematicWriter(airdrop.world(), position);
             schematic.set(writer);
             writer.writeSchematic(config.schematic);
             config.onCreate.handle(ctx);
@@ -53,21 +54,27 @@ public class SchematicComponent extends AbstractComponent {
                 .materials("no_replace", "Блоки, которые нельзя заменять")
                 .materials("no_place", "Блоки, которые не вставлять")
                 .materialMap("replace", "Замена блоков")
-                .events("on_create", "on_remove")
-                ;
+                .events("on_create", "on_remove");
 
         public static final YamlDecoder<Config> DECODER = RecordYamlDecoder.mapOf(
                 Config::new,
                 Schematic.DECODER.fieldOf(),
+                Vec3iValue.DECODER.fieldOf("offsets", new Vec3iValue(Vec3i.ZERO)),
                 HANDLER.fieldOf("on_create", EMPTY_HANDLER),
                 HANDLER.fieldOf("on_remove", EMPTY_HANDLER)
         );
         private final Schematic schematic;
+        private final Vec3iValue offsets;
         private final EventHandler onCreate;
         private final EventHandler onRemove;
 
         public Config(Schematic schematic, EventHandler onCreate, EventHandler onRemove) {
+            this(schematic, new Vec3iValue(Vec3i.ZERO), onCreate, onRemove);
+        }
+
+        public Config(Schematic schematic, Vec3iValue offsets, EventHandler onCreate, EventHandler onRemove) {
             this.schematic = schematic;
+            this.offsets = offsets;
             this.onCreate = onCreate;
             this.onRemove = onRemove;
         }

@@ -1,8 +1,6 @@
 package dev.by1337.baf.world;
 
 import dev.by1337.baf.util.zip.CRC32Util;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import it.unimi.dsi.fastutil.shorts.Short2IntOpenCustomHashMap;
 import it.unimi.dsi.fastutil.shorts.Short2IntOpenHashMap;
 import org.bukkit.Chunk;
 import org.bukkit.Material;
@@ -47,10 +45,10 @@ public class ChunkData {
         for (int pos = 0; pos < this.blocks.length; pos++) {
             short block = this.blocks[pos];
             if (block == AIR) continue;
-            if (lastPos != pos){
+            if (lastPos != pos) {
                 out.writeInt(lastPos = pos);
             }
-            if (last != block){
+            if (last != block) {
                 last = block;
                 out.writeShort(-block);
             }
@@ -58,6 +56,7 @@ public class ChunkData {
 
 
     }
+
     public void save(DataOutput out) throws IOException {
         CRC32 crc = new CRC32();
         out.writeInt(CRC32Util.updateInt(crc, x));

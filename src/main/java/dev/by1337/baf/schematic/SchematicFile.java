@@ -18,10 +18,7 @@ import org.jetbrains.annotations.Contract;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -33,7 +30,7 @@ public class SchematicFile {
     private final List<Pair<Vec3i, BlockData>> blocks;
 
     public SchematicFile(List<Pair<Vec3i, BlockData>> blocks) {
-        this.blocks = blocks;
+        this.blocks = blocks.stream().sorted(Comparator.comparingInt(v -> v.getLeft().y())).toList();
     }
 
     public void forEachPoints(Consumer<Vec3i> consumer) {
@@ -91,6 +88,10 @@ public class SchematicFile {
 
     public Stream<Pair<Vec3i, BlockData>> stream() {
         return blocks.stream();
+    }
+
+    public List<Pair<Vec3i, BlockData>> blocks() {
+        return blocks;
     }
 
     public SchematicFile copy() {

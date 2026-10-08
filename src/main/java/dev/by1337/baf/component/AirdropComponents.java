@@ -1,13 +1,6 @@
 package dev.by1337.baf.component;
 
-import dev.by1337.baf.component.impl.DestroyComponent;
-import dev.by1337.baf.component.impl.CommandsComponent;
-import dev.by1337.baf.component.impl.InitComponent;
-import dev.by1337.baf.component.impl.ParticleComponent;
-import dev.by1337.baf.component.impl.TimerComponent;
-import dev.by1337.baf.component.impl.TimeoutComponent;
-import dev.by1337.baf.component.impl.BossBarComponent;
-import dev.by1337.baf.component.impl.GPSComponent;
+import dev.by1337.baf.component.impl.*;
 import dev.by1337.baf.component.impl.block.BreakBlockComponent;
 import dev.by1337.baf.component.impl.block.ClickBlockComponent;
 import dev.by1337.baf.component.impl.dh.DHHologramComponent;
@@ -17,7 +10,7 @@ import dev.by1337.baf.component.impl.wg.WgRegionComponent;
 
 public class AirdropComponents {
 
-    public static void boot(){
+    public static void boot() {
         AirdropComponent.REGISTRY.clear();
         AirdropComponent.REGISTRY.register("default:__init__", InitComponent.Config.DECODER, InitComponent.Config.WEB_SCHEMA);
         AirdropComponent.REGISTRY.register("default:__destroy__", DestroyComponent.Config.DECODER, DestroyComponent.Config.WEB_SCHEMA);

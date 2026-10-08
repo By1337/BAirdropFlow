@@ -7,9 +7,12 @@ import dev.by1337.item.util.text.RawTextComponentLike;
 import net.kyori.adventure.text.ComponentLike;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
-/** Compatibility with ConfigurableItems 1.6, which caches text containing placeholders. */
+/**
+ * Compatibility with ConfigurableItems 1.6, which caches text containing placeholders.
+ */
 final class LootMenuText {
-    private LootMenuText() {}
+    private LootMenuText() {
+    }
 
     static void restore(ItemModel model) {
         var components = model.components();

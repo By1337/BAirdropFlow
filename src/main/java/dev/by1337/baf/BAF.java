@@ -1,10 +1,10 @@
 package dev.by1337.baf;
 
-import dev.by1337.baf.interact.InteractManager;
 import dev.by1337.baf.gps.GPSRegistry;
-import dev.by1337.baf.spawner.global.GlobalSpawners;
-import dev.by1337.baf.particle.ParticleGraphs;
+import dev.by1337.baf.interact.InteractManager;
 import dev.by1337.baf.loot.LootTables;
+import dev.by1337.baf.particle.ParticleGraphs;
+import dev.by1337.baf.spawner.global.GlobalSpawners;
 import dev.by1337.baf.world.WorldData;
 import dev.by1337.baf.world.WorldDataContainer;
 import dev.by1337.baf.world.fake.FakeBlockSetter;
@@ -70,12 +70,15 @@ public class BAF {
     public static WorldDataContainer<WorldData> worldData() {
         return plugin.worldData;
     }
-    public static Plugin plugin(){
+
+    public static Plugin plugin() {
         return plugin;
     }
+
     public static ParticleGraphs particleGraphs() {
         return plugin.particleGraphs;
     }
+
     public static WorldDataContainer<FakeBlockSetter> fakeBlocks() {
         return plugin.fakeBlocks;
     }

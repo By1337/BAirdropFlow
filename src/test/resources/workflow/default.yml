@@ -28,46 +28,46 @@ spawner:
     publish_location: false
     gps_line: Аирдроп {value:type} в <lang:bairdropflow.world.{world}.in> через {formated_time_left}
   on_create:
-  - weights:
-      '20':
-      - set_value: loot_table example/epic
-      - set_value: type элитный
-      '50':
-      - set_value: loot_table example/rare
-      - set_value: type редкий
-      '100':
-      - set_value: loot_table example/default
-      - set_value: type обычный
-  - bc: "<white> \n<center><white>Аирдроп {value:type}\n<center><white>появится че\
+    - weights:
+        '20':
+          - set_value: loot_table example/epic
+          - set_value: type элитный
+        '50':
+          - set_value: loot_table example/rare
+          - set_value: type редкий
+        '100':
+          - set_value: loot_table example/default
+          - set_value: type обычный
+    - bc: "<white> \n<center><white>Аирдроп {value:type}\n<center><white>появится че\
       рез 5 минут!\n<white>\n"
   when:
     2m:
-    - bc: |
-        <white>
-        <center><white>Аирдроп {value:type}
-        <center><white>появится через 2 минуты!
-        <white>
+      - bc: |
+          <white>
+          <center><white>Аирдроп {value:type}
+          <center><white>появится через 2 минуты!
+          <white>
     1m:
-    - bc: |
-        <white>
-        <center><white>Аирдроп {value:type}
-        <center><white>появится через 1 минуту!
-        <white>
+      - bc: |
+          <white>
+          <center><white>Аирдроп {value:type}
+          <center><white>появится через 1 минуту!
+          <white>
     5s-1s:
+      - bc: |
+          <white>
+          <center><white>Аирдроп {value:type}
+          <center><white>появится через {time} сек.
+          <white>
+  on_timer_end:
     - bc: |
         <white>
         <center><white>Аирдроп {value:type}
-        <center><white>появится через {time} сек.
+        <center><white>появился на [{x}, {y}, {z}]
         <white>
-  on_timer_end:
-  - bc: |
-      <white>
-      <center><white>Аирдроп {value:type}
-      <center><white>появился на [{x}, {y}, {z}]
-      <white>
-  - make:
-      loot_table: '{value:loot_table}'
-      type: '{value:type}'
+    - make:
+        loot_table: '{value:loot_table}'
+        type: '{value:type}'
 $web_meta: '{"version":3,"webNodes":{"web_69d51acb3f8b":{"type":"web:note","x":-175.81264437262718,"y":-1375.9489699720423,"title":"Заметка","text":"{time_to_open}
   - время до открытия аирдропа\n{time_to_end} - время до удаления аирдропа после открытия\n{click_wait}
   - 6000 (5минут) аирдроп ждёи пока его активируют после чего \n  начнётся таймер
@@ -100,205 +100,205 @@ nodes:
   __init__:
     type: __init__
     on_init:
-    - create: timeout
-    - create: gps
+      - create: timeout
+      - create: gps
   region:
     type: wg:region
     size: 15;15;15
     flags:
-    - use deny
-    - other-explosion deny
-    - mob-damage allow
-    - pvp allow
-    - tnt deny
-    - ghast-fireball deny
-    - wither-damage deny
-    - creeper-explosion deny
-    - vehicle-destroy allow
-    - interact deny
-    - entry-deny-message -e
-    - deny-message -e
-    - exit-deny-message -e
+      - use deny
+      - other-explosion deny
+      - mob-damage allow
+      - pvp allow
+      - tnt deny
+      - ghast-fireball deny
+      - wither-damage deny
+      - creeper-explosion deny
+      - vehicle-destroy allow
+      - interact deny
+      - entry-deny-message -e
+      - deny-message -e
+      - exit-deny-message -e
     on_create:
-    - create: schematic
+      - create: schematic
     on_remove:
-    - remove: schematic
+      - remove: schematic
   schematic:
     type: schematic:paster
     path: ../WorldEdit/schematics/asteroid.schem
     offsets: 0;-1;0
     no_replace:
-    - bedrock
+      - bedrock
     no_place:
-    - air
+      - air
     on_create:
-    - create: commands
+      - create: commands
     on_remove:
-    - create: commands_1
+      - create: commands_1
     replace:
       barrier: air
   tto_holo:
     type: dh:hologram
     offsets: 0.5;1.8;0.5
     lines:
-    - '&cAirdrop'
-    - '&fДо открытия: {ctx:tto.timer}'
+      - '&cAirdrop'
+      - '&fДо открытия: {ctx:tto.timer}'
     on_create:
-    - create: bossbar
+      - create: bossbar
     on_remove:
-    - remove: bossbar
-    on_update: []
+      - remove: bossbar
+    on_update: [ ]
   tte:
     type: tick:timer
     timer: '{time_to_end}'
     on_create:
-    - create: tte_holo
+      - create: tte_holo
     on_tick:
-    - call: update tte_holo
-    on_timer_end: []
+      - call: update tte_holo
+    on_timer_end: [ ]
     on_remove:
-    - remove: tte_holo
-    - destroy: ''
+      - remove: tte_holo
+      - destroy: ''
   tte_holo:
     type: dh:hologram
     offsets: 0.5;1.8;0.5
     lines:
-    - '&aAirdrop'
-    - '&fДо удаления: {ctx:tte.timer}'
+      - '&aAirdrop'
+      - '&fДо удаления: {ctx:tte.timer}'
     on_create:
-    - create: bossbar_1
+      - create: bossbar_1
     on_remove:
-    - remove: bossbar_1
+      - remove: bossbar_1
   looter:
     type: loot:looter
     offsets: 0;0;0
     loot_table: '{args:loot_table}'
     title: '&aAirdrop!'
     on_open:
-    - create: commands_2
+      - create: commands_2
     on_create:
-    - create: animation_1
-    on_remove: []
+      - create: animation_1
+    on_remove: [ ]
     take_cooldown_ticks: 10
     fill_duration_ticks: 100
     obfuscation_materials:
-    - gray_dye
-    - pink_dye
+      - gray_dye
+      - pink_dye
     obfuscation_name: '&cСкрытый предмет'
     rolls: 32
   __destroy__:
     type: __destroy__
     on_destroy:
-    - setblock: '{x} {y} {z} air'
-    - remove: gps
+      - setblock: '{x} {y} {z} air'
+      - remove: gps
   animation:
     type: particle:animation
     animation: example
     ticks: -1
-    on_create: []
-    on_remove: []
-    on_timer_end: []
+    on_create: [ ]
+    on_remove: [ ]
+    on_timer_end: [ ]
     offsets: 0.5;0;0.5
   commands:
     type: default:commands
     on_run:
-    - setblock: '{x} {y} {z} minecraft:respawn_anchor[charges=4]'
-    - create: animation
+      - setblock: '{x} {y} {z} minecraft:respawn_anchor[charges=4]'
+      - create: animation
   commands_1:
     type: default:commands
     on_run:
-    - setblock: '{x} {y} {z} air'
-    - remove: animation
+      - setblock: '{x} {y} {z} air'
+      - remove: animation
   animation_1:
     type: particle:animation
     animation: explosion
     offsets: 0.5;0;0.5
     ticks: 30
-    on_create: []
-    on_remove: []
-    on_timer_end: []
+    on_create: [ ]
+    on_remove: [ ]
+    on_timer_end: [ ]
   commands_2:
     type: default:commands
     on_run:
-    - message: '&7Личное сообщение для %player_name%'
+      - message: '&7Личное сообщение для %player_name%'
   tto:
     type: tick:timer
     timer: '{time_to_open}'
     on_create:
-    - create: tto_holo
+      - create: tto_holo
     on_tick:
-    - call: update tto_holo
+      - call: update tto_holo
     on_timer_end:
-    - create: tte
+      - create: tte
     on_remove:
-    - remove: tto_holo
+      - remove: tto_holo
   bossbar:
     type: default:bossbar
     title: '&cAirdrop&f до открытия {ctx:bossbar.time}'
     radius: 64
     color: red
     overlay: progress
-    flags: []
+    flags: [ ]
     progress: 1
     time: '{ctx:tto.timer}'
     progress_from_time: true
-    on_create: []
-    on_remove: []
+    on_create: [ ]
+    on_remove: [ ]
   bossbar_1:
     type: default:bossbar
     title: '&cAirdrop&f до удаления {ctx:bossbar_1.time}'
     radius: 64
     color: red
     overlay: progress
-    flags: []
+    flags: [ ]
     progress: 1
     time: '{ctx:tte.timer}'
     progress_from_time: true
     on_create:
-    - create: looter
+      - create: looter
     on_remove:
-    - remove: looter
+      - remove: looter
   gps:
     type: default:gps
     publish_location: true
     gps_line: <{color}>● <white>Аирдроп [<lang:bairdropflow.world.{world}.name> {x}/{y}/{z}]
       <hover:show_text:'<green>нажми'><click:run_command:/gps {gps_id}><green>[нажми]</click></hover>
     on_create:
-    - create: region
+      - create: region
     on_remove:
-    - remove: region
+      - remove: region
   timeout:
     type: tick:timeout
     ticks: '{click_wait}'
     on_create:
-    - create: click
-    on_remove: []
+      - create: click
+    on_remove: [ ]
     on_timer_end:
-    - destroy: ''
+      - destroy: ''
   click:
     type: block:click
     offsets: 0;0;0
     count: 1
     on_create:
-    - create: hologram
-    on_click: []
+      - create: hologram
+    on_click: [ ]
     on_clicked:
-    - remove: timeout
-    - create: commands_3
+      - remove: timeout
+      - create: commands_3
     on_remove:
-    - remove: hologram
+      - remove: hologram
   hologram:
     type: dh:hologram
     offsets: 0.5;1.8;0.5
     lines:
-    - '&cAirdrop'
-    - '&cНе активирован'
-    on_create: []
-    on_update: []
-    on_remove: []
+      - '&cAirdrop'
+      - '&cНе активирован'
+    on_create: [ ]
+    on_update: [ ]
+    on_remove: [ ]
   commands_3:
     type: default:commands
     on_run:
-    - bc: "<white> \n<center><white>Аирдроп {value:type}\n<center><white>Активиров\
+      - bc: "<white> \n<center><white>Аирдроп {value:type}\n<center><white>Активиров\
         ан на [{x}, {y}, {z}]\n<white>\n"
-    - create: tto
+      - create: tto

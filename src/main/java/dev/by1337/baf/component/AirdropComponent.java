@@ -1,18 +1,19 @@
 package dev.by1337.baf.component;
 
 
-import dev.by1337.baf.registry.DecoderRegistry;
 import dev.by1337.edsl.context.EventContext;
-import dev.by1337.yaml.decoder.YamlDecoder;
 
 public interface AirdropComponent {
     NodeRegistry REGISTRY = new NodeRegistry();
 
     boolean call(String event, EventContext ctx);
+
     void markRemoved(EventContext ctx);
 
     boolean isRemoved();
+
     String name();
+
     Object getPlaceholder(String key);
 
     void onCreate(EventContext ctx);

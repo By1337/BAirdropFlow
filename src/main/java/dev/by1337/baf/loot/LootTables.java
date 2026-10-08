@@ -132,7 +132,10 @@ public class LootTables {
             throw new IllegalStateException("Не удалось сохранить таблицы лута", e);
         } finally {
             if (temporary != null) {
-                try { Files.deleteIfExists(temporary); } catch (IOException ignored) { }
+                try {
+                    Files.deleteIfExists(temporary);
+                } catch (IOException ignored) {
+                }
             }
         }
     }

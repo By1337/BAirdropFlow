@@ -1,27 +1,21 @@
 package dev.by1337.baf.schematic;
 
-import dev.by1337.baf.BAF;
-import dev.by1337.baf.util.Vec3i;
-import dev.by1337.core.util.misc.Pair;
 import dev.by1337.yaml.decoder.BukkitYamlDecoders;
 import dev.by1337.yaml.decoder.RecordYamlDecoder;
 import dev.by1337.yaml.decoder.YamlDecoder;
 import org.bukkit.Material;
-import org.bukkit.block.data.*;
+import org.bukkit.block.data.BlockData;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.stream.Stream;
 
 public class Schematic {
     private static final Random random = new Random();
     public static final YamlDecoder<Schematic> DECODER = RecordYamlDecoder.mapOf(
             Schematic::new,
             SchematicFile.DECODER.fieldOf("path"),
-            Vec3i.DECODER.fieldOf("offsets", Vec3i.ZERO),
             BukkitYamlDecoders.material().wildcard().asSet().fieldOf("no_replace"),
             BukkitYamlDecoders.material().wildcard().asSet().fieldOf("no_place"),
             YamlDecoder.flattenKeys(
@@ -33,14 +27,12 @@ public class Schematic {
 
     private boolean auto_rotate = false;
     private final SchematicFile schematicFile;
-    private final Vec3i offsets;
     private final Set<Material> no_replace;
     private final Set<Material> no_place;
     private final Map<Material, BlockData> replaces;
 
-    public Schematic(SchematicFile schematicFile, Vec3i offsets, Set<Material> noReplace, Set<Material> noPlace, Map<Material, BlockData> replaces) {
-        this.schematicFile = offsets.isZero() ? schematicFile : schematicFile.mutatePos(v -> v.add(offsets));
-        this.offsets = offsets;
+    public Schematic(SchematicFile schematicFile, Set<Material> noReplace, Set<Material> noPlace, Map<Material, BlockData> replaces) {
+        this.schematicFile = schematicFile;
         no_replace = noReplace;
         no_place = noPlace;
         this.replaces = replaces;
@@ -51,6 +43,7 @@ public class Schematic {
         if (auto_rotate) return mutator.apply(o);
         return o.copy();
     }
+
     /*private Stream<Pair<Vec3i, BlockData>> bloksStream(SchematicFile s) {
         return s.stream().map(this::mutate);
     }
@@ -109,7 +102,7 @@ public class Schematic {
         }
         return Pair.of(pair.getLeft(), newData);
     }*/
-    public boolean canReplace(Material material){
+    public boolean canReplace(Material material) {
         return !no_replace.contains(material);
     }
 
@@ -125,7 +118,7 @@ public class Schematic {
         return no_place;
     }
 
-    public BlockData replace(BlockData m){
+    public BlockData replace(BlockData m) {
         return replaces.getOrDefault(m.getMaterial(), m);
     }
 
@@ -136,6 +129,7 @@ public class Schematic {
     private static <T> T any(T t, T t1, T t2, T t3, T t4) {
         return any(any(t, t1, t2, t3), t4);
     }
+
     private static <T> T any(T t, T t1, T t2, T t3) {
         return any(any(t, t1), any(t2, t3));
     }

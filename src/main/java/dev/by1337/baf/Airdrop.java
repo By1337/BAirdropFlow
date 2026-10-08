@@ -5,6 +5,7 @@ import dev.by1337.baf.component.ComponentHolder;
 import dev.by1337.baf.ref.AirdropCleaner;
 import dev.by1337.cmd.Command;
 import dev.by1337.edsl.context.EventContext;
+import dev.by1337.plc.PlaceholderApplier;
 import dev.by1337.plc.PlaceholderResolver;
 import dev.by1337.plc.Placeholders;
 import org.bukkit.Location;
@@ -14,7 +15,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
-public class Airdrop {
+public class Airdrop implements PlaceholderApplier {
     private static final Random RANDOM = new Random();
     public static final PlaceholderResolver<Airdrop> PLACEHOLDERS = Placeholders.<Airdrop>create()
             .withContext("x", air -> air.x)
@@ -63,6 +64,7 @@ public class Airdrop {
     }
 
 
+    @Override
     public String setPlaceholders(String s) {
         return PLACEHOLDERS.setPlaceholders(s, this);
     }

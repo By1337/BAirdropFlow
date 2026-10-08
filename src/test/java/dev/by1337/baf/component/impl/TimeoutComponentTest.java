@@ -24,7 +24,8 @@ class TimeoutComponentTest {
 
     @BeforeAll
     static void initializeContextWithoutPlaceholderApi() {
-        try (var ignored = new EventContext(false)) {}
+        try (var ignored = new EventContext(false)) {
+        }
     }
 
     @BeforeEach
@@ -109,12 +110,28 @@ class TimeoutComponentTest {
 
     @Test
     void failingCompletionHandlerStillRemovesTheNode() {
-        var component = create(1, ignored -> { throw new IllegalStateException("handler failed"); });
+        var component = create(1, ignored -> {throw new IllegalStateException("handler failed");});
         assertThrows(IllegalStateException.class, () -> component.onSyncTick(ctx));
         assertTrue(component.isRemoved());
         assertNull(airdrop.components().get("ttl"));
         component.onSyncTick(ctx);
         assertEquals(List.of("remove"), events);
+    }
+
+    @Test
+    void durationResolvesThroughTheAirdropAndIsSnapshottedAtCreation() {
+        airdrop.args().put("ticks", "2");
+        var config = TimeoutComponent.Config.DECODER.decode(YamlValue.wrap(Map.of("ticks", "{args:ticks}"))).getOrThrow();
+        var component = (TimeoutComponent) config.create(airdrop, "dynamic");
+        // No bound airdrop resolver in this EventContext: configured values must use Airdrop itself.
+        try (var unbound = new EventContext(false)) {
+            airdrop.components().add(component, unbound);
+            airdrop.args().put("ticks", "100");
+            component.onSyncTick(unbound);
+            assertFalse(component.isRemoved());
+            component.onSyncTick(unbound);
+            assertTrue(component.isRemoved());
+        }
     }
 
     @Test

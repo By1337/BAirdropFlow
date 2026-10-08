@@ -45,7 +45,7 @@ nodes:
     on_broken:
       - remove: tte
       - create: next_state
-    on_remove: []
+    on_remove: [ ]
 
   hologram:
     type: dh:hologram

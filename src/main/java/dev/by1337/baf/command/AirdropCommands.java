@@ -27,7 +27,8 @@ public class AirdropCommands {
         if (COMMANDS == null) resetCommands();
         return COMMANDS;
     }
-    public static void resetCommands(){
+
+    public static void resetCommands() {
         COMMANDS = new Command<EventContext>("root")
                 .and(DefaultEventCommands.createCommands())
                 .and(nodeControl())
@@ -45,9 +46,9 @@ public class AirdropCommands {
                             OptionsHolder flags = (OptionsHolder) args.getOrDefault("flags", new OptionsHolder());
                             String node = (String) args.getOrThrow("node", "Use: [create] <node>");
                             var drop = ctx.get(Airdrop.class);
-                           // if (drop.isRemoved()) {
-                           //     throw new CommandMsgError("Airdrop is removed!");
-                           // }
+                            // if (drop.isRemoved()) {
+                            //     throw new CommandMsgError("Airdrop is removed!");
+                            // }
                             var factory = drop.config().nodes().get(node);
                             if (factory == null) {
                                 throw new CommandMsgError("Unknown node " + node);
@@ -64,7 +65,7 @@ public class AirdropCommands {
                             drop.components().add(factory.create(drop, name), ctx);
                             if (drop.isRemoved()) {
                                 var c = drop.components().get(name);
-                                if (c != null){
+                                if (c != null) {
                                     c.markRemoved(ctx);
                                 }
                             }

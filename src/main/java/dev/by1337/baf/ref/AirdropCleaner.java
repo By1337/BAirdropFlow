@@ -43,7 +43,8 @@ public class AirdropCleaner {
             }
         }
     }
-    private interface CleanerTask extends Cleaner, Runnable{
+
+    private interface CleanerTask extends Cleaner, Runnable {
 
     }
 }

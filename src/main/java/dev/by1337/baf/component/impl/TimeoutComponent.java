@@ -4,28 +4,32 @@ import dev.by1337.baf.Airdrop;
 import dev.by1337.baf.component.AbstractComponent;
 import dev.by1337.baf.component.AirdropComponent;
 import dev.by1337.baf.component.ComponentFactory;
-import dev.by1337.baf.component.ComponentHolder;
 import dev.by1337.baf.component.system.TimerSystem;
+import dev.by1337.baf.config.value.IntValue;
 import dev.by1337.baf.web.NodeSchema;
 import dev.by1337.edsl.EventHandler;
 import dev.by1337.edsl.context.EventContext;
 import dev.by1337.yaml.decoder.RecordYamlDecoder;
 import dev.by1337.yaml.decoder.YamlDecoder;
 
-/** A cancellable deadline: removing it never fires on_timer_end. */
+/**
+ * A cancellable deadline: removing it never fires on_timer_end.
+ */
 public class TimeoutComponent extends AbstractComponent implements TimerSystem.Tickable {
     private final Config config;
+    private final Airdrop airdrop;
     private int remainingTicks;
     private boolean finished;
 
-    private TimeoutComponent(Config config, String name, ComponentHolder owner) {
-        super(name, owner);
+    private TimeoutComponent(Config config, String name, Airdrop airdrop) {
+        super(name, airdrop.components());
+        this.airdrop = airdrop;
         this.config = config;
-        remainingTicks = config.ticks;
     }
 
     @Override
     public void onCreate(EventContext ctx) {
+        remainingTicks = config.ticks.getInt(airdrop);
         try (var ignored = ctx.tracer().enter(name + " on_create {", "}")) {
             config.onCreate.handle(ctx);
         }
@@ -59,24 +63,27 @@ public class TimeoutComponent extends AbstractComponent implements TimerSystem.T
 
         public static final YamlDecoder<Config> DECODER = RecordYamlDecoder.mapOf(
                 Config::new,
-                YamlDecoder.INT.fieldOf("ticks", 1200),
+                IntValue.DECODER.fieldOf("ticks", new IntValue(1200)),
                 HANDLER.fieldOf("on_create", EMPTY_HANDLER),
                 HANDLER.fieldOf("on_remove", EMPTY_HANDLER),
                 HANDLER.fieldOf("on_timer_end", EMPTY_HANDLER)
         );
 
-        private final int ticks;
+        private final IntValue ticks;
         private final EventHandler onCreate;
         private final EventHandler onRemove;
         private final EventHandler onTimerEnd;
 
         public Config(int ticks, EventHandler onRemove, EventHandler onTimerEnd) {
-            this(ticks, EMPTY_HANDLER, onRemove, onTimerEnd);
+            this(new IntValue(ticks), EMPTY_HANDLER, onRemove, onTimerEnd);
         }
 
         public Config(int ticks, EventHandler onCreate, EventHandler onRemove, EventHandler onTimerEnd) {
-            if (ticks < 1) throw new IllegalArgumentException("Timeout ticks must be positive");
-            this.ticks = ticks;
+            this(new IntValue(ticks), onCreate, onRemove, onTimerEnd);
+        }
+
+        public Config(IntValue ticks, EventHandler onCreate, EventHandler onRemove, EventHandler onTimerEnd) {
+            this.ticks = ticks.checked(v -> v > 0, "Timeout ticks must be positive");
             this.onCreate = onCreate;
             this.onRemove = onRemove;
             this.onTimerEnd = onTimerEnd;
@@ -84,7 +91,7 @@ public class TimeoutComponent extends AbstractComponent implements TimerSystem.T
 
         @Override
         public AirdropComponent create(Airdrop airdrop, String name) {
-            return new TimeoutComponent(this, name, airdrop.components());
+            return new TimeoutComponent(this, name, airdrop);
         }
 
         @Override

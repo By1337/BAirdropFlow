@@ -313,12 +313,13 @@ function vectorInputs(value, fractional, attributes = '') {
 function readVector(container, fractional) {
   return joinVector([...container.querySelectorAll('[data-vector-axis]')].map(input => input.value), fractional);
 }
+const fieldType = field => Array.isArray(field.type) ? field.type[0] : field.type;
 function scalarInput(value, field, attributes) {
   return `<input ${attributes} type="text" value="${escape(value)}">`;
 }
 function readScalar(input, field) {
-  if (field.type === 'boolean' && ['true','false'].includes(input.value)) return input.value === 'true';
-  if (['integer','number'].includes(field.type) && input.value.trim() && Number.isFinite(Number(input.value))) return Number(input.value);
+  if (fieldType(field) === 'boolean' && ['true','false'].includes(input.value)) return input.value === 'true';
+  if (['integer','number'].includes(fieldType(field)) && input.value.trim() && Number.isFinite(Number(input.value))) return Number(input.value);
   return input.value;
 }
 
@@ -330,7 +331,7 @@ function nodeFields(name,node,schema) {
     if(control==='lines') return `<div class="node-field"><label>${escape(title)}</label><textarea data-node-lines="${escape(name)}" data-field="${escape(key)}" spellcheck="false" placeholder="Одна строка на линию">${escape(nodeDrafts.get(JSON.stringify([name,key]))??(Array.isArray(value)?value.join('\n'):value))}</textarea></div>`;
     if(control==='materials' || control==='material-map') return `<div class="node-field"><label>${escape(title)}</label><div class="node-field-summary">${escape(control==='materials' ? `${Array.isArray(value)?value.length:0} материалов` : `${Object.keys(value ?? {}).length} замен`)} · настройка справа</div></div>`;
     if(control==='vector') return `<div class="node-field"><span>${escape(title)}</span>${vectorInputs(value, field['x-fractional'] === true, `data-node-vector="${escape(name)}" data-vector-field="${escape(key)}"`)}</div>`;
-    if(['string','integer','number','boolean'].includes(field.type)) return `<div class="node-field"><label>${escape(title)}</label>${scalarInput(value,field,`data-inline-node="${escape(name)}" data-inline-field="${escape(key)}"`)}</div>`;
+    if(['string','integer','number','boolean'].includes(fieldType(field))) return `<div class="node-field"><label>${escape(title)}</label>${scalarInput(value,field,`data-inline-node="${escape(name)}" data-inline-field="${escape(key)}"`)}</div>`;
     return `<div class="node-field"><label>${escape(title)}</label><div class="node-field-summary">${escape(Array.isArray(value)?`${value.length} элементов`:typeof value==='object'?Object.keys(value??{}).join(', '):String(value))}</div></div>`;
   });
   for(const [key,value] of Object.entries(node)) if(!known.has(key)&&!key.startsWith('on_')) fields.push(`<div class="node-field"><label>${escape(key)}</label><div class="node-field-summary">${escape(typeof value==='object'?Array.isArray(value)?`${value.length} элементов`:Object.keys(value).join(', '):String(value))}</div></div>`);
@@ -704,10 +705,10 @@ function drawInspector() {
   const node = model.nodes[selected], schema = schemaFor(node), required = schema.required ?? [];
   const fields = Object.entries(schema.properties ?? {}).filter(([key]) => key !== 'type' && !key.startsWith('on_'));
   panel.innerHTML = `<div class="section-label">Компонент</div><div class="inspector-title"><h2>${escape(schema.title ?? node.type)}</h2><button id="delete-node" class="icon-button danger" title="Удалить ноду">×</button></div><p>${escape(schema.description ?? 'Тип не зарегистрирован.')}</p><div class="field"><label for="node-title">Название в редакторе</label><input id="node-title" value="${escape(model.layout(selected).title || '')}" placeholder="${escape(selected)}"></div><div class="field"><label for="node-name">ID ноды</label><input id="node-name" value="${escape(selected)}" ${['__init__','__destroy__'].includes(selected) ? 'readonly' : ''}></div><div class="field"><label for="node-color">Цвет ноды</label><div class="color-control"><input id="node-color" type="color" value="${escape(model.layout(selected).color || color(node.type))}"><button id="reset-color" type="button" class="secondary">Сбросить</button></div></div><div class="field"><label>Тип</label><div class="readonly-type">${escape(node.type)}</div></div>${fields.map(([key, field]) => {
-    const value = node[key] ?? field.default ?? '', control = field['x-control'], json = control === 'event' || (!control && ['array','object'].includes(field.type));
+    const value = node[key] ?? field.default ?? '', control = field['x-control'], json = control === 'event' || (!control && ['array','object'].includes(fieldType(field)));
     const draft = invalidFields.get(JSON.stringify([selected, key]));
     const display = draft?.value ?? (control === 'lines' ? (Array.isArray(value) ? value.join('\n') : value) : json ? JSON.stringify(value, null, 2) : value);
-    const body = control === 'event' ? `<div data-inspector-event="${escape(key)}"></div>` : control === 'materials' || control === 'material-map' ? materialEditor(key,value,control) : control === 'vector' ? vectorInputs(draft?.value ?? value, field['x-fractional'] === true, `data-inspector-vector="${escape(key)}"`) : control === 'lines' || json ? `<textarea data-field="${escape(key)}" data-control="${control ?? 'json'}" rows="${json ? 5 : 3}" spellcheck="false">${escape(display)}</textarea>` : scalarInput(display,field,`data-field="${escape(key)}" data-control="${field.type}" ${required.includes(key)?'required':''}`);
+    const body = control === 'event' ? `<div data-inspector-event="${escape(key)}"></div>` : control === 'materials' || control === 'material-map' ? materialEditor(key,value,control) : control === 'vector' ? vectorInputs(draft?.value ?? value, field['x-fractional'] === true, `data-inspector-vector="${escape(key)}"`) : control === 'lines' || json ? `<textarea data-field="${escape(key)}" data-control="${control ?? 'json'}" rows="${json ? 5 : 3}" spellcheck="false">${escape(display)}</textarea>` : scalarInput(display,field,`data-field="${escape(key)}" data-control="${fieldType(field)}" ${required.includes(key)?'required':''}`);
     return `<div class="field${draft ? ' error' : ''}"><label>${escape(field.title ?? key)}${required.includes(key) ? ' *' : ''}</label>${body}<small>${escape(control === 'event' ? 'Связи create, remove и destroy соединяются на схеме.' : field.description ?? '')}</small><small class="field-error">${escape(draft?.message ?? '')}</small></div>`;
   }).join('')}<details><summary class="section-label">Полный JSON ноды</summary><textarea id="raw-node" rows="14" spellcheck="false">${escape(JSON.stringify(node, null, 2))}</textarea><small>Неизвестные поля сохраняются.</small><button id="apply-raw" style="margin-top:10px">Применить JSON</button></details><div class="section-label">Исходящие связи</div><div id="inspector-edges"></div>`;
   $('#node-title').onchange = event => { model.setTitle(selected,event.target.value); refresh(); };
