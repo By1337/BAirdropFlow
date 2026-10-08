@@ -12,7 +12,6 @@ import dev.by1337.bmenu.menu.Menu;
 import dev.by1337.bmenu.menu.command.MenuCommands;
 import dev.by1337.cmd.Command;
 import dev.by1337.cmd.CommandMsgError;
-import dev.by1337.core.command.bcmd.argument.ArgumentInt;
 import dev.by1337.core.util.text.minimessage.MiniMessage;
 import dev.by1337.core.BCore;
 import dev.by1337.plc.PlaceholderResolver;
@@ -49,7 +48,6 @@ public class LootMenu extends PutableMenu {
             .withContext("max_page", v -> Math.max(v.currentPage, v.draft.maxPage()) + 1)
             .withContext("has_next_page", v -> v.currentPage < v.draft.maxPage())
             .withContext("loot_table_id", v -> v.tableId)
-            .withContext("rolls", v -> v.rolls)
             .withContext("weight_mode", v -> v.mode == EditMode.WEIGHTS)
             .withContext("count_mode", v -> v.mode == EditMode.COUNTS)
             .withContext("edit_mode", v -> v.mode.title);
@@ -73,15 +71,6 @@ public class LootMenu extends PutableMenu {
                     m.save();
                     m.viewer.sendMessage("Таблица лута сохранена");
                 }
-            }))
-            .sub(new Command<ExecuteContext>("[rolls]").executor(new ArgumentInt<>("delta"), (ctx, delta) -> {
-                if (ctx.menu instanceof LootMenu m && delta != null) {
-                    long value = (long) m.rolls + delta;
-                    if (value < 0 || value > Integer.MAX_VALUE) return;
-                    m.rolls = (int) value;
-                    m.save();
-                    m.refresh();
-                }
             }));
 
     private final Config cfg;
@@ -90,7 +79,6 @@ public class LootMenu extends PutableMenu {
     private String tableId;
     private LootEditorDraft draft;
     private int currentPage;
-    private int rolls;
     private EditMode mode = EditMode.ITEMS;
     private boolean closed = true;
     private boolean updateScheduled;
@@ -119,7 +107,6 @@ public class LootMenu extends PutableMenu {
         if (table == null) throw new CommandMsgError("Неизвестная таблица лута: " + tableId);
         LootTables.DEFAULT.beginEdit(table, this);
         draft = new LootEditorDraft(table.items(), cfg.itemSlots.length);
-        rolls = table.rolls();
         currentPage = 0;
         mode = EditMode.ITEMS;
         slotsReady = false;
@@ -230,7 +217,6 @@ public class LootMenu extends PutableMenu {
     public void save() {
         capturePage();
         table.setItems(draft.items());
-        table.setRolls(rolls);
         // Keep edits in memory even if saving fails, so a later save can recover them.
         try {
             LootTables.DEFAULT.save();

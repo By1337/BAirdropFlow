@@ -27,7 +27,8 @@ public record LootEntry(ItemHolder itemHolder, double weight, int minCount, int 
     public ItemStack generate() {
         ItemStack stack = itemHolder.getItemStack();
         if (minCount != 0 && maxCount != 0) {
-            stack.setAmount((int) ThreadLocalRandom.current().nextLong(minCount, (long) maxCount + 1));
+            int c = (int) ThreadLocalRandom.current().nextLong(minCount, (long) maxCount + 1);
+            stack.setAmount(Math.clamp(c, 1, stack.getMaxStackSize()));
         }
         return stack;
     }

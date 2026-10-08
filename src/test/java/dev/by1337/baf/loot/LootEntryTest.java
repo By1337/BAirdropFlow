@@ -21,9 +21,9 @@ class LootEntryTest {
 
     @Test void generationUsesInclusiveRangeAndLeavesOriginalStackUntouched() {
         ItemHolder item = item();
-        LootTable table = new LootTable(List.of(new LootEntry(item, 1, 2, 4)), 200);
+        LootTable table = new LootTable(List.of(new LootEntry(item, 1, 2, 4)));
         var amounts = new HashSet<Integer>();
-        for (ItemStack stack : table.generate()) {
+        for (ItemStack stack : table.generate(200)) {
             assertEquals(Material.DIAMOND, stack.getType());
             assertTrue(stack.getAmount() >= 2 && stack.getAmount() <= 4);
             amounts.add(stack.getAmount());
@@ -32,12 +32,20 @@ class LootEntryTest {
         assertEquals(12, item.getItemStack().getAmount());
     }
 
+    @Test void generationCountIsSuppliedPerCallWithoutChangingTheTable() {
+        LootTable table = new LootTable(List.of(new LootEntry(item(), 1)));
+        assertEquals(90, table.generate(90).size());
+        assertEquals(3, table.generate(3).size());
+        assertTrue(table.generate(0).isEmpty());
+        assertEquals(1, table.items().size());
+    }
+
     @Test void disabledRangePreservesStackAndEqualBoundsGiveFixedCount() {
         for (int[] range : List.of(new int[] {0, 0}, new int[] {0, 5}, new int[] {5, 0})) {
             assertEquals(12, new LootEntry(item(), 1, range[0], range[1]).generate().getAmount());
         }
         assertEquals(7, new LootEntry(item(), 1, 7, 7).generate().getAmount());
-        assertEquals(Integer.MAX_VALUE,
+        assertEquals(64,
                 new LootEntry(item(), 1, Integer.MAX_VALUE, Integer.MAX_VALUE).generate().getAmount());
     }
 

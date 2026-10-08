@@ -106,7 +106,7 @@ public class LootTables {
                 throw new IllegalStateException("Не удалось загрузить лут. Резервная копия: " + backup, e);
             }
         } else {
-            loaded = Map.of("loot/default", new LootTable(List.of(new LootEntry(ItemHolder.DIRT, 100)), 5));
+            loaded = Map.of("loot/default", new LootTable(List.of(new LootEntry(ItemHolder.DIRT, 100))));
         }
         clear();
         loaded.forEach(this::set);

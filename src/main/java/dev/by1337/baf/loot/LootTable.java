@@ -12,30 +12,18 @@ import java.util.List;
 public class LootTable {
     public static final YamlCodec<LootTable> CODEC = RecordYamlCodecBuilder.mapOf(
             LootTable::new,
-            LootEntry.CODEC.listOf().fieldOf("items", LootTable::items, List.of()),
-            YamlCodec.INT.fieldOf("rolls", LootTable::rolls, 1)
+            LootEntry.CODEC.listOf().fieldOf("items", LootTable::items, List.of())
     );
     private List<LootEntry> items;
-    private int rolls;
     private WeightedItemSelector<LootEntry> selector;
     private boolean selectorReady;
 
-    public LootTable(List<LootEntry> items, int rolls) {
+    public LootTable(List<LootEntry> items) {
         setItems(items);
-        setRolls(rolls);
     }
 
     public List<LootEntry> items() {
         return items;
-    }
-
-    public int rolls() {
-        return rolls;
-    }
-
-    public void setRolls(int rolls) {
-        if (rolls < 0) throw new IllegalArgumentException("Количество прокруток не может быть отрицательным");
-        this.rolls = rolls;
     }
 
     public void setItems(List<LootEntry> items) {
@@ -58,7 +46,8 @@ public class LootTable {
         return selector == null ? null : selector.getRandomItem();
     }
 
-    public List<ItemStack> generate() {
+    public List<ItemStack> generate(int rolls) {
+        if (rolls < 0) throw new IllegalArgumentException("Количество прокруток не может быть отрицательным");
         List<ItemStack> result = new ArrayList<>();
         for (int i = 0; i < rolls; i++) {
             LootEntry entry = selectItem();

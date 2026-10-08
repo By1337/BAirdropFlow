@@ -40,21 +40,6 @@ items:
     name: "<gold>Предыдущая страница"
     on_click:
       - '[previous_page]'
-  rolls:
-    slot: 49
-    material: clock
-    name: "<gold>Прокрутки: <yellow>{rolls}"
-    lore:
-      - "<gray>ЛКМ +1, ПКМ -1; Shift: шаг 10"
-      - "<gray>Выбор по весам, с повторениями."
-    on_left_click:
-      - '[rolls] 1'
-    on_right_click:
-      - '[rolls] -1'
-    on_shift_left_click:
-      - '[rolls] 10'
-    on_shift_right_click:
-      - '[rolls] -10'
   next_page:
     slot: 50
     material: arrow

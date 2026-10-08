@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class LootTablesTest {
     @TempDir Path dir;
-    private static LootTable table() { return new LootTable(List.of(), 1); }
+    private static LootTable table() { return new LootTable(List.of()); }
 
     @Test void replacementAndRemovalMaintainReverseLookup() {
         LootTables registry = new LootTables();
@@ -42,18 +42,18 @@ class LootTablesTest {
         assertSame(table, registry.remove("test"));
     }
 
-    @Test void roundTripsWeightsRollsAndItemBytes() throws Exception {
+    @Test void roundTripsWeightsAndItemBytesWithoutRolls() throws Exception {
         Path file = dir.resolve("loot.yml");
         Files.writeString(file, "{}");
         LootTables registry = new LootTables();
         registry.load(file.toFile());
         LootEntry entry = new LootEntry(new ItemHolder(new byte[] {1, 2, 3}), 2.5, 2, 9);
-        registry.set("loot/example", new LootTable(List.of(entry), 7));
+        registry.set("loot/example", new LootTable(List.of(entry)));
         registry.save();
         LootTables reloaded = new LootTables();
         reloaded.load(file.toFile());
         LootTable table = reloaded.get("loot/example");
-        assertEquals(7, table.rolls());
+        assertFalse(Files.readString(file).contains("rolls:"));
         assertEquals(2.5, table.items().get(0).weight());
         assertEquals(2, table.items().get(0).minCount());
         assertEquals(9, table.items().get(0).maxCount());
@@ -65,6 +65,16 @@ class LootTablesTest {
         try (var files = Files.list(dir)) { assertTrue(files.noneMatch(v -> v.toString().endsWith(".tmp"))); }
     }
 
+    @Test void legacyRollsAreIgnoredAndRemovedOnSave() throws Exception {
+        Path file = dir.resolve("loot.yml");
+        Files.writeString(file, "example:\n  rolls: 90\n  items: []\n");
+        LootTables registry = new LootTables();
+        registry.load(file.toFile());
+        assertTrue(registry.get("example").items().isEmpty());
+        registry.save();
+        assertFalse(Files.readString(file).contains("rolls:"));
+    }
+
     @Test void invalidFileDoesNotReplaceLoadedTablesOrOverwriteFile() throws Exception {
         Path file = dir.resolve("loot.yml");
         Files.writeString(file, "{}");
@@ -72,7 +82,7 @@ class LootTablesTest {
         registry.load(file.toFile());
         LootTable old = table();
         registry.set("old", old);
-        String invalid = "broken:\n  rolls: -1\n  items: []\n";
+        String invalid = "broken: [\n";
         Files.writeString(file, invalid);
         assertThrows(IllegalStateException.class, () -> registry.load(file.toFile()));
         assertSame(old, registry.get("old"));

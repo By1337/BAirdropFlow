@@ -11,18 +11,18 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class LootMenuTextTest {
     @Test void restoresLivePlaceholdersInCachedTextAndPreservesFormatting() {
-        Component cached = Component.text("Прокрутки: {rolls}", NamedTextColor.GOLD);
+        Component cached = Component.text("Страница: {current_page}", NamedTextColor.GOLD);
         var restored = LootMenuText.dynamicText(cached);
         assertTrue(restored instanceof RawTextComponentLike);
         var raw = (RawTextComponentLike) restored;
-        int[] rolls = {3};
-        var resolver = Placeholders.create().of("rolls", () -> rolls[0]);
+        int[] page = {3};
+        var resolver = Placeholders.create().of("current_page", () -> page[0]);
         var text = PlainTextComponentSerializer.plainText();
         Component first = raw.asComponent(resolver.bind(null), null);
-        assertEquals("Прокрутки: 3", text.serialize(first));
+        assertEquals("Страница: 3", text.serialize(first));
         assertEquals(NamedTextColor.GOLD, first.color());
-        rolls[0] = 13;
-        assertEquals("Прокрутки: 13", text.serialize(raw.asComponent(resolver.bind(null), null)));
+        page[0] = 13;
+        assertEquals("Страница: 13", text.serialize(raw.asComponent(resolver.bind(null), null)));
         assertSame(raw, LootMenuText.dynamicText(raw));
     }
 

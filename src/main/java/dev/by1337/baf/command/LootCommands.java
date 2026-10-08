@@ -34,7 +34,7 @@ public final class LootCommands {
                             if (id == null) throw new CommandMsgError("/baf loot create <id>");
                             LootTables tables = LootTables.DEFAULT;
                             if (tables.get(id) != null) throw new CommandMsgError("Такая таблица уже существует");
-                            tables.set(id, new LootTable(List.of(), 1));
+                            tables.set(id, new LootTable(List.of()));
                             try {
                                 tables.save();
                             } catch (RuntimeException e) {
