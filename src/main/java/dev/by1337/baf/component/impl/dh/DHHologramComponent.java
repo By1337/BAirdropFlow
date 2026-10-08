@@ -9,12 +9,14 @@ import dev.by1337.baf.config.value.Vec3dValue;
 import dev.by1337.baf.ref.CleanerSlot;
 import dev.by1337.baf.util.Vec3d;
 import dev.by1337.baf.web.NodeSchema;
+import dev.by1337.core.util.text.minimessage.MiniMessage;
 import dev.by1337.edsl.EventHandler;
 import dev.by1337.edsl.context.EventContext;
 import dev.by1337.yaml.decoder.RecordYamlDecoder;
 import dev.by1337.yaml.decoder.YamlDecoder;
 import eu.decentsoftware.holograms.api.DHAPI;
 import eu.decentsoftware.holograms.api.holograms.Hologram;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Location;
 
 import java.util.ArrayList;
@@ -69,9 +71,13 @@ public class DHHologramComponent extends AbstractComponent {
     private List<String> lines() {
         List<String> result = new ArrayList<>();
         for (StringValue line : config.lines) {
-            result.add(line.getString(airdrop));
+            result.add(toLegacy(line.getString(airdrop)));
         }
         return result;
+    }
+    private String toLegacy(String s){
+        var c = MiniMessage.deserialize(s);
+        return LegacyComponentSerializer.legacy('§').serialize(c);
     }
 
     public static class Config implements ComponentFactory {
