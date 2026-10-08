@@ -8,5 +8,7 @@ test('vector fields preserve the YAML vector format for integer and fractional c
   assert.equal(joinVector(['0.25', '-1.5', '2'], true), '0.25;-1.5;2');
   assert.equal(joinVector(['{x}', '1', '2'], false), '{x};1;2');
   assert.equal(joinVector(['{position}'], false), '{position}');
+  assert.equal(joinVector(['{position}', '', ''], false), '{position}');
+  assert.equal(joinVector(['{x}', '{y}', '{z}'], false), '{x};{y};{z}');
   assert.equal(joinVector(['0', '', '2'], true), '0;;2');
 });

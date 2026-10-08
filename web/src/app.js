@@ -2,7 +2,7 @@ import {EventDslEditor, makeDescriptor} from './event-dsl-editor.js';
 import { GraphModel, clone, defaultsNodeId } from './model.js';
 import { replaceEditableCommands, formatCommands, formatWorkflowYaml } from './command-yaml.js';
 import { validTimeKey } from './spawner.js';
-import { joinVector } from './vector.js';
+import { splitVector, joinVector } from './vector.js';
 import { highlightYaml } from './yaml-highlight.js';
 import { nodePlaceholders, renameNodePlaceholders, renameLiteralPlaceholders, countPlaceholderUses } from './node-placeholders.js';
 const $ = selector => document.querySelector(selector);
@@ -170,7 +170,9 @@ function drawGenerator() {
     container.querySelectorAll('input').forEach(input => input.onchange = () => editGenerator(() => {
       const key = container.dataset.generatorVector;
       const value = readVector(container, schema.properties[key]['x-fractional'] === true);
-      generatorError = ''; model.setGenerator({...model.config.generator, [key]:value}); drawGenerator(); updateStatus();
+      generatorError = ''; model.setGenerator({...model.config.generator, [key]:value});
+      $('#raw-generator').value = JSON.stringify(model.config.generator, null, 2);
+      $('.generator-error').textContent = ''; updateStatus();
     }));
   });
   $('#apply-generator-json').onclick = () => editGenerator(() => {
@@ -305,7 +307,8 @@ const edgeColor = action => ({remove:'#ff9da4',destroy:'#ff727f',call:'#84aaff',
 function curve(x,y,tx,ty) { const d=Math.max(70,Math.abs(tx-x)*.45); return `M${x},${y} C${x+d},${y} ${tx-d},${ty} ${tx},${ty}`; }
 const handlerList = value => value === undefined || value === null ? [] : Array.isArray(value) ? value : [value];
 function vectorInputs(value, fractional, attributes = '') {
-  return `<div class="vector-inputs" ${attributes}><input data-vector-axis="value" type="text" value="${escape(value)}" placeholder="X;Y;Z или {имя}"></div>`;
+  const parts = splitVector(value);
+  return `<div class="vector-inputs" ${attributes}>${['X', 'Y', 'Z'].map((axis, index) => `<label><span>${axis}</span><input data-vector-axis="${axis.toLowerCase()}" type="text" value="${escape(parts[index] ?? '')}" aria-label="${axis}" spellcheck="false" autocomplete="off"></label>`).join('')}</div>`;
 }
 function readVector(container, fractional) {
   return joinVector([...container.querySelectorAll('[data-vector-axis]')].map(input => input.value), fractional);
@@ -436,7 +439,7 @@ function drawGraph() {
       const name = container.dataset.nodeVector, field = container.dataset.vectorField;
       const schema = schemaFor(model.nodes[name]).properties[field];
       model.setField(name, field, readVector(container, schema['x-fractional'] === true));
-      refresh();
+      drawInspector(); updateStatus();
     }));
   });
   $('.graph').querySelectorAll('[data-node-lines]').forEach(input=>input.onchange=()=>safe(()=>{
@@ -891,7 +894,7 @@ async function copyYaml() {
     if (active?.dataset.vectorAxis) {
       const container=active.closest('[data-node-vector],[data-inspector-vector],[data-generator-vector]');
       if (container) {
-        const value=[...container.querySelectorAll('[data-vector-axis]')].map(input=>input.value).join(';');
+        const value=readVector(container);
         if (container.dataset.nodeVector && config.nodes[container.dataset.nodeVector]) config.nodes[container.dataset.nodeVector][container.dataset.vectorField]=value;
         else if (container.dataset.inspectorVector && selected && config.nodes[selected]) config.nodes[selected][container.dataset.inspectorVector]=value;
         else if (container.dataset.generatorVector && config.generator) config.generator[container.dataset.generatorVector]=value;

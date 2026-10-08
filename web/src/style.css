@@ -78,3 +78,8 @@
 .selection-group{fill:#63dec006;stroke:#63dec099;stroke-width:1;stroke-dasharray:6 4;vector-effect:non-scaling-stroke;cursor:grab}
 .graph.group-selection .node.selected foreignObject{pointer-events:none}
 .graph.group-selection .node.selected{cursor:grab}
+
+.vector-inputs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;min-width:0}
+.vector-inputs>label{display:flex;align-items:center;gap:5px;min-width:0;margin:0;font-size:11px;color:var(--muted)}
+.vector-inputs>label>span{flex:none}
+.vector-inputs input{min-width:0;padding-left:7px;padding-right:7px}
