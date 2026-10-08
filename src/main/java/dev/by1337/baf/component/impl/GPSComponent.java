@@ -25,6 +25,11 @@ public class GPSComponent extends AbstractComponent {
         this.airdrop = airdrop;
         registry = BAF.gps();
         entry = new CleanerSlot<>(value -> registry.remove(value.id()), airdrop.cleaner());
+        exportPlaceholder("gps_id", () -> {
+            var v = entry.get();
+            if (v == null) return "-1";
+            return Long.toString(v.id());
+        });
     }
 
     @Override
@@ -49,6 +54,7 @@ public class GPSComponent extends AbstractComponent {
     public record Config(boolean publish_location, String gps_line,
                          EventHandler on_create, EventHandler on_remove) implements ComponentFactory {
         public static final NodeSchema WEB_SCHEMA = NodeSchema.of("GPS", "Публикует аирдроп в GPS. Запись удаляется при снятии ноды или очистке аирдропа.")
+                .placeholder("gps_id", "gps id", "id в /gps <id>")
                 .bool("publish_location", "Публиковать координаты", true)
                 .text("gps_line", "Строка GPS", "", false)
                 .inputs("create", "remove")
