@@ -6,8 +6,11 @@ import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import dev.by1337.baf.workflow.WorkflowFiles;
 import dev.by1337.web.client.RequestRouter;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockbukkit.mockbukkit.MockBukkit;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -50,6 +53,123 @@ class TunnelEditorTest {
         body.add("nodes", doc.getAsJsonObject("config").get("nodes").deepCopy());
         body.add("metadata", doc.get("metadata").deepCopy());
         return body;
+    }
+
+    @BeforeEach
+    void setUp() {
+        MockBukkit.mock();
+    }
+    @AfterEach
+    void cleanup() {
+        MockBukkit.unmock();
+    }
+
+    @Test
+    void copiesTheEntireWorkflowWithoutChangingTheSource() throws Exception {
+        Path root = dir.resolve("copy-data");
+        try (var server = new EditorDevServer(root, dir.resolve("static"), 0)) {
+            var edit = payload(data(server));
+            edit.getAsJsonObject("metadata").add("webNodes", JsonParser.parseString("{\"note\":{\"text\":\"Заметка\",\"x\":123,\"color\":\"#abcdef\"}}"));
+            edit.getAsJsonObject("metadata").add("viewport", JsonParser.parseString("{\"x\":20,\"y\":30,\"scale\":0.7}"));
+            assertTrue(json(send(server, "airdrop", "POST", edit.toString())).get("ok").getAsBoolean());
+            var original = data(server);
+            Path source = root.resolve("workflow/default.yml");
+            byte[] originalBytes = Files.readAllBytes(source);
+            var request = new JsonObject();
+            request.addProperty("source", "default.yml");
+            request.addProperty("key", "копия.yml");
+            request.addProperty("id", "demo:копия");
+            var response = json(send(server, "airdrop/copy", "POST", request.toString()));
+            assertTrue(response.get("ok").getAsBoolean(), response.toString());
+            var copied = response.getAsJsonObject("data");
+            var expected = original.getAsJsonObject("config").deepCopy();
+            expected.addProperty("id", "demo:копия");
+            assertEquals(expected, copied.getAsJsonObject("config"));
+            assertEquals(original.get("metadata"), copied.get("metadata"));
+            assertNotNull(server.workflows.getById("demo:копия"));
+            assertArrayEquals(originalBytes, Files.readAllBytes(source));
+            Path destination = root.resolve("workflow/копия.yml");
+            byte[] copyBytes = Files.readAllBytes(destination);
+            request.addProperty("id", "another-id");
+            assertFalse(json(send(server, "airdrop/copy", "POST", request.toString())).get("ok").getAsBoolean());
+            assertArrayEquals(copyBytes, Files.readAllBytes(destination));
+            request.addProperty("key", "duplicate-id.yml");
+            request.addProperty("id", "demo:копия");
+            assertFalse(json(send(server, "airdrop/copy", "POST", request.toString())).get("ok").getAsBoolean());
+            assertFalse(Files.exists(root.resolve("workflow/duplicate-id.yml")));
+            request.addProperty("id", "another-id");
+            for (String key : new String[]{"../outside.yml", "/tmp/outside.yml", "bad.txt"}) {
+                request.addProperty("key", key);
+                assertFalse(json(send(server, "airdrop/copy", "POST", request.toString())).get("ok").getAsBoolean());
+            }
+            request.addProperty("key", "missing-source.yml");
+            request.addProperty("source", "../outside.yml");
+            assertFalse(json(send(server, "airdrop/copy", "POST", request.toString())).get("ok").getAsBoolean());
+            assertFalse(Files.exists(root.resolve("workflow/missing-source.yml")));
+            var copyEdit = payload(copied);
+            copyEdit.getAsJsonObject("nodes").getAsJsonObject("opening").addProperty("timer", "99");
+            assertTrue(json(send(server, "airdrop", "POST", copyEdit.toString())).get("ok").getAsBoolean());
+            assertArrayEquals(originalBytes, Files.readAllBytes(source));
+        }
+    }
+
+    @Test
+    void createsAValidAirdropAndRejectsDuplicateFilesIdsAndInvalidPaths() throws Exception {
+        Path dataRoot = dir.resolve("create-data");
+        try (var server = new EditorDevServer(dataRoot, dir.resolve("static"), 0)) {
+            var request = new JsonObject();
+            request.addProperty("key", "новый-аирдроп.yml");
+            request.addProperty("id", "demo:новый");
+            request.addProperty("world", "world_nether");
+            var response = json(send(server, "airdrop/create", "POST", request.toString()));
+            assertTrue(response.get("ok").getAsBoolean(), response.toString());
+            var created = response.getAsJsonObject("data");
+            var config = created.getAsJsonObject("config");
+            assertEquals("demo:новый", config.get("id").getAsString());
+            assertEquals("world_nether", config.get("world").getAsString());
+            assertTrue(config.getAsJsonObject("nodes").has("__init__"));
+            assertTrue(config.getAsJsonObject("nodes").has("__destroy__"));
+            assertNotNull(server.workflows.get("новый-аирдроп.yml"));
+            var list = json(send(server, "airdrops", "GET", null)).getAsJsonArray("data");
+            assertEquals(2, list.size());
+            for (var summary : list) assertTrue(summary.getAsJsonObject().get("valid").getAsBoolean());
+            Path file = dataRoot.resolve("workflow/новый-аирдроп.yml");
+            byte[] original = Files.readAllBytes(file);
+
+            request.addProperty("id", "different-id");
+            var duplicateFile = json(send(server, "airdrop/create", "POST", request.toString()));
+            assertFalse(duplicateFile.get("ok").getAsBoolean());
+            assertTrue(duplicateFile.get("error").getAsString().contains("уже существует"));
+            assertArrayEquals(original, Files.readAllBytes(file));
+            request.addProperty("key", "duplicate-id.yml");
+            request.addProperty("id", "demo:новый");
+            assertFalse(json(send(server, "airdrop/create", "POST", request.toString())).get("ok").getAsBoolean());
+            assertFalse(Files.exists(dataRoot.resolve("workflow/duplicate-id.yml")));
+
+            request.addProperty("id", "different-id");
+            for (String key : new String[]{"../outside.yml", "/tmp/outside.yml", "folder/new.yml", "bad.txt", ""}) {
+                request.addProperty("key", key);
+                assertFalse(json(send(server, "airdrop/create", "POST", request.toString())).get("ok").getAsBoolean(), key);
+            }
+            assertFalse(Files.exists(dataRoot.resolve("outside.yml")));
+            request.addProperty("key", "blank.yml");
+            request.addProperty("world", " ");
+            assertFalse(json(send(server, "airdrop/create", "POST", request.toString())).get("ok").getAsBoolean());
+            assertFalse(Files.exists(dataRoot.resolve("workflow/blank.yml")));
+
+            var edit = payload(created);
+            var commands = new JsonObject();
+            commands.addProperty("type", "default:commands");
+            var actions = new JsonArray();
+            var console = new JsonObject();
+            console.addProperty("console", "say new airdrop");
+            actions.add(console);
+            commands.add("on_run", actions);
+            edit.getAsJsonObject("nodes").add("commands", commands);
+            var saved = json(send(server, "airdrop", "POST", edit.toString()));
+            assertTrue(saved.get("ok").getAsBoolean(), saved.toString());
+            assertTrue(Files.readString(file).contains("say new airdrop"));
+        }
     }
 
     @Test
@@ -119,9 +239,12 @@ class TunnelEditorTest {
             assertEquals(2, commandList.size());
             assertEquals("{x} {y} {z} minecraft:respawn_anchor[charges=4]", commandList.get(0).getAsJsonObject().get("setblock").getAsString());
             yamlBody.addProperty("yaml", "- create: timer");
-            assertFalse(json(send(server, "commands/parse", "POST", yamlBody.toString())).get("ok").getAsBoolean());
+            assertTrue(json(send(server, "commands/parse", "POST", yamlBody.toString())).get("ok").getAsBoolean());
             yamlBody.addProperty("yaml", "- '[destroy]'");
-            assertFalse(json(send(server, "commands/parse", "POST", yamlBody.toString())).get("ok").getAsBoolean());
+            assertTrue(json(send(server, "commands/parse", "POST", yamlBody.toString())).get("ok").getAsBoolean());
+            yamlBody.addProperty("yaml", "- if: ready\n  do:\n    - create: timer\n  else:\n    - call: update hologram");
+            var conditional = json(send(server, "commands/parse", "POST", yamlBody.toString())).getAsJsonArray("data");
+            assertEquals("timer", conditional.get(0).getAsJsonObject().getAsJsonArray("do").get(0).getAsJsonObject().get("create").getAsString());
             JsonObject original = data(server), body = payload(original);
             var settings = new JsonObject();
             var generator = new JsonObject();

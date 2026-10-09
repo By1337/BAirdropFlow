@@ -1,9 +1,8 @@
-import {EventDslEditor, makeDescriptor} from './event-dsl-editor.js';
+import {EventDslEditor} from './event-dsl-editor.js';
 import { GraphModel, clone, defaultsNodeId } from './model.js';
-import { replaceEditableCommands, formatCommands, formatWorkflowYaml } from './command-yaml.js';
+import { formatWorkflowYaml } from './command-yaml.js';
 import { validTimeKey } from './spawner.js';
 import { splitVector, joinVector } from './vector.js';
-import { highlightYaml } from './yaml-highlight.js';
 import { nodePlaceholders, renameNodePlaceholders, renameLiteralPlaceholders, countPlaceholderUses } from './node-placeholders.js';
 const $ = selector => document.querySelector(selector);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
@@ -13,7 +12,14 @@ let model, schemas = {}, generatorSchemas = {}, spawnerSchemas = {}, selected, s
 const selectedNodes = new Set();
 const nodeScroll = new Map();
 const nodeDrafts = new Map();
-const pendingCommandEdits = new Map();
+const commandEditors = new Map();
+const spawnerEditors = new Map();
+function clearYamlEditors() {
+  for (const editor of [...commandEditors.values(), ...spawnerEditors.values()]) editor.destroy();
+  commandEditors.clear(); spawnerEditors.clear();
+}
+const hasYamlDrafts = () => nodeDrafts.size || [...spawnerEditors.values()].some(editor=>editor.dirty);
+const completionContext = spawner => ({spawner,nodes:Object.keys(model?.nodes??{}),args:Object.keys(model?.config.args??{})});
 let graphListeners;
 let minimapDrag = null;
 let copyingYaml = false;
@@ -51,27 +57,72 @@ async function configure() {
   });
 }
 $('#connect').onclick = configure;
-function leave() { return !model?.dirty || confirm('Есть несохранённые изменения. Покинуть редактор?'); }
+function leave() { return !(model?.dirty || hasYamlDrafts()) || confirm('Есть несохранённые изменения. Покинуть редактор?'); }
 $('.brand').onclick = event => { event.preventDefault(); if (leave()) { history.replaceState(null, '', '#'); loadHome(); } };
-window.addEventListener('beforeunload', event => { if (model?.dirty) { event.preventDefault(); event.returnValue = ''; } });
+window.addEventListener('beforeunload', event => { if (model?.dirty || hasYamlDrafts()) { event.preventDefault(); event.returnValue = ''; } });
 async function loadHome() {
-  model = null; selectNode(null); selectedEdge = null; linking = null; generatorError = ''; spawnerError = ''; invalidFields.clear(); nodeDrafts.clear();
+  clearYamlEditors(); model = null; selectNode(null); selectedEdge = null; linking = null; generatorError = ''; spawnerError = ''; invalidFields.clear(); nodeDrafts.clear();
   $('#breadcrumb').textContent = 'Все аирдропы';
   $('#app').innerHTML = '<div class="loading"><span class="spinner"></span>Загрузка аирдропов…</div>';
   try {
     [catalogue, schemas, generatorSchemas, spawnerSchemas] = await Promise.all([api('airdrops'), api('schemas'), api('generator-schemas'), api('spawner-schemas')]);
-    $('#app').innerHTML = `<section class="page"><div class="page-heading"><div><div class="eyebrow">СЦЕНАРИИ ВАШЕГО СЕРВЕРА</div><h1>Аирдропы</h1><p>Настройте события, таймеры и связи между нодами.<br>Все сценарии вашего сервера — в одном месте.</p></div><button id="reload-home" class="secondary">↻ Обновить список</button></div><div class="stats"><div class="stat"><b>${catalogue.length}</b><span>аирдропов</span></div><div class="stat"><b>${catalogue.reduce((n, item) => n + (item.nodeCount ?? 0), 0)}</b><span>нод в сценариях</span></div><div class="stat"><b>${Object.keys(schemas).length}</b><span>типов компонентов</span></div></div><div class="searchbar"><input id="search" placeholder="Поиск по имени, файлу или миру…" aria-label="Поиск аирдропов"><span>Конфиги из папки workflow</span></div><div class="cards" id="cards"></div></section>`;
-    $('#reload-home').onclick = loadHome; $('#search').oninput = renderCards; renderCards();
+    $('#app').innerHTML = `<section class="page"><div class="page-heading"><div><div class="eyebrow">СЦЕНАРИИ ВАШЕГО СЕРВЕРА</div><h1>Аирдропы</h1><p>Настройте события, таймеры и связи между нодами.<br>Все сценарии вашего сервера — в одном месте.</p></div><div class="home-actions"><button id="create-airdrop" class="primary">+ Новый аирдроп</button><button id="reload-home" class="secondary">↻ Обновить список</button></div></div><div class="stats"><div class="stat"><b>${catalogue.length}</b><span>аирдропов</span></div><div class="stat"><b>${catalogue.reduce((n, item) => n + (item.nodeCount ?? 0), 0)}</b><span>нод в сценариях</span></div><div class="stat"><b>${Object.keys(schemas).length}</b><span>типов компонентов</span></div></div><div class="searchbar"><input id="search" placeholder="Поиск по имени, файлу или миру…" aria-label="Поиск аирдропов"><span>Конфиги из папки workflow</span></div><div class="cards" id="cards"></div></section>`;
+    $('#create-airdrop').onclick = createAirdrop; $('#reload-home').onclick = loadHome; $('#search').oninput = renderCards; renderCards();
   } catch (error) {
     $('#connection-label').textContent = 'Нет подключения';
     $('#app').innerHTML = `<section class="page"><div class="eyebrow">BAIRDROPFLOW</div><h1>Подключитесь к серверу</h1><p class="muted">${escape(error.message)}</p><button id="setup" class="primary">Настроить подключение</button></section>`;
     $('#setup').onclick = configure;
   }
 }
+async function createAirdrop() {
+  const button=$('#create-airdrop');if(!button||button.disabled)return;
+  button.disabled=true;
+  let name='new_airdrop',index=2;
+  while(catalogue.some(item=>item.key===`${name}.yml`||item.id===name))name=`new_airdrop_${index++}`;
+  let fields={key:`${name}.yml`,id:name,world:catalogue[0]?.world??'world'},error='';
+  try {
+    while(true){
+      const pending=dialog(`<h2>Новый аирдроп</h2><div class="field"><label for="new-airdrop-file">Имя файла</label><input id="new-airdrop-file" name="key" value="${escape(fields.key)}" maxlength="128" placeholder="meteor.yml" required><small>Расширение .yml добавится автоматически. Допустимы буквы, цифры, _, - и точки.</small></div><div class="field"><label for="new-airdrop-id">ID аирдропа</label><input id="new-airdrop-id" name="id" value="${escape(fields.id)}" maxlength="128" required></div><div class="field"><label for="new-airdrop-world">Мир</label><input id="new-airdrop-world" name="world" value="${escape(fields.world)}" maxlength="128" required></div><p class="field-error" role="alert">${escape(error)}</p>`, 'Создать');
+      const file=$('#new-airdrop-file'),id=$('#new-airdrop-id');let previous=fields.key.replace(/\.ya?ml$/i,'');
+      file.oninput=()=>{const next=file.value.trim().replace(/\.ya?ml$/i,'');if(id.value===previous)id.value=next;previous=next;};
+      file.focus();file.select();
+      const result=await pending;if(!result)return;
+      const rawKey=String(result.get('key')).trim();
+      fields={key:/\.ya?ml$/.test(rawKey)?rawKey:`${rawKey}.yml`,id:String(result.get('id')).trim(),world:String(result.get('world')).trim()};
+      try {
+        const created=await api('airdrop/create',fields);
+        await openEditor(created.key);toast('Аирдроп создан.');return;
+      }catch(problem){error=problem.message;}
+    }
+  } finally {if(button.isConnected)button.disabled=false;}
+}
+async function copyAirdrop(source, button) {
+  if(button.disabled)return;
+  button.disabled=true;
+  const item=catalogue.find(item=>item.key===source);
+  const base=source.split('/').pop().replace(/\.ya?ml$/i,'');
+  let suffix='_copy',index=2;
+  while(catalogue.some(entry=>entry.key===`${base}${suffix}.yml`||entry.id===`${item.id??base}${suffix}`))suffix=`_copy_${index++}`;
+  let fields={key:`${base}${suffix}.yml`,id:`${item.id??base}${suffix}`},error='';
+  try {
+    while(true){
+      const pending=dialog(`<h2>Копия аирдропа</h2><p>Все настройки, команды, ноды и оформление схемы из ${escape(source)} будут перенесены в новый аирдроп.</p><div class="field"><label for="copy-airdrop-file">Имя нового файла</label><input id="copy-airdrop-file" name="key" value="${escape(fields.key)}" maxlength="128" required><small>Расширение .yml добавится автоматически.</small></div><div class="field"><label for="copy-airdrop-id">Новый ID аирдропа</label><input id="copy-airdrop-id" name="id" value="${escape(fields.id)}" maxlength="128" required></div><p class="field-error" role="alert">${escape(error)}</p>`, 'Создать копию');
+      const file=$('#copy-airdrop-file');file.focus();file.select();
+      const result=await pending;if(!result)return;
+      const rawKey=String(result.get('key')).trim();
+      fields={key:/\.ya?ml$/.test(rawKey)?rawKey:`${rawKey}.yml`,id:String(result.get('id')).trim()};
+      try {
+        const copied=await api('airdrop/copy',{source,...fields});
+        await openEditor(copied.key);toast('Копия аирдропа создана.');return;
+      }catch(problem){error=problem.message;}
+    }
+  } finally {if(button.isConnected)button.disabled=false;}
+}
 function renderCards() {
   const query = $('#search').value.toLowerCase();
   const items = catalogue.filter(item => `${item.id} ${item.key} ${item.world}`.toLowerCase().includes(query));
-  $('#cards').innerHTML = items.map(item => `<article class="card"><div class="card-top"><div class="air-icon">◇</div><span class="badge ${item.valid ? '' : 'error'}">${item.valid ? 'Готов к запуску' : 'Есть ошибки'}</span></div><div class="card-body"><h2>${escape(item.id ?? item.key)}</h2><code>${escape(item.key)}</code><div class="card-info"><span>Мир<b>${escape(item.world ?? '—')}</b></span><span>Компоненты<b>${item.nodeCount ?? 0} нод</b></span></div>${item.error ? `<details class="error-details"><summary>Ошибка конфигурации</summary>${escape(item.error)}</details>` : ''}</div><div class="card-foot"><span>Нодовый сценарий</span><button data-open="${escape(item.key)}">Редактировать ↗</button></div></article>`).join('') || '<div class="empty">Аирдропы не найдены</div>';
+  $('#cards').innerHTML = items.map(item => `<article class="card"><div class="card-top"><div class="air-icon">◇</div><span class="badge ${item.valid ? '' : 'error'}">${item.valid ? 'Готов к запуску' : 'Есть ошибки'}</span></div><div class="card-body"><h2>${escape(item.id ?? item.key)}</h2><code>${escape(item.key)}</code><div class="card-info"><span>Мир<b>${escape(item.world ?? '—')}</b></span><span>Компоненты<b>${item.nodeCount ?? 0} нод</b></span></div>${item.error ? `<details class="error-details"><summary>Ошибка конфигурации</summary>${escape(item.error)}</details>` : ''}</div><div class="card-foot"><button data-copy="${escape(item.key)}" class="secondary">Скопировать</button><button data-open="${escape(item.key)}">Редактировать ↗</button></div></article>`).join('') || '<div class="empty">Аирдропы не найдены</div>';
+  $('#cards').querySelectorAll('[data-copy]').forEach(button => button.onclick = () => copyAirdrop(button.dataset.copy, button));
   $('#cards').querySelectorAll('[data-open]').forEach(button => button.onclick = () => openEditor(button.dataset.open));
 }
 async function openEditor(key) {
@@ -82,7 +133,7 @@ async function openEditor(key) {
     if (!Object.keys(schemas).length) schemas = await api('schemas');
     if (!Object.keys(generatorSchemas).length) generatorSchemas = await api('generator-schemas');
     if (!Object.keys(spawnerSchemas).length) spawnerSchemas = await api('spawner-schemas');
-    model = new GraphModel(workflowDocument); selectNode(null); selectedEdge = null; linking = null; generatorError = ''; spawnerError = ''; invalidFields.clear(); nodeScroll.clear(); nodeDrafts.clear();
+    clearYamlEditors(); model = new GraphModel(workflowDocument); selectNode(null); selectedEdge = null; linking = null; generatorError = ''; spawnerError = ''; invalidFields.clear(); nodeScroll.clear(); nodeDrafts.clear();
     history.replaceState(null, '', `#edit/${encodeURIComponent(key)}`);
     $('#breadcrumb').textContent = `Аирдропы / ${workflowDocument.config.id ?? key}`;
     $('#app').innerHTML = `<section class="workspace"><div class="workspace-toolbar"><button id="back" class="secondary">←</button><button id="tab-graph" class="editor-tab">Сценарий</button><button id="tab-generator" class="editor-tab">Генератор локации</button><button id="tab-spawner" class="editor-tab">Спавнер и параметры</button><button id="add-node">+ Нода</button><button id="undo" title="Ctrl+Z">↶</button><button id="redo" title="Ctrl+Shift+Z">↷</button><button id="settings" class="optional">Настройки аирдропа</button><div class="spacer"></div><button id="reload-editor" title="Перезагрузить с диска">↻</button><button id="copy-yaml" class="secondary" title="Скопировать текущий YAML-файл без сохранения на сервере">Скопировать YAML</button><button id="save" class="primary">Сохранить</button></div><aside class="library"><div class="section-label">Компоненты</div><div id="node-library"></div><p>Добавьте компонент, затем потяните от выхода события к нужному входу другой ноды.</p><div class="section-label" style="margin-top:28px">Ноды сценария</div><div id="outline"></div></aside><div class="graph-shell"><svg class="graph" tabindex="0" aria-label="Схема аирдропа"></svg><svg id="minimap" class="graph-minimap" tabindex="0" role="img" aria-label="Миникарта схемы. Нажмите или перетащите для перемещения, стрелки — навигация."></svg><div class="graph-hint" id="graph-hint">Shift+ЛКМ на пустом месте — выделение рамкой · Колесо — масштаб</div><div class="graph-controls"><button id="zoom-out" aria-label="Уменьшить">−</button><span id="zoom-value">100%</span><button id="zoom-in" aria-label="Увеличить">+</button><button id="fit" title="Показать весь граф">⤢</button></div></div><aside class="inspector" id="inspector"></aside><main class="generator-panel" id="generator-panel"></main><main class="spawner-panel" id="spawner-panel"></main><footer class="workspace-status"><span id="node-count"></span><span id="edge-count"></span><span id="warnings"></span><span id="save-state"></span></footer></section>`;
@@ -96,7 +147,7 @@ async function openEditor(key) {
     $('#save').onclick = save; $('#copy-yaml').onclick = copyYaml;
     $('#copy-yaml').onpointerdown = event => event.preventDefault();
     $('#reload-editor').onclick = () => openEditor(model.document.key);
-    $('#undo').onclick = () => { model.undo(); generatorError = ''; spawnerError = ''; invalidFields.clear(); nodeDrafts.clear(); refresh(); }; $('#redo').onclick = () => { model.redo(); generatorError = ''; spawnerError = ''; invalidFields.clear(); nodeDrafts.clear(); refresh(); };
+    $('#undo').onclick = () => { clearYamlEditors(); model.undo(); generatorError = ''; spawnerError = ''; invalidFields.clear(); nodeDrafts.clear(); refresh(); }; $('#redo').onclick = () => { clearYamlEditors(); model.redo(); generatorError = ''; spawnerError = ''; invalidFields.clear(); nodeDrafts.clear(); refresh(); };
     $('#zoom-in').onclick = () => zoomBy(1.15); $('#zoom-out').onclick = () => zoomBy(1 / 1.15); $('#fit').onclick = fit;
     const library=$('#node-library');
     { const b=document.createElement('button'); b.textContent='Заметка · Note'; b.style.setProperty('--node-color','#edc482'); b.onclick=()=>quickAdd('web:note',{x:((($('.graph-shell').clientWidth/2)-graphView.x)/graphView.zoom),y:((($('.graph-shell').clientHeight/2)-graphView.y)/graphView.zoom)}); library.append(b); }
@@ -181,8 +232,11 @@ function drawGenerator() {
     generatorError = ''; model.setGenerator(next); drawGenerator(); updateStatus();
   });
 }
-function editSpawner(action) {
+async function editSpawner(action) {
+  const owner=model;
   try {
+    await Promise.all([...spawnerEditors.values()].map(editor=>editor.commit()));
+    if(model!==owner)return;
     action(); spawnerError = ''; drawSpawner(); updateStatus();
   } catch (error) {
     spawnerError = error.message; const label = $('.spawner-error'); if (label) label.textContent = spawnerError;
@@ -196,10 +250,17 @@ function changeSpawner(action) {
 function mapRows(kind, entries, extra = '') {
   return Object.entries(entries ?? {}).map(([key,value]) => `<div class="spawner-map-row" data-map-row="${kind}" data-original="${escape(key)}" ${extra}><input data-map-key value="${escape(key)}" aria-label="Имя параметра" placeholder="loot_table"><input data-map-value value="${escape(value)}" aria-label="Значение параметра" placeholder="example/default"><button type="button" data-op="remove-pair" title="Удалить">×</button></div>`).join('');
 }
-function mountActions(host, value, write, descriptors = {}, compact = false) {
-  return new EventDslEditor(host, {value, descriptors, compact, parseYaml: yaml => api('commands/parse',{yaml}), onChange: next => {
-    write(next); const spawnerJson=$('#raw-spawner'),nodeJson=$('#raw-node'); if(spawnerJson)spawnerJson.value=JSON.stringify(model.config.spawner,null,2); if(nodeJson&&selected)nodeJson.value=JSON.stringify(model.nodes[selected],null,2); drawGraph(); updateStatus();
-  }});
+function mountActions(host, value, write, key) {
+  let editor=spawnerEditors.get(key);
+  if (editor) { editor.sync(value); editor.mount(host); return editor; }
+  const owner=model;
+  editor=new EventDslEditor(host, {value, context:()=>completionContext(true), parseYaml:yaml=>api('commands/parse',{yaml}),
+    onDraft:()=>updateStatus(), onError:()=>updateStatus(), onChange:next=>{
+      if(model!==owner)return;
+      write(next); const raw=$('#raw-spawner'); if(raw)raw.value=JSON.stringify(model.config.spawner,null,2);
+      updateStatus();
+    }});
+  spawnerEditors.set(key,editor);return editor;
 }
 function drawSpawner() {
   const panel=$('#spawner-panel');if(!panel||!model)return;
@@ -219,9 +280,10 @@ function drawSpawner() {
   })));
   $('#spawner-time')?.addEventListener('change',e=>editSpawner(()=>{changeSpawner(next=>next.time=e.target.value);}));
   $('#apply-spawner-json').onclick=()=>editSpawner(()=>{const value=JSON.parse($('#raw-spawner').value);if(!value||Array.isArray(value)||typeof value!=='object')throw new Error('Нужен объект');model.setSpawner(value);});
-  const descriptors={make:makeDescriptor()};
-  panel.querySelectorAll('[data-event-section]').forEach(host=>{const key=host.dataset.eventSection;mountActions(host,spawner[key],value=>changeSpawner(next=>next[key]=value),descriptors);});
-  panel.querySelectorAll('[data-when-actions]').forEach(host=>{const time=host.dataset.whenActions;mountActions(host,spawner.when?.[time],value=>changeSpawner(next=>{next.when??={};next.when[time]=value;}),descriptors);});
+  const editorKeys=new Set();
+  panel.querySelectorAll('[data-event-section]').forEach(host=>{const key=host.dataset.eventSection;editorKeys.add(key);mountActions(host,spawner[key],value=>changeSpawner(next=>next[key]=value),key);});
+  panel.querySelectorAll('[data-when-actions]').forEach(host=>{const time=host.dataset.whenActions;const key=`when:${time}`;editorKeys.add(key);mountActions(host,spawner.when?.[time],value=>changeSpawner(next=>{next.when??={};next.when[time]=value;}),key);});
+  for(const [key,editor] of spawnerEditors)if(!editorKeys.has(key)){editor.destroy();spawnerEditors.delete(key);}
   panel.onchange=e=>{const input=e.target;if(input.matches('[data-time-key]'))editSpawner(()=>{const old=input.closest('[data-time-card]').dataset.timeCard,key=input.value.trim();if(!validTimeKey(key))throw new Error('Время: используйте 2m или 5s-1s');changeSpawner(next=>{if(key!==old&&Object.hasOwn(next.when,key))throw new Error('Такое время уже есть');const value=next.when[old];delete next.when[old];next.when[key]=value;});});
     if(input.matches('[data-map-key],[data-map-value]'))editSpawner(()=>{const entries=[...panel.querySelectorAll('[data-map-row="args"]')].map(row=>[row.querySelector('[data-map-key]').value.trim(),row.querySelector('[data-map-value]').value]);if(entries.some(([key])=>!key)||new Set(entries.map(([key])=>key)).size!==entries.length)throw new Error('Имена параметров должны быть уникальны');model.setArgs(Object.fromEntries(entries));drawSpawner();});};
   panel.onclick=async e=>{const button=e.target.closest('[data-spawner-op], [data-op="remove-pair"]');if(!button)return;const op=button.dataset.spawnerOp??button.dataset.op;
@@ -271,7 +333,7 @@ function updateStatus() {
   const missing = edges.filter(edge => edge.missing && !edge.dynamic).length;
   $('#warnings').textContent = [missing ? `${missing} ссылок на отсутствующие ноды` : '', generatorError, spawnerError].filter(Boolean).join(' · ');
   $('#warnings').className = missing || generatorError || spawnerError ? 'warn' : '';
-  $('#save-state').textContent = model.dirty ? '● Есть несохранённые изменения' : 'Все изменения сохранены';
+  $('#save-state').textContent = (model.dirty || hasYamlDrafts()) ? '● Есть несохранённые изменения' : 'Все изменения сохранены';
   $('#undo').disabled = !model.undoStack.length; $('#redo').disabled = !model.redoStack.length;
 }
 const protectedNode = name => ['__init__','__destroy__',defaultsNodeId].includes(name);
@@ -288,14 +350,14 @@ function inputsFor(name, edges = model.edges()) {
   return inputs;
 }
 const outputsFor = name => model.isWeb(name) ? [] : eventsFor(model.node(name));
-const nodeWidth = name => Math.min(760,Math.max(260,model.layout(name).width || 340));
+const nodeWidth = name => Math.max(260,model.layout(name).width || 340);
 const portRows = name => Math.max(inputsFor(name).length,outputsFor(name).length,1);
 const bodyTop = name => 106+(portRows(name)-1)*26;
 function heightFor(name, inputs = inputsFor(name)) {
   const node = model.node(name);
   const minimum=node.type==='web:note'?140:bodyTop(name)+70;
   const suggested=node.type==='web:note'?220:Math.max(310,bodyTop(name)+180);
-  return Math.min(780,Math.max(minimum,model.layout(name).height || suggested));
+  return Math.max(minimum,model.layout(name).height || suggested);
 }
 function inputKey(edge) { return edge.action === 'call' ? `call:${edge.event}` : edge.action; }
 function endpoints(edge, inputs = inputsFor(edge.target)) {
@@ -338,8 +400,9 @@ function nodeFields(name,node,schema) {
   return fields.join('')||'<div class="node-field-empty">Настроек нет</div>';
 }
 function drawGraph() {
+  const focusedYaml=[...commandEditors.values()].find(editor=>editor.editor.view.hasFocus);
   $('.graph').querySelectorAll('.node-fields').forEach(el=>nodeScroll.set(el.dataset.scrollNode,el.scrollTop));
-  $('.graph').querySelectorAll('[data-note-text],[data-command-yaml]').forEach(input => {
+  $('.graph').querySelectorAll('[data-note-text]').forEach(input => {
     if (document.activeElement === input) nodeDrafts.set(JSON.stringify([input.dataset.noteText ?? input.dataset.commandYaml, input.dataset.noteText ? 'text' : 'on_run']), input.value);
   });
   $('.graph').querySelectorAll('[data-node-lines]').forEach(input=>{
@@ -357,7 +420,7 @@ function drawGraph() {
     handles.push(`<g class="edge-end" data-edge="${escape(edge.id)}" data-reconnect="${escape(edge.id)}"><title>Потяните конец связи на другой вход или на пустое место</title><circle class="edge-grab" cx="${hx}" cy="${hy}" r="12"/><circle class="edge-knob" cx="${hx}" cy="${hy}" r="4.5" stroke="${stroke}"/></g>`);
     return `<g class="wire${selectedClass}" data-edge="${escape(edge.id)}"><path class="edge-hit" d="${d}"/><path class="edge" d="${d}" stroke="${stroke}" marker-end="url(#arrow-${edge.action})"/><text class="edge-label" x="${(x+hx)/2}" y="${(y+hy)/2-8}">${escape(edge.action==='call'?edge.event:edge.action)}</text></g>`;
   }).join('');
-  const cards = Object.entries(nodes).map(([name,node]) => {
+  const cards = Object.entries(nodes).sort(([left],[right])=>Number(selectedNodes.has(left))-Number(selectedNodes.has(right))).map(([name,node]) => {
     const p=model.layout(name), width=nodeWidth(name), height=heightFor(name,ports.get(name)), title=model.title(name), selectedClass=selectedNodes.has(name)?' selected':'';
     const resize=`<g data-resize="${escape(name)}" class="note-resize"><title>Изменить размер</title><rect x="${width-25}" y="${height-25}" width="25" height="25" fill="transparent"/><path d="M${width-18},${height-6} L${width-6},${height-18} M${width-12},${height-6} L${width-6},${height-12}"/></g>`;
     if (name === defaultsNodeId) return `<g class="node${selectedClass}" data-node="${escape(name)}" transform="translate(${p.x},${p.y})"><rect class="node-card" rx="10" width="${width}" height="${height}"/><text class="node-name" x="18" y="29">${escape(title)}</text><text class="node-type" x="18" y="47">defaults</text><foreignObject x="14" y="65" width="${width-28}" height="${height-90}"><div xmlns="http://www.w3.org/1999/xhtml" class="node-fields" data-scroll-node="${escape(name)}">${defaultsEditor()}</div></foreignObject>${resize}</g>`;
@@ -366,8 +429,7 @@ function drawGraph() {
     const portMarkup=inputs.map((input,i)=>`<g class="input-port" data-target="${escape(name)}" data-input="${escape(input.key)}"><title>${escape(input.action==='call'?`call: ${input.event} ${name}`:`${input.action}: ${name}`)}</title><circle class="port-hit" cx="0" cy="${82+i*26}" r="13"/><circle class="port port-${input.action}" cx="0" cy="${82+i*26}" r="6"/><text class="input-label" x="17" y="${86+i*26}">${escape(input.label)}</text></g>`).join('')+
       outputs.map((event,i)=>`<g class="output-port" data-source="${escape(name)}" data-output="${escape(event)}"><title>Зажмите и потяните к входу другой ноды</title><circle class="port-hit" cx="${width}" cy="${82+i*26}" r="13"/><circle class="port" cx="${width}" cy="${82+i*26}" r="6"/><text class="event-label" text-anchor="end" x="${width-17}" y="${86+i*26}">${escape(event)}</text></g>`).join('');
     if (node.type === 'default:commands') {
-      const commandText = nodeDrafts.get(JSON.stringify([name,'on_run'])) ?? formatCommands(handlerList(node.on_run));
-      return `<g class="node command-note${selectedClass}" data-node="${escape(name)}" transform="translate(${p.x},${p.y})"><rect class="node-card" rx="10" width="${width}" height="${height}"/><path d="M10,1 H${width-10}" stroke="${tint}" stroke-width="3"/><text class="node-name" x="18" y="29">${escape(title)}</text><text class="note-kind" x="18" y="47">Команды · YAML</text>${portMarkup}<foreignObject x="18" y="104" width="${width-36}" height="${height-129}"><div xmlns="http://www.w3.org/1999/xhtml" class="node-fields command-editor" data-scroll-node="${escape(name)}"><pre class="yaml-highlight" aria-hidden="true">${highlightYaml(commandText)}</pre><textarea data-command-yaml="${escape(name)}" spellcheck="false" placeholder="- console: 'Команда'">${escape(commandText)}</textarea><small class="node-field-error"></small></div></foreignObject>${resize}</g>`;
+      return `<g class="node command-note${selectedClass}" data-node="${escape(name)}" transform="translate(${p.x},${p.y})"><rect class="node-card" rx="10" width="${width}" height="${height}"/><path d="M10,1 H${width-10}" stroke="${tint}" stroke-width="3"/><text class="node-name" x="18" y="29">${escape(title)}</text><text class="note-kind" x="18" y="47">Команды · YAML</text>${portMarkup}<foreignObject x="18" y="104" width="${width-36}" height="${height-129}"><div xmlns="http://www.w3.org/1999/xhtml" class="node-fields command-editor" data-scroll-node="${escape(name)}"><div data-command-yaml="${escape(name)}" class="command-yaml-host"></div></div></foreignObject>${resize}</g>`;
     }
     const top=bodyTop(name), innerHeight=Math.max(20,height-top-25);
     const body=`<foreignObject x="14" y="${top}" width="${width-28}" height="${innerHeight}"><div xmlns="http://www.w3.org/1999/xhtml" class="node-fields" data-scroll-node="${escape(name)}">${nodeFields(name,node,schema)}</div></foreignObject>`;
@@ -400,36 +462,28 @@ function drawGraph() {
       updateStatus(); if (selected === name) drawWebInspector();
     };
   });
-  $('.graph').querySelectorAll('[data-command-yaml]').forEach(input => {
-    const preview = input.previousElementSibling;
-    input.oninput = () => {
-      nodeDrafts.set(JSON.stringify([input.dataset.commandYaml,'on_run']), input.value);
-      preview.innerHTML = highlightYaml(input.value);
-    };
-    input.onscroll = () => { preview.scrollTop = input.scrollTop; preview.scrollLeft = input.scrollLeft; };
-    input.onchange = () => {
-      if (copyingYaml) return;
-      const name = input.dataset.commandYaml, draft = input.value, owner = model;
-      const task = (async () => {
-        try {
-          const parsed = await api('commands/parse', {yaml:draft});
-          if (model !== owner || nodeDrafts.get(JSON.stringify([name,'on_run'])) !== draft || !model.nodes[name]) return;
-          model.setField(name, 'on_run', replaceEditableCommands(handlerList(model.nodes[name].on_run), parsed));
-          input.blur();
-          nodeDrafts.delete(JSON.stringify([name,'on_run']));
-          invalidFields.delete(JSON.stringify([name,'on_run']));
-          refresh();
-        } catch (error) {
-          if (model !== owner || !model.nodes[name] || nodeDrafts.get(JSON.stringify([name,'on_run'])) !== draft) return;
-          invalidFields.set(JSON.stringify([name,'on_run']), {value:draft,message:error.message});
-          input.classList.add('invalid');
-          input.parentElement.querySelector('.node-field-error').textContent = error.message;
-        }
-      })();
-      pendingCommandEdits.set(name, task);
-      task.finally(() => { if (pendingCommandEdits.get(name) === task) pendingCommandEdits.delete(name); });
-    };
+  for (const [name,editor] of commandEditors) if(model.nodes[name]?.type!=='default:commands') {editor.destroy();commandEditors.delete(name);}
+  $('.graph').querySelectorAll('[data-command-yaml]').forEach(host => {
+    const name=host.dataset.commandYaml, key=JSON.stringify([name,'on_run']), owner=model;
+    let editor=commandEditors.get(name);
+    if (editor) {editor.sync(handlerList(model.nodes[name].on_run));editor.mount(host);}
+    else {
+      editor=new EventDslEditor(host,{value:handlerList(model.nodes[name].on_run),compact:true,
+        context:()=>completionContext(false),parseYaml:yaml=>api('commands/parse',{yaml}),
+        onDraft:draft=>{nodeDrafts.set(key,draft);updateStatus();},
+        onError:error=>{if(model!==owner)return;error?invalidFields.set(key,{value:editor.value,message:error.message}):invalidFields.delete(key);updateStatus();},
+        onChange:parsed=>{
+          if(model!==owner||!model.nodes[name])return;
+          model.setField(name,'on_run',parsed);
+          nodeDrafts.delete(key);invalidFields.delete(key);updateStatus();
+          if(editorTab==='graph'&&!drag&&!linking){drawGraph();drawInspectorEdges();}
+        }});
+      commandEditors.set(name,editor);
+    }
+    const draft=nodeDrafts.get(key);
+    if(draft!==undefined&&editor.value!==draft){editor.editor.setValue(draft);editor.dirty=true;}
   });
+  if(focusedYaml?.element.isConnected)focusedYaml.editor.view.focus();
   $('.graph').querySelectorAll('[data-inline-field]').forEach(input=>input.onchange=()=>safe(()=>{
     const node=model.nodes[input.dataset.inlineNode], field=input.dataset.inlineField, schema=schemaFor(node).properties[field];
     const value=readScalar(input,schema);
@@ -539,7 +593,7 @@ function setupGraph() {
     }
     const dx=(event.clientX-drag.startX)/graphView.zoom, dy=(event.clientY-drag.startY)/graphView.zoom;
     if (drag.kind==='node') for (const [name, point] of drag.points) Object.assign(model.layout(name),{x:point.x+dx,y:point.y+dy});
-    else if (drag.kind==='resize') Object.assign(model.layout(drag.name),{width:Math.min(760,Math.max(260,drag.point.width+dx)),height:Math.min(780,Math.max(model.node(drag.name).type==='web:note'?140:bodyTop(drag.name)+70,drag.point.height+dy))});
+    else if (drag.kind==='resize') Object.assign(model.layout(drag.name),{width:Math.max(260,drag.point.width+dx),height:Math.max(model.node(drag.name).type==='web:note'?140:bodyTop(drag.name)+70,drag.point.height+dy)});
     else {graphView.x=drag.point.x+dx*graphView.zoom;graphView.y=drag.point.y+dy*graphView.zoom;model.metadata.viewport=clone(graphView);}
     drawGraph();
   };
@@ -559,6 +613,7 @@ function setupGraph() {
   document.addEventListener('pointerup', event => { if (fieldPointer===event.pointerId) fieldPointer=null; }, {signal:graphListeners.signal});
   svg.onwheel=event=> { if(event.target.closest('.node-fields')) return; event.preventDefault(); if (linking||drag) return; closeContext(); const b=svg.getBoundingClientRect(); zoomBy(Math.exp(-event.deltaY*.001),event.clientX-b.left,event.clientY-b.top); };
   svg.oncontextmenu=event=> {
+    if(event.target.closest('.cm-editor,textarea,input'))return;
     event.preventDefault(); if (drag||linking&&!linking.click) cancelGesture();
     const node=event.target.closest('[data-node]'), edge=event.target.closest('[data-edge]');
     showContext(event.clientX,event.clientY,{node:node?.dataset.node,edge:edge?model.edges().find(e=>e.id===edge.dataset.edge):null,position:graphPoint(event)});
@@ -859,7 +914,7 @@ async function flushCardDrafts() {
       nodeDrafts.delete(encoded);
     } else if (field === 'on_run' && model.nodes[name]?.type === 'default:commands') {
       const parsed = await api('commands/parse', {yaml:draft});
-      model.setField(name, field, replaceEditableCommands(handlerList(model.nodes[name][field]), parsed));
+      model.setField(name, field, parsed);
       nodeDrafts.delete(encoded);
       invalidFields.delete(encoded);
     }
@@ -871,6 +926,8 @@ async function copyYaml() {
   button.disabled = true;
   copyingYaml = true;
   try {
+    await Promise.all([...spawnerEditors.values()].map(editor=>editor.commit()));
+    if(model!==current)return;
     const config=clone(current.config), metadata=clone(current.metadata), drafts=new Map(nodeDrafts);
     for (const [encoded, entry] of invalidFields) {
       const [name, field]=JSON.parse(encoded);
@@ -934,7 +991,7 @@ async function save() {
   const button = $('#save'), current = model; button.disabled = true; button.textContent = 'Проверка…';
   try {
     document.activeElement?.blur();
-    await Promise.all([...pendingCommandEdits.values()]);
+    await Promise.all([...commandEditors.values(),...spawnerEditors.values()].map(editor=>editor.commit()));
     await flushCardDrafts();
     if (model !== current) return;
     if (invalidFields.size || generatorError || spawnerError) { toast('Исправьте ошибки в полях перед сохранением.', true); return; }
@@ -949,9 +1006,9 @@ async function save() {
 window.addEventListener('keydown', event => {
   if (!model || $('#dialog').open) return;
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { event.preventDefault(); document.activeElement?.blur(); save(); return; }
-  if (['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)) return;
+  if (event.target.closest?.('.cm-editor') || document.activeElement?.isContentEditable || ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)) return;
   if (event.key === 'Escape') { cancelGesture(); return; }
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? model.redo() : model.undo(); generatorError = ''; spawnerError = ''; invalidFields.clear(); nodeDrafts.clear(); refresh(); }
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); clearYamlEditors(); event.shiftKey ? model.redo() : model.undo(); generatorError = ''; spawnerError = ''; invalidFields.clear(); nodeDrafts.clear(); refresh(); }
   if (event.key === 'Delete') safe(() => { if (selectedEdge) { model.removeEdge(selectedEdge); selectedEdge = null; refresh(); } else if (selected && confirm(`Удалить ноду «${selected}»?`)) { model.remove(selected); selectNode(null); refresh(); } });
 });
 const initialKey = location.hash.startsWith('#edit/') ? decodeURIComponent(location.hash.slice(6)) : null;

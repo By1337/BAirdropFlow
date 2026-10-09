@@ -44,6 +44,26 @@ public final class AirdropWeb implements Closeable {
                 .get("/generator-schemas", h -> dispatch(h, executor, () -> JsonValues.GSON.toJsonTree(Generators.schemas())))
                 .get("/spawner-schemas", h -> dispatch(h, executor, () -> JsonValues.GSON.toJsonTree(AirdropSpawnerBoot.schemas())))
                 .get("/airdrop", h -> dispatch(h, executor, () -> workflows.read(h.params().getString("key"))))
+                .post("/airdrop/create", h -> dispatch(h, executor, () -> {
+                    if (!h.params().contentType().split(";", 2)[0].trim().equalsIgnoreCase("application/json")) {
+                        throw new IllegalArgumentException("Ожидалось application/json");
+                    }
+                    JsonObject body = JsonParser.parseString(h.params().body()).getAsJsonObject();
+                    if (!body.has("key") || !body.has("id") || !body.has("world")) {
+                        throw new IllegalArgumentException("Нужны key, id и world");
+                    }
+                    return workflows.create(body.get("key").getAsString(), body.get("id").getAsString(), body.get("world").getAsString());
+                }))
+                .post("/airdrop/copy", h -> dispatch(h, executor, () -> {
+                    if (!h.params().contentType().split(";", 2)[0].trim().equalsIgnoreCase("application/json")) {
+                        throw new IllegalArgumentException("Ожидалось application/json");
+                    }
+                    JsonObject body = JsonParser.parseString(h.params().body()).getAsJsonObject();
+                    if (!body.has("source") || !body.has("key") || !body.has("id")) {
+                        throw new IllegalArgumentException("Нужны source, key и id");
+                    }
+                    return workflows.copy(body.get("source").getAsString(), body.get("key").getAsString(), body.get("id").getAsString());
+                }))
                 .post("/commands/parse", h -> dispatch(h, executor, () -> {
                     JsonObject body = JsonParser.parseString(h.params().body()).getAsJsonObject();
                     if (!body.has("yaml") || !body.get("yaml").isJsonPrimitive())

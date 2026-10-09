@@ -25,6 +25,7 @@ import dev.by1337.cmd.Command;
 import dev.by1337.cmd.CommandMsgError;
 import dev.by1337.cmd.argument.ArgumentString;
 import dev.by1337.core.command.bcmd.argument.ArgumentChoice;
+import dev.by1337.core.command.bcmd.argument.ArgumentPlayers;
 import dev.by1337.core.command.bcmd.requires.RequiresPermission;
 import dev.by1337.core.plugin.BasePlugin;
 import dev.by1337.core.util.io.ResourceUtil;
@@ -111,13 +112,16 @@ public class BAirdropFlow extends BasePlugin {
         addCloseHook(new AsyncTimerSystem(this, manager).start());
         if (!new File(getDataFolder(), "spawner").exists()) {
             ResourceUtil.saveIfNotExist("spawner/by_time.yml", this);
+            ResourceUtil.saveIfNotExist("spawner/by_item.yml", this);
         }
         globalSpawners = new GlobalSpawners();
+        addCloseHook(globalSpawners::close);
         try {
             globalSpawners.load(getDataFolder().toPath().resolve("spawner"), workflows, manager, log::warn);
         } catch (java.io.IOException e) {
             throw new IllegalStateException("Не удалось загрузить глобальные спавнеры", e);
         }
+        globalSpawners.enableItems(this);
         if (config.web.enabled()) {
             web = new AirdropWeb(workflows, config.web, action -> Bukkit.getScheduler().runTask(this, action));
             addCloseHook(web);
@@ -150,6 +154,18 @@ public class BAirdropFlow extends BasePlugin {
                 }), null);
         registerCommand(new Command<CommandSender>("baf").executor(sender -> startWorkflow("default.yml"))
                 .sub(LootCommands.create())
+                .sub(new Command<CommandSender>("give").requires(new RequiresPermission<>("baf.admin"))
+                        .executor(new ArgumentPlayers<>("player", true),
+                                new ArgumentChoice<>("item", () -> globalSpawners.items().ids()),
+                                (sender, players, id) -> {
+                                    var item = globalSpawners.items().byId(id);
+                                    if (players == null || players.isEmpty() || item == null)
+                                        throw new CommandMsgError("/baf give <игрок> <предмет>");
+                                    var player = players.getFirst();
+                                    var stack = globalSpawners.items().getItemStack(item);
+                                    player.getInventory().addItem(stack).values().forEach(leftover ->
+                                            player.getWorld().dropItemNaturally(player.getLocation(), leftover));
+                                }))
                 .sub(new Command<CommandSender>("reload").requires(new RequiresPermission<>("baf.admin"))
                         .executor((s) -> {
                             onDisable();

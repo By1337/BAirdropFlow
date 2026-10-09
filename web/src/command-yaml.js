@@ -1,28 +1,3 @@
-const links = new Set(['create','remove','remove?','rm','rm?','call','call?','destroy']);
-const stringLink = /^\[(?:create|remove\??|rm\??|call\??|destroy)\](?:\s|$)/;
-
-export function isConnection(value) {
-  if (typeof value === 'string') return stringLink.test(value.trim());
-  return !!value && !Array.isArray(value) && typeof value === 'object' && Object.keys(value).some(key => links.has(key));
-}
-
-export function editableCommands(values) {
-  return Array.isArray(values) ? values.filter(value => !isConnection(value)) : [];
-}
-
-export function replaceEditableCommands(previous, commands) {
-  const source=Array.isArray(previous)?previous:[], result=[];
-  let index=0;
-  for (const item of source) {
-    if (isConnection(item)) result.push(item);
-    else if (index<commands.length) result.push(commands[index++]);
-  }
-  const remaining=commands.slice(index), tail=source.slice().reverse().findIndex(item=>!isConnection(item));
-  const trailing=tail<0?result.length:tail;
-  result.splice(result.length-trailing,0,...remaining);
-  return result;
-}
-
 const scalar = value => value === null ? 'null' : typeof value === 'string' ? JSON.stringify(value) : String(value);
 const keyOf = key => /^[A-Za-z_][A-Za-z0-9_-]*$/.test(key) ? key : JSON.stringify(key);
 function lines(value, depth, prefix) {
@@ -49,7 +24,7 @@ export function formatActions(values) {
   return values.map(value=>lines(value,0,'- ')).join('').replace(/\n$/, '');
 }
 export function formatCommands(values) {
-  return formatActions(editableCommands(values));
+  return formatActions(values);
 }
 
 // A local export must also retain command text that has not been parsed by the server yet.
@@ -72,11 +47,9 @@ export function formatWorkflowYaml(config, metadata, drafts = new Map()) {
           output.push(lines(item, 4, `${keyOf(field)}: `));
           continue;
         }
-        const connections = Array.isArray(item) ? item.filter(isConnection) : [];
-        if (!draft.trim() && !connections.length) { output.push('    on_run: []\n'); continue; }
+        if (!draft.trim()) { output.push('    on_run: []\n'); continue; }
         output.push('    on_run:\n');
         if (draft.trim()) output.push(draft.replace(/\n$/, '').split('\n').map(line => `      ${line}\n`).join(''));
-        for (const connection of connections) output.push(lines(connection, 6, '- '));
       }
     }
   }

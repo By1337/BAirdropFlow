@@ -107,6 +107,52 @@ public final class WorkflowRepository {
         return saved.json();
     }
 
+    public synchronized JsonObject create(String key, String id, String world) throws IOException {
+        if (id == null || id.isBlank() || id.length() > 128) throw new IllegalArgumentException("Укажите ID аирдропа (до 128 символов)");
+        if (world == null || world.isBlank() || world.length() > 128) throw new IllegalArgumentException("Укажите мир (до 128 символов)");
+        // Refresh the repository before checking IDs, including files added outside the editor.
+        list();
+        if (getById(id) != null) throw new IllegalArgumentException("Аирдроп с таким ID уже существует: " + id);
+        YamlMap yaml = YamlMap.loadFromString("""
+                generator:
+                  type: generator:fixed
+                  at: '0;100;0'
+                spawner:
+                  type: spawner:timer
+                  time: 5m
+                  when: {}
+                  on_timer_end:
+                    - make: {}
+                args: {}
+                nodes:
+                  __init__:
+                    type: __init__
+                    on_init: []
+                  __destroy__:
+                    type: __destroy__
+                    on_destroy: []
+                """);
+        yaml.set("id", id);
+        yaml.set("world", world);
+        var nodes = dev.by1337.baf.web.JsonValues.GSON.toJsonTree(yaml.getRaw("nodes")).getAsJsonObject();
+        var metadata = new JsonObject();
+        var created = files.create(key, yaml, candidate -> validate(nodes, metadata, candidate));
+        update(created);
+        return created.json();
+    }
+
+    public synchronized JsonObject copy(String source, String key, String id) throws IOException {
+        if (id == null || id.isBlank() || id.length() > 128) throw new IllegalArgumentException("Укажите ID аирдропа (до 128 символов)");
+        list();
+        if (getById(id) != null) throw new IllegalArgumentException("Аирдроп с таким ID уже существует: " + id);
+        var copied = files.copy(source, key, id, yaml -> {
+            var document = new WorkflowFiles.Document(key, "", yaml).json();
+            validate(document.getAsJsonObject("config").getAsJsonObject("nodes"), document.getAsJsonObject("metadata"), yaml);
+        });
+        update(copied);
+        return copied.json();
+    }
+
     private void validate(JsonObject nodes, JsonObject metadata, YamlMap yaml) {
         if (nodes.size() > 512) throw new IllegalArgumentException("Максимум 512 нод в одном аирдропе");
         for (var node : nodes.entrySet()) {

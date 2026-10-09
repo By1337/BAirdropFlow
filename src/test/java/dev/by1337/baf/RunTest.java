@@ -7,11 +7,13 @@ import dev.by1337.baf.spawner.AirdropSpawnerBoot;
 import dev.by1337.baf.web.AirdropWeb;
 import dev.by1337.baf.workflow.WorkflowFiles;
 import dev.by1337.baf.workflow.WorkflowRepository;
+import dev.by1337.core.ServerVersion;
 import dev.by1337.web.ClientList;
 import dev.by1337.web.db.Database;
 import dev.by1337.web.db.User;
 import dev.by1337.web.network.ConnectionListener;
 import dev.by1337.web.network.content.GetStaticContentHandler;
+import org.junit.jupiter.api.Test;
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,8 +24,8 @@ import java.util.concurrent.Executors;
 
 public class RunTest {
     private static final Logger log = LoggerFactory.getLogger(RunTest.class);
-
-    //      @Test //ЭТО НЕ ТЕСТ, А ЗАПУСК WEB РЕДАКТОРА ДЛЯ ОТЛАДКИ
+    //  @Test
+        //ЭТО НЕ ТЕСТ, А ЗАПУСК WEB РЕДАКТОРА ДЛЯ ОТЛАДКИ
     void startBackand() throws Exception {
         System.setProperty("baf.ide", "true");
         MockBukkit.mock();

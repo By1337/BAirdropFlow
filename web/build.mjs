@@ -1,7 +1,7 @@
 import { mkdir, copyFile } from 'node:fs/promises';
-import { execFileSync } from 'node:child_process';
+import { build } from 'esbuild';
 const output = new URL('./dist/bairdropflow/', import.meta.url);
 await mkdir(output, { recursive: true });
-for (const name of ['app.js', 'model.js', 'node-placeholders.js', 'command-yaml.js', 'spawner.js', 'event-dsl-model.js', 'event-dsl-editor.js', 'vector.js', 'yaml-highlight.js']) execFileSync(process.execPath, ['--check', new URL(`./src/${name}`, import.meta.url).pathname]);
-for (const name of ['index.html', 'style.css', 'app.js', 'model.js', 'node-placeholders.js', 'command-yaml.js', 'spawner.js', 'event-dsl-model.js', 'event-dsl-editor.js', 'vector.js', 'yaml-highlight.js']) await copyFile(new URL(`./src/${name}`, import.meta.url), new URL(name, output));
-console.log('Built web/dist/bairdropflow (static assets, no runtime dependencies).');
+await build({entryPoints:[new URL('./src/app.js',import.meta.url).pathname],bundle:true,format:'esm',target:['es2022'],minify:true,sourcemap:true,outfile:new URL('app.js',output).pathname});
+for(const name of ['index.html','style.css']) await copyFile(new URL(`./src/${name}`, import.meta.url), new URL(name, output));
+console.log('Built web/dist/bairdropflow (CodeMirror bundled locally; no CDN).');

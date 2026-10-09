@@ -8,6 +8,7 @@ depend:
   - WorldEdit
 
 softdepend:
+  - WorldGuard
   - DecentHolograms
 
 permissions:

@@ -140,10 +140,15 @@ public class AirdropManager {
     }
 
     public EventContext newContext(Airdrop airdrop) {
-        return messages.newContext(airdrop).placeholders(Airdrop.PLACEHOLDERS.bindCtx(airdrop)).build();
+        return newContext(airdrop, null);
     }
 
     public EventContext newContext(Airdrop airdrop, @Nullable Player player) {
-        return messages.newContext(airdrop).source(player).placeholders(Airdrop.PLACEHOLDERS.bindCtx(airdrop)).build();
+        var v = messages.newContext(airdrop)
+                .source(player)
+                .placeholders(Airdrop.PLACEHOLDERS.bindCtx(airdrop))
+                .build();
+        v.with(airdrop.location());
+        return v;
     }
 }

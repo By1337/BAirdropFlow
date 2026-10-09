@@ -60,17 +60,35 @@ public final class WorkflowFiles {
         return new Document(key, revision(original), yaml);
     }
 
+    public synchronized Document create(String key, YamlMap yaml, Consumer<YamlMap> validator) throws IOException {
+        if (key == null || key.length() > 128 || !key.matches("[\\p{L}\\p{N}_][\\p{L}\\p{N}_.-]*\\.(?:yml|yaml)")) {
+            throw new IllegalArgumentException("Имя файла: буквы, цифры, _, -, точка и расширение .yml или .yaml");
+        }
+        validator.accept(yaml);
+        byte[] bytes = yaml.saveToString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        Document result = checkedDocument(key, bytes, yaml);
+        Files.createDirectories(home);
+        try {
+            Files.write(home.resolve(key), bytes, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+        } catch (FileAlreadyExistsException e) {
+            throw new IllegalArgumentException("Файл аирдропа уже существует: " + key);
+        }
+        return result;
+    }
+
+    public synchronized Document copy(String source, String key, String id, Consumer<YamlMap> validator) throws IOException {
+        var original = read(source);
+        original.yaml().set("id", id);
+        return create(key, original.yaml(), validator);
+    }
+
     public synchronized Document save(String key, String revision, JsonObject nodes, JsonObject metadata,
                                       JsonObject settings, Consumer<YamlMap> validator) throws IOException {
         Path path = resolve(key);
         byte[] original = Files.readAllBytes(path);
         YamlMap candidate = candidate(original, revision, nodes, metadata, settings, validator);
         byte[] bytes = candidate.saveToString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
-        Document result = new Document(key, revision(bytes), candidate);
-        if (JsonValues.GSON.toJson(result.json()).getBytes(java.nio.charset.StandardCharsets.UTF_8).length >
-                dev.by1337.web.client.WebProtocol.MAX_PAYLOAD_SIZE - 64) {
-            throw new IllegalArgumentException("Конфиг превышает лимит ответа туннеля 1 MiB");
-        }
+        Document result = checkedDocument(key, bytes, candidate);
         if (!revision(Files.readAllBytes(path)).equals(revision)) throw new ConflictException();
         Path backup = backups.resolve(System.currentTimeMillis() + "-" + UUID.randomUUID()).resolve(home.relativize(path));
         Files.createDirectories(backup.getParent());
@@ -85,6 +103,15 @@ public final class WorkflowFiles {
             }
         } finally {
             Files.deleteIfExists(temporary);
+        }
+        return result;
+    }
+
+    private Document checkedDocument(String key, byte[] bytes, YamlMap yaml) {
+        Document result = new Document(key, revision(bytes), yaml);
+        if (JsonValues.GSON.toJson(result.json()).getBytes(java.nio.charset.StandardCharsets.UTF_8).length >
+                dev.by1337.web.client.WebProtocol.MAX_PAYLOAD_SIZE - 64) {
+            throw new IllegalArgumentException("Конфиг превышает лимит ответа туннеля 1 MiB");
         }
         return result;
     }

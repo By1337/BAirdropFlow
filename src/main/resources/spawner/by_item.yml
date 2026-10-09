@@ -1,0 +1,30 @@
+type: default:by_item
+items:
+  default:
+    item:
+      material: BEACON
+      name: '<gold>Вызов аирдропа'
+      lore:
+        - '<gray>ПКМ по блоку — вызвать аирдроп'
+    workflow: example:default
+    consume: true
+    # Дополняют args из workflow. Доступны в нодах как {args:loot_count}.
+    # player и player_uuid передаются автоматически и имеют приоритет.
+    args:
+      player: "%player_name%"
+      loot_count: '10'
+      air_type: 'default'
+    requirements:
+      # Высота появления: на один блок выше выбранного блока.
+      min_y: 50
+      max_y: 120
+      flat_surface: true
+      # Радиус площадки: 2 => 5x5, твёрдая опора на одной высоте.
+      radius: 2
+      clear_height: 3
+      # При true требуется работающий WorldGuard. Проверяется вся область
+      # от опоры до clear_height, в радиусе radius, включая регионы аирдропов.
+      outside_regions: false
+# Выдать: /baf give <игрок> default (право baf.admin).
+# Глобальный идентификатор предмета: baf_airdrop:default.
+# Использование: предмет в основной руке, ПКМ по блоку.

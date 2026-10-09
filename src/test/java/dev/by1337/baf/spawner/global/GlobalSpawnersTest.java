@@ -5,8 +5,11 @@ import dev.by1337.baf.Workflow;
 import dev.by1337.baf.spawner.AirdropSpawner;
 import dev.by1337.baf.spawner.AirdropSpawnerBoot;
 import dev.by1337.baf.workflow.WorkflowRepository;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockbukkit.mockbukkit.MockBukkit;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -21,6 +24,14 @@ class GlobalSpawnersTest {
     @TempDir
     Path directory;
 
+    @BeforeEach
+    void setUp() {
+        MockBukkit.mock();
+    }
+    @AfterEach
+    void cleanup() {
+        MockBukkit.unmock();
+    }
     @Test
     void loadsNestedSchedulesSkipsInvalidFilesAndFindsNearestPublishedEvent() throws Exception {
         AirdropSpawnerBoot.boot();
