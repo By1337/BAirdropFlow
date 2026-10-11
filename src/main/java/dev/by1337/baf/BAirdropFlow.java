@@ -50,6 +50,7 @@ public class BAirdropFlow extends BasePlugin {
     AirdropWeb web;
     GPSRegistry gps;
     GlobalSpawners globalSpawners;
+    MenuSubLoader menus;
 
     @Override
     public void onLoad() {
@@ -63,27 +64,22 @@ public class BAirdropFlow extends BasePlugin {
 
         config = safeDecode(Config.DECODER, "config.yml", this);
         messages.setCommands(AirdropCommands.getCommands());
-        messages.setDebug(config.debug);
+        //messages.setDebug(config.debug);
         BAF.manager = manager = new AirdropManager(this, messages);
         if (!new File(getDataFolder(), "particles").exists()) {
             ResourceUtil.saveIfNotExist("particles/example.yml", this);
             ResourceUtil.saveIfNotExist("particles/explosion.yml", this);
+            ResourceUtil.saveIfNotExist("particles/spreading_flame.yml", this);
         }
         particleGraphs = new ParticleGraphs(this);
         particleGraphs.load();
         ResourceUtil.saveIfNotExist("workflow/default.yml", this);
         workflows = new WorkflowRepository(new WorkflowFiles(getDataFolder().toPath().resolve("workflow"),
                 getDataFolder().toPath().resolve("backups/workflow")), Workflow.CODEC, log::warn);
-        try {
-            workflows.load();
-        } catch (java.io.IOException e) {
-            throw new IllegalStateException("Не удалось загрузить аирдропы", e);
-        }
         ResourceUtil.saveIfNotExist("menu/lool_table.yml", this);
-        MenuSubLoader menus = new MenuSubLoader(new File(getDataFolder(), "menu"), this, BMenu.menuLoader());
+        menus = new MenuSubLoader(new File(getDataFolder(), "menu"), this, BMenu.menuLoader());
         menus.menuCodecRegistry().register("baf:loot", LootMenu.Config.CODEC);
         BMenu.menuLoader().registerSubLoader(this, menus);
-        menus.loadMenus();
         addCloseHook(() -> BMenu.menuLoader().unregisterSubLoader(this));
         addCloseHook(() -> Bukkit.getOnlinePlayers().forEach(player -> {
             if (BMenu.menuLoader().getOpenedMenu(player) instanceof LootMenu) player.closeInventory();
@@ -98,8 +94,20 @@ public class BAirdropFlow extends BasePlugin {
     }
 
     @Override
+    public void onDisable() {
+        super.onDisable();
+    }
+
+    @Override
     public void onEnable() {
         super.onEnable();
+        try {
+            workflows.load();
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("Не удалось загрузить аирдропы", e);
+        }
+        menus.loadMenus();
+
         gps = new GPSRegistry(this);
         addCloseHook(gps);
         worldData = new WorldDataContainer<>(this, w -> new WorldData(w, this));

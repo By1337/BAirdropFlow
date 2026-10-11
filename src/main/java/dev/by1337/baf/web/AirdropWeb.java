@@ -25,7 +25,7 @@ public final class AirdropWeb implements Closeable {
     public AirdropWeb(WorkflowRepository workflows, WebConfig config, Executor executor) {
         this.config = config;
         endpoint = new WebEndpoint(router(workflows, () -> JsonValues.GSON.toJsonTree(AirdropComponent.REGISTRY.schemas()), executor),
-                false, config.url(), config.staticContent(), config.secret().isBlank() ? null : config.secret(), config.description());
+                false, config.url(), "bair-v1", config.secret().isBlank() ? null : config.secret(), config.description());
     }
 
     public CompletableFuture<String> link() {
@@ -33,7 +33,7 @@ public final class AirdropWeb implements Closeable {
             if (conn == null) throw new IllegalStateException("Не удалось подключиться к BWebTunnel");
             URI uri = URI.create(config.url());
             String scheme = uri.getScheme().equals("wss") ? "https" : "http";
-            return scheme + "://" + uri.getRawAuthority() + "/" + conn.getToken() + "/" + config.staticContent() + "/";
+            return scheme + "://" + uri.getRawAuthority() + "/" + conn.getToken() + "/" + "bair-v1" + "/";
         });
     }
 

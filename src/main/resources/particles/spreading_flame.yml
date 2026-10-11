@@ -1,0 +1,13 @@
+__root__:
+  type: base:root
+  connections:
+    flame: ''
+flame:
+  type: base:particle
+  particle: flame
+  count: 0
+  maxSpeed: 0
+  offsets: 0;0;0
+  dist: 0;0;0
+  overrideLimiter: false
+  alwaysShow: false

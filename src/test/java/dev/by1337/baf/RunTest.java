@@ -56,7 +56,7 @@ public class RunTest {
         AirdropWeb web = new AirdropWeb(repository, new WebConfig(
                 true,
                 "ws://localhost:" + port + "/api/ws",
-                "bairdropflow",
+                //"bairdropflow",
                 "",
                 ""
         ), Executors.newSingleThreadExecutor());

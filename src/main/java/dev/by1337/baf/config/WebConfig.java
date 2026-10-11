@@ -3,12 +3,11 @@ package dev.by1337.baf.config;
 import dev.by1337.yaml.decoder.RecordYamlDecoder;
 import dev.by1337.yaml.decoder.YamlDecoder;
 
-public record WebConfig(boolean enabled, String url, String staticContent, String secret, String description) {
+public record WebConfig(boolean enabled, String url, String secret, String description) {
     public static final YamlDecoder<WebConfig> DECODER = RecordYamlDecoder.mapOf(
             WebConfig::new,
             YamlDecoder.BOOL.fieldOf("enabled", false),
             YamlDecoder.STRING.fieldOf("url", "wss://btunnel.bdev.space/api/ws"),
-            YamlDecoder.STRING.fieldOf("static", "bairdropflow"),
             YamlDecoder.STRING.fieldOf("secret", ""),
             YamlDecoder.STRING.fieldOf("description", "BAirdropFlow")
     );

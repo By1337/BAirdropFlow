@@ -160,7 +160,7 @@ public class TimerSpawner implements AirdropSpawner {
                     });
                 }
                 if (location == null) {
-                    if (generatorFailure++ >= 250) {
+                    if (generatorFailure++ >= 2000) {
                         log.error("Failed to generate location for {} in {}", workflow.id(), workflow.generator);
                         removed = true;
                     }
