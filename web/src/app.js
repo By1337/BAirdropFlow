@@ -1,3 +1,4 @@
+import {GraphRenderer} from './graph-renderer.js';
 import {EventDslEditor} from './event-dsl-editor.js';
 import { GraphModel, clone, defaultsNodeId } from './model.js';
 import { formatWorkflowYaml } from './command-yaml.js';
@@ -21,6 +22,7 @@ function clearYamlEditors() {
 const hasYamlDrafts = () => nodeDrafts.size || [...spawnerEditors.values()].some(editor=>editor.dirty);
 const completionContext = spawner => ({spawner,nodes:Object.keys(model?.nodes??{}),args:Object.keys(model?.config.args??{})});
 let graphListeners;
+let graphRenderer, graphFrame = null, graphPointer = null;
 let minimapDrag = null;
 let copyingYaml = false;
 const url = new URL(location.href), segments = location.pathname.split('/').filter(Boolean);
@@ -305,10 +307,11 @@ function selectNode(name, {toggle = false, preserve = false} = {}) {
   selectedNodes.add(name);
   selected = name;
 }
-function selectionBounds() {
-  const boxes = [...selectedNodes].filter(name => model.node(name)).map(name => ({
-    ...model.layout(name), width:nodeWidth(name), height:heightFor(name)
-  }));
+function selectionBounds(geometry = null) {
+  const boxes = [...selectedNodes].filter(name => model.node(name)).map(name => {
+    const cached = geometry?.get(name);
+    return {...model.layout(name), width:cached?.width ?? nodeWidth(name), height:cached?.height ?? heightFor(name)};
+  });
   if (!boxes.length) return null;
   const x = Math.min(...boxes.map(box => box.x)) - 12, y = Math.min(...boxes.map(box => box.y)) - 12;
   return {x, y, width:Math.max(...boxes.map(box => box.x + box.width)) - x + 12,
@@ -351,12 +354,12 @@ function inputsFor(name, edges = model.edges()) {
 }
 const outputsFor = name => model.isWeb(name) ? [] : eventsFor(model.node(name));
 const nodeWidth = name => Math.max(260,model.layout(name).width || 340);
-const portRows = name => Math.max(inputsFor(name).length,outputsFor(name).length,1);
-const bodyTop = name => 106+(portRows(name)-1)*26;
+const portRows = (name, inputs = inputsFor(name)) => Math.max(inputs.length,outputsFor(name).length,1);
+const bodyTop = (name, inputs = inputsFor(name)) => 106+(portRows(name, inputs)-1)*26;
 function heightFor(name, inputs = inputsFor(name)) {
   const node = model.node(name);
-  const minimum=node.type==='web:note'?140:bodyTop(name)+70;
-  const suggested=node.type==='web:note'?220:Math.max(310,bodyTop(name)+180);
+  const minimum=node.type==='web:note'?140:bodyTop(name, inputs)+70;
+  const suggested=node.type==='web:note'?220:Math.max(310,bodyTop(name, inputs)+180);
   return Math.max(minimum,model.layout(name).height || suggested);
 }
 function inputKey(edge) { return edge.action === 'call' ? `call:${edge.event}` : edge.action; }
@@ -400,6 +403,7 @@ function nodeFields(name,node,schema) {
   return fields.join('')||'<div class="node-field-empty">Настроек нет</div>';
 }
 function drawGraph() {
+  cancelGraphFrame();
   const focusedYaml=[...commandEditors.values()].find(editor=>editor.editor.view.hasFocus);
   $('.graph').querySelectorAll('.node-fields').forEach(el=>nodeScroll.set(el.dataset.scrollNode,el.scrollTop));
   $('.graph').querySelectorAll('[data-note-text]').forEach(input => {
@@ -416,6 +420,7 @@ function drawGraph() {
   const curves = edges.filter(e => !e.missing && !e.dynamic && e.id !== linking?.edge?.id).map(edge => {
     const {x,y,tx,ty}=endpoints(edge,ports.get(edge.target)), siblings=siblingsByInput.get(JSON.stringify([edge.target,inputKey(edge)]));
     const index=siblings.findIndex(e=>e.id===edge.id), hx=tx-22-(index%5)*14, hy=ty+(index%3-1)*9;
+    edge.sibling = index; edge.row = Math.max(0, ports.get(edge.target).findIndex(p => p.key === inputKey(edge)));
     const d=curve(x,y,hx,hy)+` L${tx},${ty}`, stroke=edgeColor(edge.action), selectedClass=selectedEdge?.id===edge.id?' selected':'';
     handles.push(`<g class="edge-end" data-edge="${escape(edge.id)}" data-reconnect="${escape(edge.id)}"><title>Потяните конец связи на другой вход или на пустое место</title><circle class="edge-grab" cx="${hx}" cy="${hy}" r="12"/><circle class="edge-knob" cx="${hx}" cy="${hy}" r="4.5" stroke="${stroke}"/></g>`);
     return `<g class="wire${selectedClass}" data-edge="${escape(edge.id)}"><path class="edge-hit" d="${d}"/><path class="edge" d="${d}" stroke="${stroke}" marker-end="url(#arrow-${edge.action})"/><text class="edge-label" x="${(x+hx)/2}" y="${(y+hy)/2-8}">${escape(edge.action==='call'?edge.event:edge.action)}</text></g>`;
@@ -431,20 +436,21 @@ function drawGraph() {
     if (node.type === 'default:commands') {
       return `<g class="node command-note${selectedClass}" data-node="${escape(name)}" transform="translate(${p.x},${p.y})"><rect class="node-card" rx="10" width="${width}" height="${height}"/><path d="M10,1 H${width-10}" stroke="${tint}" stroke-width="3"/><text class="node-name" x="18" y="29">${escape(title)}</text><text class="note-kind" x="18" y="47">Команды · YAML</text>${portMarkup}<foreignObject x="18" y="104" width="${width-36}" height="${height-129}"><div xmlns="http://www.w3.org/1999/xhtml" class="node-fields command-editor" data-scroll-node="${escape(name)}"><div data-command-yaml="${escape(name)}" class="command-yaml-host"></div></div></foreignObject>${resize}</g>`;
     }
-    const top=bodyTop(name), innerHeight=Math.max(20,height-top-25);
+    const top=bodyTop(name, inputs), innerHeight=Math.max(20,height-top-25);
     const body=`<foreignObject x="14" y="${top}" width="${width-28}" height="${innerHeight}"><div xmlns="http://www.w3.org/1999/xhtml" class="node-fields" data-scroll-node="${escape(name)}">${nodeFields(name,node,schema)}</div></foreignObject>`;
     return `<g class="node${selectedClass}" data-node="${escape(name)}" transform="translate(${p.x},${p.y})"><rect class="node-card" rx="10" width="${width}" height="${height}"/><path d="M10,1 H${width-10}" stroke="${tint}" stroke-width="3"/><text class="node-name" x="18" y="27">${escape(title.length>33?title.slice(0,31)+'…':title)}</text><text class="node-type" x="18" y="46">${escape(`${name} · ${schema.title}`)}</text><line class="node-divider" x1="0" x2="${width}" y1="61" y2="61"/>${portMarkup}${body}${resize}</g>`;
   }).join('');
-  let preview='';
-  if (linking) {
-    const point=model.layout(linking.source), x=point.x+nodeWidth(linking.source), y=point.y+82+outputsFor(linking.source).indexOf(linking.output)*26;
-    preview=`<path class="connection-preview" d="${curve(x,y,linking.point.x,linking.point.y)}" marker-end="url(#arrow-preview)"/><circle class="preview-tip" cx="${linking.point.x}" cy="${linking.point.y}" r="5"/>`;
-  }
   const groupBounds = selectedNodes.size > 1 && drag?.kind !== 'select' ? selectionBounds() : null;
-  const groupFrame = groupBounds ? `<rect class="selection-group" data-selection-drag x="${groupBounds.x}" y="${groupBounds.y}" width="${groupBounds.width}" height="${groupBounds.height}" rx="8"/>` : '';
-  const box = drag?.kind === 'select' ? drag.box : null;
-  const marquee = box ? `<rect class="selection-marquee" x="${box.x}" y="${box.y}" width="${box.width}" height="${box.height}"/>` : '';
-  $('.graph').innerHTML=`<defs>${['create','remove','destroy','call','preview'].map(action=>`<marker id="arrow-${action}" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="${action==='preview'?'#e2fff5':edgeColor(action)}"/></marker>`).join('')}</defs><g id="scene" transform="translate(${graphView.x},${graphView.y}) scale(${graphView.zoom})">${curves}${groupFrame}${cards}${handles.join('')}${preview}${marquee}</g>`;
+  const groupFrame = `<rect class="selection-group" data-selection-drag rx="8"/>`;
+  const overlays = `<path class="connection-preview" marker-end="url(#arrow-preview)"/><circle class="preview-tip" r="5"/><rect class="selection-marquee"/>`;
+  $('.graph').innerHTML=`<defs>${['create','remove','destroy','call','preview'].map(action=>`<marker id="arrow-${action}" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="${action==='preview'?'#e2fff5':edgeColor(action)}"/></marker>`).join('')}</defs><g id="scene" transform="translate(${graphView.x},${graphView.y}) scale(${graphView.zoom})">${curves}${groupFrame}${cards}${handles.join('')}${overlays}</g>`;
+  graphRenderer = new GraphRenderer($('.graph'), new Map(Object.entries(nodes).map(([name,node]) => [name, {
+    layout:model.layout(name), type:node.type, width:nodeWidth(name), height:heightFor(name,ports.get(name)),
+    inputs:ports.get(name), outputs:outputsFor(name)
+  }])), edges, curve);
+  graphRenderer.box('.selection-group', groupBounds);
+  graphRenderer.box('.selection-marquee', drag?.kind === 'select' ? drag.box : null);
+  graphRenderer.preview(linking);
   drawMinimap();
   $('#zoom-value').textContent=`${Math.round(graphView.zoom*100)}%`;
   $('#graph-hint').textContent=linking?(linking.edge?'Отпустите на другом входе · На пустом месте — отвязать · Esc — отмена':'Тяните к входу create, remove, destroy или событию · Esc — отмена'):(selectedNodes.size > 1 ? 'Тяните выделенную группу · ЛКМ снаружи — снять выделение · Shift+ЛКМ — рамка' : 'Shift+ЛКМ на пустом месте — выделение рамкой · ПКМ — меню');
@@ -502,6 +508,37 @@ function drawGraph() {
     nodeDrafts.delete(JSON.stringify([input.dataset.nodeLines,input.dataset.field]));refresh();
   }));
 
+}
+function cancelGraphFrame() {
+  if (graphFrame !== null) cancelAnimationFrame(graphFrame);
+  graphFrame = null; graphPointer = null;
+}
+function scheduleGraphFrame(event = null) {
+  if (event) graphPointer = {clientX:event.clientX, clientY:event.clientY};
+  if (graphFrame !== null) return;
+  graphFrame = requestAnimationFrame(() => {
+    graphFrame = null;
+    const pointer = graphPointer; graphPointer = null;
+    if (!graphRenderer?.scene.isConnected) return;
+    graphRenderer.viewport(graphView);
+    if (drag?.kind === 'node') graphRenderer.move(drag.points.keys());
+    if (drag?.kind === 'resize') {
+      const name = drag.name, node = graphRenderer.nodes.get(name);
+      const top = name === defaultsNodeId || node.type === 'web:note' ? 65 : node.type === 'default:commands' ? 104 : bodyTop(name,node.inputs);
+      graphRenderer.resize(name,nodeWidth(name),heightFor(name,node.inputs),top);
+      commandEditors.get(name)?.editor.view.requestMeasure();
+    }
+    if (drag?.kind === 'select') graphRenderer.selection(selectedNodes);
+    graphRenderer.box('.selection-group', selectedNodes.size > 1 && drag?.kind !== 'select' ? selectionBounds(graphRenderer.nodes) : null);
+    graphRenderer.box('.selection-marquee', drag?.kind === 'select' ? drag.box : null);
+    graphRenderer.preview(linking);
+    if (linking && pointer) {
+      $('.graph').querySelector('.drop-target')?.classList.remove('drop-target');
+      targetAt(pointer)?.classList.add('drop-target');
+    }
+    drawMinimap(true);
+    $('#zoom-value').textContent = `${Math.round(graphView.zoom*100)}%`;
+  });
 }
 function graphPoint(event) {
   const b=$('.graph').getBoundingClientRect();
@@ -569,6 +606,7 @@ function setupGraph() {
         selectNode(node.dataset.node, {preserve:true});
         drag={kind:resize?'resize':'node',name:selected,startX:event.clientX,startY:event.clientY,
           points:new Map([...selectedNodes].map(name => [name, clone(model.layout(name))])),
+          minHeight:model.node(selected).type==='web:note'?140:bodyTop(selected)+70,
           point:{...clone(model.layout(selected)),width:nodeWidth(selected),height:heightFor(selected)},before:model.snapshot(),dirtyBefore:model.dirty};
       } else { selectNode(null); drag={kind:'pan',startX:event.clientX,startY:event.clientY,point:clone(graphView),before:model.snapshot(),dirtyBefore:model.dirty}; }
       drawInspector();
@@ -576,7 +614,7 @@ function setupGraph() {
     svg.setPointerCapture(event.pointerId); event.preventDefault(); drawGraph();
   };
   svg.onpointermove=event=> {
-    if (linking) { linking.point=graphPoint(event); drawGraph(); const target=targetAt(event); target?.classList.add('drop-target'); return; }
+    if (linking) { linking.point=graphPoint(event); scheduleGraphFrame(event); return; }
     if (!drag) return;
     if (drag.kind === 'select') {
       const point = graphPoint(event), start = drag.start;
@@ -589,13 +627,13 @@ function setupGraph() {
           selectedNodes.add(node.name); selected = node.name;
         }
       }
-      drawGraph(); return;
+      scheduleGraphFrame(); return;
     }
     const dx=(event.clientX-drag.startX)/graphView.zoom, dy=(event.clientY-drag.startY)/graphView.zoom;
     if (drag.kind==='node') for (const [name, point] of drag.points) Object.assign(model.layout(name),{x:point.x+dx,y:point.y+dy});
-    else if (drag.kind==='resize') Object.assign(model.layout(drag.name),{width:Math.max(260,drag.point.width+dx),height:Math.max(model.node(drag.name).type==='web:note'?140:bodyTop(drag.name)+70,drag.point.height+dy)});
+    else if (drag.kind==='resize') Object.assign(model.layout(drag.name),{width:Math.max(260,drag.point.width+dx),height:Math.max(drag.minHeight,drag.point.height+dy)});
     else {graphView.x=drag.point.x+dx*graphView.zoom;graphView.y=drag.point.y+dy*graphView.zoom;model.metadata.viewport=clone(graphView);}
-    drawGraph();
+    scheduleGraphFrame();
   };
   svg.onpointerup=event=> {
     if (fieldPointer===event.pointerId) { fieldPointer=null; return; }
@@ -623,22 +661,34 @@ function minimapViewport() {
   const shell = $('.graph-shell');
   return {x:-graphView.x/graphView.zoom, y:-graphView.y/graphView.zoom, width:shell.clientWidth/graphView.zoom, height:shell.clientHeight/graphView.zoom};
 }
-function drawMinimap() {
+function drawMinimap(incremental = false) {
   const svg = $('#minimap'); if (!svg || !model || !graphView) return;
   const viewport = minimapViewport(); if (!viewport.width || !viewport.height) return;
-  const nodes = Object.entries(model.allNodes()).map(([name,node]) => ({name,node,...model.layout(name),width:nodeWidth(name),height:heightFor(name)}));
+  const nodes = [...graphRenderer.nodes].map(([name,node]) => ({name,node:model.node(name),...node.layout,width:node.width,height:node.height}));
   const bounds = [...nodes,viewport];
   const x = Math.min(...bounds.map(p=>p.x)), y = Math.min(...bounds.map(p=>p.y));
   const width = Math.max(...bounds.map(p=>p.x+p.width))-x, height = Math.max(...bounds.map(p=>p.y+p.height))-y;
   const padding = Math.max(width,height)*.06;
   if (!minimapDrag) svg.setAttribute('viewBox', `${x-padding} ${y-padding} ${width+padding*2} ${height+padding*2}`);
-  svg.innerHTML = `<title>Миникарта · нажмите или перетащите, чтобы переместить область просмотра</title>${nodes.map(p=>`<rect class="minimap-node${selectedNodes.has(p.name)?' selected':''}" x="${p.x}" y="${p.y}" width="${p.width}" height="${p.height}" rx="12" fill="${escape(p.color||color(p.node.type))}"><title>${escape(model.title(p.name))}</title></rect>`).join('')}<rect class="minimap-viewport" x="${viewport.x}" y="${viewport.y}" width="${viewport.width}" height="${viewport.height}"/>`;
+  if (incremental === true) {
+    for (const rect of svg.querySelectorAll('[data-minimap-node]')) {
+      const name = rect.dataset.minimapNode, node = graphRenderer.nodes.get(name);
+      if (drag?.points?.has(name) || drag?.kind === 'resize' && drag.name === name) {
+        for (const [key,value] of Object.entries({x:node.layout.x,y:node.layout.y,width:node.width,height:node.height})) rect.setAttribute(key,value);
+      }
+      if (drag?.kind === 'select') rect.classList.toggle('selected',selectedNodes.has(name));
+    }
+    const rect = svg.querySelector('.minimap-viewport');
+    for (const [key,value] of Object.entries(viewport)) rect.setAttribute(key,value);
+    return;
+  }
+  svg.innerHTML = `<title>Миникарта · нажмите или перетащите, чтобы переместить область просмотра</title>${nodes.map(p=>`<rect data-minimap-node="${escape(p.name)}" class="minimap-node${selectedNodes.has(p.name)?' selected':''}" x="${p.x}" y="${p.y}" width="${p.width}" height="${p.height}" rx="12" fill="${escape(p.color||color(p.node.type))}"><title>${escape(model.title(p.name))}</title></rect>`).join('')}<rect class="minimap-viewport" x="${viewport.x}" y="${viewport.y}" width="${viewport.width}" height="${viewport.height}"/>`;
 }
 function setupMinimap() {
   const svg = $('#minimap'); minimapDrag = null;
   const moveTo = (x,y) => {
     graphView.x = -x*graphView.zoom; graphView.y = -y*graphView.zoom;
-    model.metadata.viewport = clone(graphView); model.dirty = true; drawGraph(); updateStatus();
+    model.metadata.viewport = clone(graphView); model.dirty = true; scheduleGraphFrame(); updateStatus();
   };
   svg.onpointerdown = event => {
     if (event.button !== 0 || drag || linking) return;
@@ -668,7 +718,7 @@ function setupMinimap() {
     event.preventDefault(); event.stopPropagation(); const view = minimapViewport();
     moveTo(view.x+direction[0]*view.width*.15,view.y+direction[1]*view.height*.15);
   };
-  const observer = new ResizeObserver(drawMinimap); observer.observe($('.graph-shell'));
+  const observer = new ResizeObserver(() => { if (graphRenderer?.scene.isConnected) drawMinimap(true); }); observer.observe($('.graph-shell'));
   graphListeners.signal.addEventListener('abort',()=>observer.disconnect(),{once:true});
 }
 function closeContext() { $('#graph-context')?.remove(); }
@@ -706,7 +756,7 @@ document.addEventListener('pointerdown',event=>{if(!event.target.closest('#graph
 function zoomBy(multiplier, cx = $('.graph-shell').clientWidth / 2, cy = $('.graph-shell').clientHeight / 2) {
   const zoom = Math.min(2, Math.max(.25, graphView.zoom * multiplier)), ratio = zoom / graphView.zoom;
   graphView.x = cx - (cx - graphView.x) * ratio; graphView.y = cy - (cy - graphView.y) * ratio; graphView.zoom = zoom;
-  model.metadata.viewport = clone(graphView); model.dirty = true; drawGraph(); updateStatus();
+  model.metadata.viewport = clone(graphView); model.dirty = true; scheduleGraphFrame(); updateStatus();
 }
 function fit(markDirty = true) {
   const entries = Object.entries(model.allNodes()); if (!entries.length) return;
@@ -716,7 +766,7 @@ function fit(markDirty = true) {
   graphView.zoom = Math.min(1.2, Math.max(.25, Math.min((width - 90) / (maxX - minX), (height - 90) / (maxY - minY))));
   graphView.x = (width - (maxX - minX) * graphView.zoom) / 2 - minX * graphView.zoom;
   graphView.y = (height - (maxY - minY) * graphView.zoom) / 2 - minY * graphView.zoom;
-  model.metadata.viewport = clone(graphView); if (markDirty) model.dirty = true; drawGraph(); updateStatus();
+  model.metadata.viewport = clone(graphView); if (markDirty) model.dirty = true; scheduleGraphFrame(); updateStatus();
 }
 function materialEditor(key, value, control) {
   const entries = control === 'materials' ? (Array.isArray(value) ? value : []).map(item => [item]) : Object.entries(value && typeof value === 'object' && !Array.isArray(value) ? value : {});

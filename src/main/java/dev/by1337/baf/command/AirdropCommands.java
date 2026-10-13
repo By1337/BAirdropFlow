@@ -7,6 +7,7 @@ import dev.by1337.cmd.Command;
 import dev.by1337.cmd.CommandMsgError;
 import dev.by1337.cmd.argument.ArgumentCommand;
 import dev.by1337.cmd.argument.ArgumentString;
+import dev.by1337.cmd.argument.ArgumentStrings;
 import dev.by1337.core.command.bcmd.argument.ArgumentInt;
 import dev.by1337.edsl.command.DefaultEventCommands;
 import dev.by1337.edsl.context.EventContext;
@@ -28,10 +29,25 @@ public class AirdropCommands {
         COMMANDS = new Command<EventContext>("root")
                 .and(DefaultEventCommands.createCommands())
                 .and(nodeControl())
+                .and(argumentControl())
                 .and(world())
         ;
     }
 
+
+    static Command<EventContext> argumentControl() {
+        return new Command<EventContext>("root")
+                .sub(new Command<EventContext>("[set_arg]").executor(
+                        new ArgumentString<>("key"),
+                        new ArgumentStrings<>("value"),
+                        (ctx, key, value) -> {
+                            var drop = ctx.get(Airdrop.class);
+                            if (drop == null) throw new CommandMsgError("set_arg requires an airdrop");
+                            if (key == null || value == null)
+                                throw new CommandMsgError("Use set_arg: <key> <value>");
+                            drop.args().put(key, value);
+                        }));
+    }
 
     private static Command<EventContext> nodeControl() {
         return new Command<EventContext>("root")

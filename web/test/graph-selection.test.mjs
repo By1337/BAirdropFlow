@@ -21,7 +21,7 @@ function editor(zoom = 1) {
     getBoundingClientRect:()=>({left:0,top:0})};
   const context = createContext({model, clone, AbortController,
     document:{addEventListener() {}}, $:()=>svg,
-    setupMinimap() {}, closeContext() {}, drawGraph() {}, drawInspector() {}, refresh() {},
+    setupMinimap() {}, closeContext() {}, drawGraph() {}, scheduleGraphFrame() {}, drawInspector() {}, refresh() {},
     nodeWidth:()=>300, heightFor:()=>200, bodyTop:()=>60});
   runInContext(`let selected, selectedEdge, drag, linking, graphListeners;
     const selectedNodes = new Set(); let graphView = clone(model.metadata.viewport);

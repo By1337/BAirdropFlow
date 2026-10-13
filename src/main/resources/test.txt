@@ -1,18 +1,5 @@
-Обычный ★ голубой цвет
-Редкий ★★ зелёный цвет
-Сверхредкий ★★★ синий цвет
-Эпический ★★★★ фиолетовый цвет
-Мифический ★★★★ красный цвет
-Легендарный ★★★★★ жёлтый / золотой цвет
-Ультра ★★★★★★ переливающийся / радужный цвет
-
-
-
 
 <click:run_command:''><hover:show_text:'<dark_gray>[<#FB0000>★★★★<gray>★<dark_gray>]'>Элитный</hover></click>
-
-
-
 
 
 <gradient:#AC2600:#FF9D00:#830000> ╔═══╦═╦══╦═╦══╦══╦══╦══╗</gradient>
@@ -21,10 +8,6 @@
 <#830000> ║<#FFFFE6>   Появится уже через<#FFCC00> 3 минуты!
 <#981300> ║
 <gradient:#AC2600:#FF9D00:#830000> ╚═══╩═╩══╩═╩══╩══╩══╩══╝</gradient>
-
-
-
-
 
 
 <gradient:#AC2600:#FF9D00:#830000> ╔═══╦═╦══╦═╦══╦══╦══╦══╗</gradient>
@@ -84,15 +67,6 @@
 <gradient:#AC2600:#FF9D00:#830000> ╚═══╩═╩══╩═╩══╩══╩══╩══╝</gradient>
 
 
-- "[MESSAGE_ALL] <gradient:#E408FB:#6673FF>╔══╦════╦══</gradient><#6874FD>═<gradient:#776DFA:#FF2BDF>═╦══╦══╦═╗</gradient>"
-- "[MESSAGE_ALL] <#E408FB>║"
-- "[MESSAGE_ALL] <#E408FB>║<white>         <obf><light_purple>I  <gradient:#E218FB:#FD7777>Сундук Витовта  </gradient><light_purple>I"
-- "[MESSAGE_ALL] <#E408FB>║<white>    Уровень лута: {air_name}"
-- "[MESSAGE_ALL] <#E408FB>║<white>    Призыватель: <gold>_By1337_"
-- "[MESSAGE_ALL] <#E408FB>║<white>    Появится через <#3AF2A6>30 секунд<white>!"
-- "[MESSAGE_ALL] <#E408FB>║"
-- "[MESSAGE_ALL] <gradient:#E408FB:#6673FF>╚══╩════╩══</gradient><#6874FD>═<gradient:#776DFA:#FF2BDF>═╩══╩══╩═╝<
-
 <gradient:#AC2600:#FF9D00:#830000> ╔═══╦═╦══╦═╦══╦══╦══╦══╗</gradient>
 <#981300> ║
 <#830000> ║<#FFFFE6>     <obf><#FF7200>|||</obf><#FF7700>   [Маяк убийца]   <obf><#FF7200>|||
@@ -102,96 +76,3 @@
 указывать на место ивента.'>1826 70 -189</hover></click><white>
 <#981300> ║
 <gradient:#AC2600:#FF9D00:#830000> ╚═══╩═╩══╩═╩══╩══╩══╩══╝</gradient>
-
-sub(new Command<CommandSender>("adapt").requires(new RequiresPermission<>("baf.web.admin"))
-                        .executor(sender -> {
-                            try {
-                                File airdrops = new File("/home/by1337/servers/leaf-1.21.11/plugins/BAirdropFlow/old/airdrops/");
-                                for (File air : airdrops.listFiles()) {
-                                    File items = new File(air, "items.snbt");
-                                    if (!items.exists()) continue;
-                                    var tag = NBTParser.parseAsCompoundTag(Files.readString(items.toPath(), StandardCharsets.UTF_8));
-                                    ListNBT listNBT = (ListNBT) tag.getOrThrow("items");
-                                    List<LootEntry> res = new ArrayList<>();
-                                    for (var nbt : listNBT) {
-                                        var item = (CompoundTag) nbt;
-                                        int chance = item.getAsInt("chance");
-                                        int minAmount = item.getAsInt("minAmount");
-                                        int maxAmount = item.getAsInt("maxAmount");
-                                        ItemStack itemStack = BLib.getApi().getParseCompoundTag().create((CompoundTag) item.getOrThrow("item"));
-                                        res.add(new LootEntry(new ItemHolder(itemStack), chance, minAmount, maxAmount));
-                                    }
-                                    int rolls = 25;
-                                    File cfg = new File(air, "inventory_config.yml");
-                                    if (cfg.exists()){
-                                        rolls = YamlMap.load(cfg).get("genItemCount").asInt(25);
-                                    }
-                                    LootTable lootTable = new LootTable(res, rolls);
-                                    System.out.println("adapt " + air.getName());
-                                    LootTables.DEFAULT.set(air.getName(), lootTable);
-                                }
-                                LootTables.DEFAULT.save();
-                            } catch (Exception e) {
-                                throw new RuntimeException(e);
-                            }
-                        }))
-
-========== ВАРИАНТЫ ЦВЕТОВ РЕДКОСТЕЙ / MiniMessage ==========
-
-Вариант A — основной: чистые младшие редкости, градиенты со сверхредкого.
-Легендарный — янтарь → светлое золото → янтарь, как металлический блик.
-Ультра — призма: голубой → сиреневый → розовый → персиковый → мятный.
-Для ультра я бы начал с этой призмы: она выделяется после золота и не выглядит кислотной.
-
-common: '<bold><#75D5FF>★ Обычный</bold><reset>'
-rare: '<bold><#65E887>★★ Редкий</bold><reset>'
-super_rare: '<bold><gradient:#377AFF:#84B9FF:#4265F5>★★★ Сверхредкий</gradient></bold>'
-epic: '<bold><gradient:#9D57F5:#DA9AFF:#A367F8>★★★★ Эпический</gradient></bold>'
-mythic: '<bold><gradient:#EF4058:#FF8B91:#F04460>★★★★ Мифический</gradient></bold>'
-legendary: '<bold><gradient:#FFAE32:#FFF1A8:#FFC34D>★★★★★ Легендарный</gradient></bold>'
-ultra: '<bold><gradient:#87E8FF:#B7AEFF:#FF9DDA:#FFD3A0:#A0F5D1>★★★★★★ Ультра</gradient></bold>'
-
-Вариант B — ярче, более мультяшный / игровой.
-Сверхредкий — электрический синий; эпический — пурпур с розовым бликом.
-У мифического тёплый коралловый блик, но основа остаётся красной.
-Ультра — насыщенная радуга; можно брать для больших заголовков.
-
-common: '<#63D8FF>Обычный'
-rare: '<#68F568>Редкий'
-super_rare: '<gradient:#2861FF:#6EADFF:#3157F0>Сверхредкий</gradient>'
-epic: '<gradient:#A844FF:#EC8CFF:#A956FF>Эпический</gradient>'
-mythic: '<gradient:#FF314F:#FF8870:#FA365C>Мифический</gradient>'
-legendary: '<gradient:#FF9E20:#FFE86A:#FFF5BF:#FFB42E>Легендарный</gradient>'
-ultra: '<gradient:#FFF2A6:#FFAEF5:#A0EFFF>Ультра</gradient>'
-
-ЛЕГЕНДАРНЫЙ — ещё три отдельных варианта:
-
-1. Королевское золото — насыщенные края, почти белая середина.
-'<bold><gradient:#EFA42B:#FFD65A:#FFF6CB:#FFD65A:#EFA42B>Легендарный</gradient></bold>'
-
-2. Солнечный — проще и контрастнее, без белого блика.
-'<bold><gradient:#FFAA2B:#FFE977:#FFC346>Легендарный</gradient></bold>'
-
-3. Светлое золото — мягче, для небольших надписей в лоре.
-'<gradient:#FFD06A:#FFF0BA:#FFD06A>Легендарный</gradient>'
-
-УЛЬТРА — ещё три отдельных варианта:
-
-1. Опал — холодный перламутр, более спокойный и дорогой по ощущению.
-'<bold><gradient:#A0F0FF:#BBAEFF:#FFB3E2:#C2FFF0:#A0F0FF>Ультра</gradient></bold>'
-
-2. Аврора — фиолетовый → розовый → голубой → мятный.
-'<bold><gradient:#BA8CFF:#FF98DB:#86DFFF:#86F1CF>Ультра</gradient></bold>'
-
-3. Полная радуга — максимально заметно; скорее для анонса, чем для каждой строки лора.
-'<bold><gradient:#FF7595:#FFB16E:#FFE87C:#86EFA2:#7ECFFF:#B09BFF:#F397DF>Ультра</gradient></bold>'
-
-Комбинация, с которой я бы начал:
-Обычный/Редкий/Сверхредкий/Эпический/Мифический — вариант A.
-Легендарный — «Королевское золото».
-Ультра — «Опал», если хочется перламутр; основная призма A, если хочется больше радуги.
-
-На коротком слове «Ультра» градиент лучше красить вместе со звёздами:
-так хватает символов для переходов между цветами.
-Все примеры здесь статичные: сами по себе gradient-теги не анимируют перелив.
-Число звёзд оставлено как в твоей записи: у эпического и мифического по четыре.
