@@ -44,7 +44,7 @@ class LootingInventoryTest {
     }
 
     private int occupiedSlot() {
-        for (int i = 0; i < 54; i++) if (loot.getInventory().getItem(i) != null) return i;
+        for (int i = 0; i < loot.getInventory().getSize(); i++) if (loot.getInventory().getItem(i) != null) return i;
         throw new AssertionError("No loot");
     }
 
@@ -204,11 +204,127 @@ class LootingInventoryTest {
         assertTrue(player.getItemOnCursor().getType().isAir());
     }
 
+    private void createCooling(int delay, int maxDelay) {
+        loot = new LootingInventory(9, Component.text("Cooling"), player.getLocation(), MockBukkit.createMockPlugin(),
+                -1, List.of(Material.BLAZE_POWDER), Component.text("Warm"), delay, maxDelay);
+        player.openInventory(loot.getInventory());
+    }
+
+    @Test
+    void slotsCoolIndependentlyAndCannotBeTakenBeforeReveal() {
+        createCooling(5, 5);
+        assertEquals(9, loot.getInventory().getSize());
+        loot.fill(List.of(new ItemStack(Material.DIAMOND, 13), new ItemStack(Material.GOLD_INGOT, 2)), 0, 3, 3);
+        server.getScheduler().performTicks(2);
+        assertEquals(0, occupiedCount());
+        server.getScheduler().performTicks(1);
+        int first = occupiedSlot();
+        assertEquals(Material.BLAZE_POWDER, loot.getInventory().getItem(first).getType());
+        for (InventoryAction action : List.of(InventoryAction.PICKUP_ALL, InventoryAction.PICKUP_HALF,
+                InventoryAction.MOVE_TO_OTHER_INVENTORY, InventoryAction.SWAP_WITH_CURSOR,
+                InventoryAction.DROP_ALL_SLOT, InventoryAction.CLONE_STACK)) {
+            assertTrue(click(first, ClickType.LEFT, action).isCancelled());
+        }
+        var hotbar = new InventoryClickEvent(player.getOpenInventory(), InventoryType.SlotType.CONTAINER,
+                first, ClickType.NUMBER_KEY, InventoryAction.HOTBAR_SWAP, 0);
+        server.getPluginManager().callEvent(hotbar);
+        assertTrue(hotbar.isCancelled());
+        assertNull(player.getInventory().getItem(0));
+        assertTrue(player.getItemOnCursor().getType().isAir());
+        player.closeInventory();
+        server.getScheduler().performTicks(3);
+        assertEquals(2, occupiedCount());
+        server.getScheduler().performTicks(2);
+        assertEquals(new ItemStack(Material.DIAMOND, 13), loot.getInventory().getItem(first));
+        assertEquals(1, java.util.Arrays.stream(loot.getInventory().getContents())
+                .filter(item -> item != null && item.getType() == Material.BLAZE_POWDER).count());
+        server.getScheduler().performTicks(3);
+        assertTrue(java.util.Arrays.stream(loot.getInventory().getContents())
+                .noneMatch(item -> item != null && item.getType() == Material.BLAZE_POWDER));
+        player.openInventory(loot.getInventory());
+        click(first, ClickType.LEFT, InventoryAction.PICKUP_ALL);
+        assertEquals(new ItemStack(Material.DIAMOND, 13), player.getItemOnCursor());
+    }
+
+    @Test
+    void randomIntervalsAndRevealDelaysStayWithinTheirOwnBounds() {
+        createCooling(4, 7);
+        loot.fill(Collections.nCopies(5, new ItemStack(Material.DIAMOND)), 0, 2, 5);
+        Map<Integer, Integer> appeared = new java.util.HashMap<>();
+        java.util.Set<Integer> revealed = new java.util.HashSet<>();
+        int previousAppearance = 0;
+        for (int tick = 1; tick <= 32; tick++) {
+            server.getScheduler().performOneTick();
+            for (int slot = 0; slot < 9; slot++) {
+                ItemStack item = loot.getInventory().getItem(slot);
+                if (item == null) continue;
+                if (!appeared.containsKey(slot)) {
+                    assertTrue(tick - previousAppearance >= 2 && tick - previousAppearance <= 5);
+                    assertEquals(Material.BLAZE_POWDER, item.getType());
+                    appeared.put(slot, tick);
+                    previousAppearance = tick;
+                }
+                if (item.getType() == Material.DIAMOND && revealed.add(slot)) {
+                    int delay = tick - appeared.get(slot);
+                    assertTrue(delay >= 4 && delay <= 7);
+                }
+            }
+        }
+        assertEquals(5, appeared.size());
+        assertEquals(5, revealed.size());
+    }
+
+    @Test
+    void fullInventorySkipsAttemptsAndCanAcceptLaterItems() {
+        createCooling(1, 1);
+        loot.fill(Collections.nCopies(11, new ItemStack(Material.DIAMOND)), 0, 2, 2);
+        server.getScheduler().performTicks(20);
+        assertEquals(9, occupiedCount());
+        loot.getInventory().clear();
+        server.getScheduler().performTicks(3);
+        assertEquals(1, occupiedCount());
+        assertEquals(Material.DIAMOND, loot.getInventory().getItem(occupiedSlot()).getType());
+    }
+
+    @Test
+    void revealDoesNotOverwriteReplacedSlotsAndRemovalCancelsAllTimers() {
+        createCooling(5, 5);
+        loot.fill(List.of(new ItemStack(Material.DIAMOND), new ItemStack(Material.GOLD_INGOT)), 0, 3, 3);
+        server.getScheduler().performTicks(3);
+        int slot = occupiedSlot();
+        loot.getInventory().setItem(slot, new ItemStack(Material.EMERALD));
+        server.getScheduler().performTicks(5);
+        assertEquals(Material.EMERALD, loot.getInventory().getItem(slot).getType());
+        loot.fill(Collections.nCopies(3, new ItemStack(Material.STONE)), 0, 3, 3);
+        loot.close();
+        server.getScheduler().performTicks(30);
+        assertEquals(0, occupiedCount());
+        assertNotSame(loot.getInventory(), player.getOpenInventory().getTopInventory());
+    }
+
+    private long occupiedCount() {
+        return java.util.Arrays.stream(loot.getInventory().getContents()).filter(item -> item != null).count();
+    }
+
+    @Test
+    void migratedAirdropLooterConfigDecodes() {
+        var node = dev.by1337.yaml.YamlMap.load(new java.io.File("CONFIGS/workflow/airdrop.yml")).get("nodes.looter");
+        var decoded = LooterComponent.Config.DECODER.decode(node);
+        assertFalse(decoded.hasError(), decoded.error());
+    }
+
     @Test
     void typedConfigurationRejectsInvalidDurationsAndMaskMaterials() {
         var defaults = LooterComponent.Config.DECODER.decode(YamlValue.wrap(Map.of("loot_table", "test")));
         assertFalse(defaults.hasError(), defaults.error());
         for (var invalid : List.of(Map.of("rolls", -1), Map.of("take_cooldown_ticks", -2), Map.of("fill_duration_ticks", -1),
+                Map.of("size", 0), Map.of("size", 10), Map.of("size", 63),
+                Map.of("fill_interval_ticks", -1), Map.of("reveal_delay_ticks", -1),
+                Map.of("fill_interval_max_ticks", -1), Map.of("reveal_delay_max_ticks", -1),
+                Map.of("fill_interval_ticks", 5, "fill_interval_max_ticks", 4),
+                Map.of("reveal_delay_ticks", 5, "reveal_delay_max_ticks", 4),
+                Map.of("fill_interval_max_ticks", 5), Map.of("reveal_delay_max_ticks", 5),
+                Map.of("fill_duration_ticks", 20, "fill_interval_ticks", 5),
                 Map.of("obfuscation_materials", List.of("air")), Map.of("obfuscation_materials", List.of("not_a_material")))) {
             var config = new java.util.HashMap<String, Object>(invalid);
             config.put("loot_table", "test");

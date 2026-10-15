@@ -35,6 +35,9 @@ public class LootingInventory implements Listener, InventoryHolder {
     private final int takeCooldownTicks;
     private final List<Material> obfuscationMaterials;
     private final Component obfuscationName;
+    private final int revealDelayTicks;
+    private final int revealDelayMaxTicks;
+    private final Map<String, BukkitTask> revealTasks = new HashMap<>();
     private final NamespacedKey maskKey;
     private final Map<String, ItemStack> hiddenItems = new HashMap<>();
     private final Map<UUID, Integer> cooldowns = new HashMap<>();
@@ -47,6 +50,17 @@ public class LootingInventory implements Listener, InventoryHolder {
 
     public LootingInventory(int size, @NotNull Component title, Location center, Plugin plugin,
                             int takeCooldownTicks, List<Material> obfuscationMaterials, Component obfuscationName) {
+        this(size, title, center, plugin, takeCooldownTicks, obfuscationMaterials, obfuscationName, 0, 0);
+    }
+
+    public LootingInventory(int size, @NotNull Component title, Location center, Plugin plugin,
+                            int takeCooldownTicks, List<Material> obfuscationMaterials, Component obfuscationName,
+                            int revealDelayTicks, int revealDelayMaxTicks) {
+        if (size < 9 || size > 54 || size % 9 != 0) throw new IllegalArgumentException("Invalid inventory size");
+        if (revealDelayTicks < 0 || revealDelayMaxTicks < revealDelayTicks || (revealDelayTicks == 0 && revealDelayMaxTicks != 0))
+            throw new IllegalArgumentException("Invalid reveal delay range");
+        this.revealDelayTicks = revealDelayTicks;
+        this.revealDelayMaxTicks = revealDelayMaxTicks;
         if (takeCooldownTicks < -1) throw new IllegalArgumentException("Invalid take cooldown");
         if (obfuscationMaterials.stream().anyMatch(m -> !m.isItem() || m.isAir()))
             throw new IllegalArgumentException("Mask materials must be non-air items");
@@ -68,13 +82,25 @@ public class LootingInventory implements Listener, InventoryHolder {
      * Every stack gets one insertion attempt; a full inventory discards that attempt.
      */
     public void fill(List<ItemStack> list, int durationTicks) {
+        fill(list, durationTicks, 0, 0);
+    }
+
+    public void fill(List<ItemStack> list, int durationTicks, int intervalTicks, int intervalMaxTicks) {
         if (durationTicks < 0) throw new IllegalArgumentException("Invalid fill duration");
+        if (intervalTicks < 0 || intervalMaxTicks < intervalTicks || (intervalTicks == 0 && intervalMaxTicks != 0))
+            throw new IllegalArgumentException("Invalid fill interval range");
+        if (durationTicks > 0 && intervalTicks > 0)
+            throw new IllegalArgumentException("fill_duration_ticks and fill_interval_ticks cannot be used together");
         if (fillTask != null) {
             fillTask.cancel();
             fillTask = null;
         }
         if (closed) return;
         List<ItemStack> items = list.stream().filter(item -> !empty(item)).map(ItemStack::clone).toList();
+        if (intervalTicks > 0) {
+            if (!items.isEmpty()) fillAtIntervals(items.iterator(), intervalTicks, intervalMaxTicks);
+            return;
+        }
         if (durationTicks == 0) {
             items.forEach(this::insert);
             return;
@@ -96,12 +122,41 @@ public class LootingInventory implements Listener, InventoryHolder {
         }, 1, 1);
     }
 
+    private static int randomTicks(int min, int max) {
+        return (int) ThreadLocalRandom.current().nextLong(min, (long) max + 1);
+    }
+
+    private void fillAtIntervals(Iterator<ItemStack> items, int min, int max) {
+        fillTask = plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            fillTask = null;
+            if (closed) return;
+            insert(items.next());
+            if (items.hasNext()) fillAtIntervals(items, min, max);
+        }, randomTicks(min, max));
+    }
+
+    private String maskId(ItemStack item) {
+        return !empty(item) && item.hasItemMeta()
+                ? item.getItemMeta().getPersistentDataContainer().get(maskKey, PersistentDataType.STRING) : null;
+    }
+
+    private void reveal(int slot, String id) {
+        revealTasks.remove(id);
+        ItemStack real = hiddenItems.remove(id);
+        if (closed || real == null || !id.equals(maskId(inventory.getItem(slot)))) return;
+        inventory.setItem(slot, real);
+        for (HumanEntity viewer : inventory.getViewers()) {
+            if (viewer instanceof Player player) applyCooldown(player, remainingCooldown(player));
+        }
+    }
+
     private void insert(ItemStack item) {
         List<Integer> free = new ArrayList<>();
         for (int slot = 0; slot < inventory.getSize(); slot++) {
             if (empty(inventory.getItem(slot))) free.add(slot);
         }
         if (free.isEmpty()) return;
+        int slot = free.get(ThreadLocalRandom.current().nextInt(free.size()));
         ItemStack displayed = item;
         if (!obfuscationMaterials.isEmpty()) {
             String id = UUID.randomUUID().toString();
@@ -111,8 +166,12 @@ public class LootingInventory implements Listener, InventoryHolder {
             if (obfuscationName != null) meta.displayName(obfuscationName);
             meta.getPersistentDataContainer().set(maskKey, PersistentDataType.STRING, id);
             displayed.setItemMeta(meta);
+            if (revealDelayTicks > 0) {
+                revealTasks.put(id, plugin.getServer().getScheduler().runTaskLater(plugin,
+                        () -> reveal(slot, id), randomTicks(revealDelayTicks, revealDelayMaxTicks)));
+            }
         }
-        inventory.setItem(free.get(ThreadLocalRandom.current().nextInt(free.size())), displayed);
+        inventory.setItem(slot, displayed);
         // Items arriving during an active cooldown must also show its remaining duration.
         for (HumanEntity viewer : inventory.getViewers()) {
             if (viewer instanceof Player player) applyCooldown(player, remainingCooldown(player));
@@ -163,8 +222,8 @@ public class LootingInventory implements Listener, InventoryHolder {
         event.setCancelled(true);
         ItemStack displayed = event.getCurrentItem();
         if (empty(displayed)) return;
-        String id = displayed.hasItemMeta() ? displayed.getItemMeta().getPersistentDataContainer()
-                .get(maskKey, PersistentDataType.STRING) : null;
+        String id = maskId(displayed);
+        if (id != null && revealTasks.containsKey(id)) return;
         ItemStack real = id == null ? displayed.clone() : hiddenItems.get(id);
         if (empty(real)) return;
         real = real.clone();
@@ -278,6 +337,8 @@ public class LootingInventory implements Listener, InventoryHolder {
             fillTask.cancel();
             fillTask = null;
         }
+        revealTasks.values().forEach(BukkitTask::cancel);
+        revealTasks.clear();
         HandlerList.unregisterAll(this);
         List.copyOf(inventory.getViewers()).forEach(HumanEntity::closeInventory);
         inventory.clear();

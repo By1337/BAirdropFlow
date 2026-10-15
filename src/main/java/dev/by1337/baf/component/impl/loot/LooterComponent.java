@@ -69,6 +69,12 @@ public class LooterComponent extends AbstractComponent {
         int cooldown = config.takeCooldownTicks.getInt(airdrop);
         int fillTicks = config.fillDurationTicks.getInt(airdrop);
         int rolls = config.rolls.getInt(airdrop);
+        int size = config.size.getInt(airdrop);
+        int interval = config.fillIntervalTicks.getInt(airdrop);
+        int intervalMax = upperBound(interval, config.fillIntervalMaxTicks.getInt(airdrop));
+        int reveal = config.revealDelayTicks.getInt(airdrop);
+        int revealMax = upperBound(reveal, config.revealDelayMaxTicks.getInt(airdrop));
+        validateTimings(fillTicks, interval, intervalMax, reveal, revealMax);
         var materials = config.obfuscationMaterials.stream().map(value -> value.getMaterial(airdrop)).toList();
         if (materials.stream().anyMatch(m -> !m.isItem() || m.isAir()))
             throw new IllegalArgumentException("Obfuscation materials must be non-air items");
@@ -83,12 +89,12 @@ public class LooterComponent extends AbstractComponent {
                     LooterComponent.this::on
             ));
             inventoryHolder.set(new LootingInventory(
-                    54,
+                    size,
                     MiniMessage.deserialize(config.title.getString(airdrop)),
                     airdrop.location().add(offsets.x(), offsets.y(), offsets.z()),
                     airdrop.manager().plugin(),
                     cooldown, materials,
-                    maskName.isEmpty() ? null : MiniMessage.deserialize(maskName)
+                    maskName.isEmpty() ? null : MiniMessage.deserialize(maskName), reveal, revealMax
             ));
             LootTable lootTable = airdrop.manager().lootTables().get(lootId);
             if (lootTable == null) {
@@ -96,7 +102,7 @@ public class LooterComponent extends AbstractComponent {
             } else {
                 var inv = inventoryHolder.get();
                 if (inv == null) return;
-                inv.fill(lootTable.generate(rolls), fillTicks);
+                inv.fill(lootTable.generate(rolls), fillTicks, interval, intervalMax);
             }
             config.create.handle(ctx);
         }
@@ -112,12 +118,30 @@ public class LooterComponent extends AbstractComponent {
     }
 
 
+    private static int upperBound(int min, int max) {
+        return max == 0 ? min : max;
+    }
+
+    private static void validateTimings(int duration, int interval, int intervalMax, int reveal, int revealMax) {
+        if (intervalMax < interval || (interval == 0 && intervalMax != 0))
+            throw new IllegalArgumentException("Invalid fill interval range");
+        if (revealMax < reveal || (reveal == 0 && revealMax != 0))
+            throw new IllegalArgumentException("Invalid reveal delay range");
+        if (duration > 0 && interval > 0)
+            throw new IllegalArgumentException("fill_duration_ticks and fill_interval_ticks cannot be used together");
+    }
+
     public static class Config implements ComponentFactory {
         public static final NodeSchema WEB_SCHEMA = NodeSchema.of("Контейнер лута", "Открывает инвентарь с лутом при взаимодействии с блоком.")
                 .vector("offsets", "Смещение блока", "0;0;0", false)
                 .text("loot_table", "Таблица лута", "loot/default", true)
                 .integer("rolls", "Количество выборок лута (с повторениями)", 1, 0, false)
                 .text("title", "Заголовок инвентаря", "&7Title", false)
+                .integer("size", "Размер GUI (9–54, кратно 9)", 54, 9, false)
+                .integer("fill_interval_ticks", "Минимальный интервал добавления, тиков (0 — выключен)", 0, 0, false)
+                .integer("fill_interval_max_ticks", "Максимальный интервал (0 — равен минимальному)", 0, 0, false)
+                .integer("reveal_delay_ticks", "Минимальное остывание маски, тиков (0 — раскрытие при подборе)", 0, 0, false)
+                .integer("reveal_delay_max_ticks", "Максимальное остывание (0 — равно минимальному)", 0, 0, false)
                 .integer("take_cooldown_ticks", "КД взятия, тиков (-1 — выключен)", -1, -1, false)
                 .integer("fill_duration_ticks", "Длительность заполнения, тиков", 0, 0, false)
                 .materials("obfuscation_materials", "Материалы масок (пусто — выключено)")
@@ -137,11 +161,21 @@ public class LooterComponent extends AbstractComponent {
                 IntValue.DECODER.fieldOf("fill_duration_ticks", new IntValue(0)),
                 MaterialValue.DECODER.listOf().fieldOf("obfuscation_materials", List.of()),
                 StringValue.DECODER.fieldOf("obfuscation_name", new StringValue("")),
-                IntValue.DECODER.fieldOf("rolls", new IntValue(1))
+                IntValue.DECODER.fieldOf("rolls", new IntValue(1)),
+                IntValue.DECODER.fieldOf("size", new IntValue(54)),
+                IntValue.DECODER.fieldOf("fill_interval_ticks", new IntValue(0)),
+                IntValue.DECODER.fieldOf("fill_interval_max_ticks", new IntValue(0)),
+                IntValue.DECODER.fieldOf("reveal_delay_ticks", new IntValue(0)),
+                IntValue.DECODER.fieldOf("reveal_delay_max_ticks", new IntValue(0))
         );
         private final Vec3iValue offsets;
         private final StringValue lootTable;
         private final IntValue rolls;
+        private final IntValue size;
+        private final IntValue fillIntervalTicks;
+        private final IntValue fillIntervalMaxTicks;
+        private final IntValue revealDelayTicks;
+        private final IntValue revealDelayMaxTicks;
         private final EventHandler create;
         private final EventHandler open;
         private final EventHandler remove;
@@ -173,6 +207,29 @@ public class LooterComponent extends AbstractComponent {
         public Config(Vec3iValue offsets, StringValue lootTable, EventHandler create, EventHandler open, EventHandler remove,
                       StringValue title, IntValue takeCooldownTicks, IntValue fillDurationTicks,
                       List<MaterialValue> obfuscationMaterials, StringValue obfuscationName, IntValue rolls) {
+            this(offsets, lootTable, create, open, remove, title, takeCooldownTicks, fillDurationTicks,
+                    obfuscationMaterials, obfuscationName, rolls, new IntValue(54), new IntValue(0), new IntValue(0),
+                    new IntValue(0), new IntValue(0));
+        }
+
+        public Config(Vec3iValue offsets, StringValue lootTable, EventHandler create, EventHandler open, EventHandler remove,
+                      StringValue title, IntValue takeCooldownTicks, IntValue fillDurationTicks,
+                      List<MaterialValue> obfuscationMaterials, StringValue obfuscationName, IntValue rolls,
+                      IntValue size, IntValue fillIntervalTicks, IntValue fillIntervalMaxTicks,
+                      IntValue revealDelayTicks, IntValue revealDelayMaxTicks) {
+            this.size = size.checked(v -> v >= 9 && v <= 54 && v % 9 == 0, "size must be a multiple of 9 between 9 and 54");
+            this.fillIntervalTicks = fillIntervalTicks.checked(v -> v >= 0, "fill_interval_ticks must be >= 0");
+            this.fillIntervalMaxTicks = fillIntervalMaxTicks.checked(v -> v >= 0, "fill_interval_max_ticks must be >= 0");
+            this.revealDelayTicks = revealDelayTicks.checked(v -> v >= 0, "reveal_delay_ticks must be >= 0");
+            this.revealDelayMaxTicks = revealDelayMaxTicks.checked(v -> v >= 0, "reveal_delay_max_ticks must be >= 0");
+            if (fillDurationTicks.isConstant() && fillIntervalTicks.isConstant() && fillIntervalMaxTicks.isConstant()
+                    && revealDelayTicks.isConstant() && revealDelayMaxTicks.isConstant()) {
+                int interval = this.fillIntervalTicks.getInt(null);
+                int reveal = this.revealDelayTicks.getInt(null);
+                validateTimings(fillDurationTicks.getInt(null), interval,
+                        upperBound(interval, this.fillIntervalMaxTicks.getInt(null)), reveal,
+                        upperBound(reveal, this.revealDelayMaxTicks.getInt(null)));
+            }
             this.rolls = rolls.checked(v -> v >= 0, "rolls must be >= 0");
             this.takeCooldownTicks = takeCooldownTicks.checked(v -> v >= -1, "take_cooldown_ticks must be >= -1");
             this.fillDurationTicks = fillDurationTicks.checked(v -> v >= 0, "fill_duration_ticks must be >= 0");
