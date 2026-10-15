@@ -4,11 +4,7 @@ import dev.by1337.core.util.text.minimessage.MiniMessage;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 final class Hologram {
     private static final double LINE_SPACING = 0.3;

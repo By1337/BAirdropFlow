@@ -12,8 +12,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
+import dev.by1337.baf.launch.LaunchRegistry;
 
 class ByTimeSpawnerTest {
     private static final ZoneId MOSCOW = ZoneId.of("Europe/Moscow");
@@ -43,6 +43,17 @@ class ByTimeSpawnerTest {
         return workflow;
     }
 
+    private SpawnerContext context(Map<String, Workflow> workflows, List<TickableEntity> launched) {
+        var registry = new LaunchRegistry();
+        workflows.forEach((id, workflow) -> {
+            var spawner = workflow.spawner();
+            doAnswer(call -> spawner.isGpsPublish()).when(workflow).isGpsPublish();
+            doAnswer(call -> { launched.add(workflow.createSpawner()); return null; }).when(workflow).start();
+            registry.publish(id, id, workflow);
+        });
+        return new SpawnerContext(registry, null);
+    }
+
     @Test
     void launchesWorkflowSpawnerOnceAndAdvancesDailyWithoutReplayingMissedDays() {
         TestClock clock = new TestClock();
@@ -50,7 +61,7 @@ class ByTimeSpawnerTest {
         List<TickableEntity> launched = new ArrayList<>();
         var spawner = new ByTimeSpawner(MOSCOW, true,
                 Map.of(ByTimeSpawner.Schedule.parse("20:00"), Map.of("example:default", 1D)), clock);
-        spawner.start(id -> workflow, launched::add);
+        spawner.start(context(Map.of("example:default", workflow), launched));
         assertEquals(1, spawner.getSecondsUntilNextEvent());
         spawner.tick();
         assertTrue(launched.isEmpty());
@@ -87,17 +98,17 @@ class ByTimeSpawnerTest {
                 ByTimeSpawner.Schedule.parse("21:00"), Map.of("visible", 1D));
         var spawner = new ByTimeSpawner(MOSCOW, true, schedules, clock);
         assertEquals(-1, spawner.getSecondsUntilNextEvent());
-        spawner.start(workflows::get, launched::add);
+        spawner.start(context(workflows, launched));
         assertEquals(3601, spawner.getSecondsUntilNextEvent());
         clock.now = Instant.parse("2026-10-05T17:00:00Z");
         spawner.tick();
         assertEquals(List.of(hidden.createSpawner()), launched);
         var unpublished = new ByTimeSpawner(MOSCOW, false, schedules, clock);
-        unpublished.start(workflows::get, launched::add);
+        unpublished.start(context(workflows, launched));
         assertEquals(-1, unpublished.getSecondsUntilNextEvent());
         var onlyHidden = new ByTimeSpawner(MOSCOW, true,
                 Map.of(ByTimeSpawner.Schedule.parse("20:00"), Map.of("hidden", 1D)), clock);
-        onlyHidden.start(workflows::get, launched::add);
+        onlyHidden.start(context(workflows, launched));
         assertEquals(-1, onlyHidden.getSecondsUntilNextEvent());
     }
 
@@ -132,7 +143,7 @@ class ByTimeSpawnerTest {
         List<TickableEntity> launched = new ArrayList<>();
         var spawner = new ByTimeSpawner(MOSCOW, true,
                 Map.of(ByTimeSpawner.Schedule.parse("20:00"), Map.of("hidden", 10D, "visible", 20D)), clock);
-        spawner.start(workflows::get, launched::add);
+        spawner.start(context(workflows, launched));
         long seconds = spawner.getSecondsUntilNextEvent();
         assertEquals(seconds, spawner.getSecondsUntilNextEvent());
         clock.now = Instant.parse("2026-10-05T17:00:00Z");
@@ -143,11 +154,35 @@ class ByTimeSpawnerTest {
     @Test
     void emptyOrUnknownWorkflowsCannotAdvertiseAnEvent() {
         var empty = new ByTimeSpawner(MOSCOW, true, Map.of(), new TestClock());
-        empty.start(id -> null, entity -> fail());
+        empty.start(context(Map.of(), new ArrayList<>()));
         assertEquals(-1, empty.getSecondsUntilNextEvent());
         var unknown = new ByTimeSpawner(MOSCOW, true,
                 Map.of(ByTimeSpawner.Schedule.parse("20:00"), Map.of("missing", 1D)), new TestClock());
-        assertThrows(IllegalArgumentException.class, () -> unknown.start(id -> null, entity -> fail()));
+        assertThrows(IllegalArgumentException.class, () -> unknown.start(context(Map.of(), new ArrayList<>())));
         assertEquals(-1, unknown.getSecondsUntilNextEvent());
     }
+    @Test
+    void timeStartsRegisteredVoteWhichStartsItsWinningTarget() {
+        var clock = new TestClock();
+        var registry = new LaunchRegistry();
+        var tasks = new ArrayList<TickableEntity>();
+        var winner = new java.util.concurrent.atomic.AtomicInteger();
+        registry.publish("winner", "event:winner", winner::incrementAndGet);
+        var votes = new dev.by1337.baf.vote.VotingService(tasks::add, message -> fail(message), message -> {}, session -> {});
+        var vote = new dev.by1337.baf.vote.VoteSpawner(new dev.by1337.baf.vote.VoteSpawner.Config(
+                "event:vote", 50, "baf:vote", Map.of("event:winner", "Winner"),
+                dev.by1337.baf.vote.VoteSpawner.Resolution.FIRST, dev.by1337.baf.vote.VoteSpawner.Resolution.FIRST,
+                true, new dev.by1337.baf.vote.VoteSpawner.Messages("", "", "", "")));
+        registry.publish("vote", vote.id(), vote);
+        var context = new SpawnerContext(registry, votes);
+        vote.start(context);
+        var scheduler = new ByTimeSpawner(MOSCOW, true,
+                Map.of(ByTimeSpawner.Schedule.parse("20:00"), Map.of(vote.id(), 1D)), clock);
+        scheduler.start(context); assertEquals(1, scheduler.getSecondsUntilNextEvent());
+        clock.now = Instant.parse("2026-10-05T17:00:00Z");
+        scheduler.tick(); scheduler.tick();
+        assertNotNull(votes.active()); assertEquals(1, tasks.size()); assertEquals(0, winner.get());
+        votes.active().tick(); assertNull(votes.active()); assertEquals(1, winner.get());
+    }
+
 }

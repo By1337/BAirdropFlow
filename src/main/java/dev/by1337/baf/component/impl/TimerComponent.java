@@ -29,6 +29,7 @@ public class TimerComponent extends AbstractComponent implements TimerSystem.Tic
     @Override
     public void onCreate(EventContext ctx) {
         timer = config.timer.getInt(airdrop);
+        tick = 0;
         try (var ignored = ctx.tracer().enter(name + " on_create {", "}")) {
             config.on_create.handle(ctx);
         }
@@ -60,7 +61,7 @@ public class TimerComponent extends AbstractComponent implements TimerSystem.Tic
 
     @Override
     public void onSyncTick(EventContext ctx) {
-        if (tick++ % 20 == 0)
+        if (!isRemoved() && ++tick % 20 == 0)
             onTick(ctx);
     }
 

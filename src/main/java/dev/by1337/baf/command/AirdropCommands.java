@@ -139,12 +139,12 @@ public class AirdropCommands {
                         new ArgumentInt<>("radius"),
                         new ArgumentCommand<>("cmd", AirdropCommands::getCommands),
                         (ctx, r, c) -> {
-                            if (r == null || c == null){
+                            if (r == null || c == null) {
                                 throw new CommandMsgError("use [nearby] <radius> <command>");
                             }
                             var air = ctx.get(Airdrop.class);
                             for (Player player : air.location().getNearbyPlayers(r)) {
-                                try (var ignored = ctx.target(player)){
+                                try (var ignored = ctx.target(player)) {
                                     c.run(ctx, s -> s);
                                 }
                             }

@@ -6,32 +6,35 @@ import dev.by1337.baf.Workflow;
 import dev.by1337.baf.spawner.AirdropSpawnerBoot;
 import dev.by1337.baf.workflow.WorkflowRepository;
 import dev.by1337.item.registry.GlobalItemRegistry;
+import dev.by1337.item.registry.ItemRegistry;
+import dev.by1337.yaml.YamlValue;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
-import org.junit.jupiter.api.*;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.persistence.PersistentDataType;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
 
-import org.bukkit.NamespacedKey;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.persistence.PersistentDataType;
-import dev.by1337.item.registry.ItemRegistry;
-import dev.by1337.yaml.YamlValue;
-import java.util.Map;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class ByItemSpawnerTest {
-    @TempDir Path directory;
+    @TempDir
+    Path directory;
     ServerMock server;
     GlobalSpawners spawners;
     Workflow workflow;
@@ -56,7 +59,10 @@ class ByItemSpawnerTest {
                 block(world, x + call.<Integer>getArgument(0), y + call.<Integer>getArgument(1), z + call.<Integer>getArgument(2)));
         when(block.getType()).thenAnswer(ignored -> blockTypes.getOrDefault(key, Material.AIR) == Material.STONE ? solid : Material.AIR);
         when(block.isPassable()).thenAnswer(ignored -> blockTypes.getOrDefault(key, Material.AIR) != Material.STONE);
-        doAnswer(call -> { blockTypes.put(key, call.getArgument(0)); return null; }).when(block).setType(any(Material.class));
+        doAnswer(call -> {
+            blockTypes.put(key, call.getArgument(0));
+            return null;
+        }).when(block).setType(any(Material.class));
         return block;
     }
 
@@ -68,21 +74,22 @@ class ByItemSpawnerTest {
         when(solid.isSolid()).thenReturn(true);
         // MockBukkit does not implement Block#isPassable; model the block grid explicitly.
         support = block(world, 10, 64, 20);
-        for (int x = -1; x <= 1; x++) for (int z = -1; z <= 1; z++) {
-            support.getRelative(x, 0, z).setType(Material.STONE);
-            support.getRelative(x, 1, z).setType(Material.AIR);
-            support.getRelative(x, 2, z).setType(Material.AIR);
-        }
+        for (int x = -1; x <= 1; x++)
+            for (int z = -1; z <= 1; z++) {
+                support.getRelative(x, 0, z).setType(Material.STONE);
+                support.getRelative(x, 1, z).setType(Material.AIR);
+                support.getRelative(x, 2, z).setType(Material.AIR);
+            }
         workflow = mock(Workflow.class);
         air = mock(Airdrop.class);
         when(air.args()).thenReturn(new HashMap<>());
         when(workflow.make(any())).thenReturn(air);
-        var workflows = mock(WorkflowRepository.class);
-        when(workflows.getById("example:test")).thenReturn(workflow);
+        var launches = new dev.by1337.baf.launch.LaunchRegistry();
+        launches.publish("workflow", "example:test", workflow);
         manager = mock(AirdropManager.class);
         AirdropSpawnerBoot.boot();
         spawners = new GlobalSpawners();
-        spawners.load(directory, workflows, manager, message -> fail(message));
+        spawners.load(directory, launches, manager, message -> fail(message));
         // ItemModel rendering uses Paper remapping and cannot run against MockBukkit's
         // Attribute interface with the installed ConfigurableItems 1.6 binary.
         spawners.items().register("test", new ByItemSpawner.SpawnItem(null, "example:test",
@@ -111,7 +118,7 @@ class ByItemSpawnerTest {
                 player.getInventory().getItemInMainHand(), block, BlockFace.UP, hand);
     }
 
-  //  @Test // TODO PAPI
+    //  @Test // TODO PAPI
     void createsImmediatelyWithArgumentsAndConsumesOneRegisteredItem() {
         var event = click(support, EquipmentSlot.HAND);
         server.getPluginManager().callEvent(event);
@@ -172,7 +179,7 @@ class ByItemSpawnerTest {
         registry.register("missing", new ByItemSpawner.SpawnItem(null, "missing", Map.of(),
                 ByItemSpawner.Requirements.DEFAULT, true));
         assertThrows(IllegalArgumentException.class,
-                () -> new ByItemSpawner(registry).start(id -> null, ignored -> fail("must not launch")));
+                () -> new ByItemSpawner(registry).start(new SpawnerContext(new dev.by1337.baf.launch.LaunchRegistry(), null)));
     }
 
     @Test

@@ -131,6 +131,8 @@ nodes:
       - bedrock
     no_place:
       - air
+      - cave_air
+      - void_air
     on_create:
       - create: commands
     on_remove:

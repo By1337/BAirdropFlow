@@ -7,6 +7,9 @@ nodes:
       - bedrock
     no_place:
       - bedrock
+      - air
+      - cave_air
+      - void_air
     replace:
       barrier: air
     on_create: [ ]

@@ -12,12 +12,16 @@ import org.bukkit.event.inventory.InventoryPickupItemEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
 import org.mockbukkit.mockbukkit.entity.PlayerMock;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -36,12 +40,16 @@ class SpreadingItemsTest {
         server = MockBukkit.mock();
         player = server.addPlayer();
         world = mock(World.class);
+        when(world.isChunkLoaded(anyInt(), anyInt())).thenReturn(true);
         when(world.dropItem(any(Location.class), any(ItemStack.class), any())).thenAnswer(call -> {
             Item entity = mock(Item.class);
             when(entity.getUniqueId()).thenReturn(UUID.randomUUID());
             when(entity.isValid()).thenReturn(true);
             when(entity.getLocation()).thenReturn(new Location(world, 0, 65, 0));
-            doAnswer(ignored -> { when(entity.isValid()).thenReturn(false); return null; }).when(entity).remove();
+            doAnswer(ignored -> {
+                when(entity.isValid()).thenReturn(false);
+                return null;
+            }).when(entity).remove();
             entities.add(entity);
             visible.add(((ItemStack) call.getArgument(1)).clone());
             Consumer<Item> initializer = call.getArgument(2);
@@ -66,6 +74,18 @@ class SpreadingItemsTest {
         var event = new EntityPickupItemEvent(player, entities.getFirst(), 0);
         server.getPluginManager().callEvent(event);
         return event;
+    }
+
+    @Test
+    void removalDuringSpawnCannotLeaveAnItemBehind() {
+        spreading = new SpreadingItems(MockBukkit.createMockPlugin(), new Location(world, 0, 65, 0),
+                List.of(new ItemStack(Material.DIAMOND)), 1, 0, 0, 0, 200,
+                List.of(), null, null, 1, item -> spreading.close());
+        spreading.tick();
+        assertTrue(spreading.isClosed());
+        assertEquals(0, spreading.queuedAndLiveCount());
+        assertEquals(1, entities.size());
+        verify(entities.getFirst()).remove();
     }
 
     @Test

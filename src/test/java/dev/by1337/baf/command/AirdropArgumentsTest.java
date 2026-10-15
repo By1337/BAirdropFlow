@@ -12,12 +12,14 @@ import org.mockbukkit.mockbukkit.MockBukkit;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AirdropArgumentsTest {
     @BeforeAll
     static void initContext() {
-        try (var ignored = new EventContext(false)) { }
+        try (var ignored = new EventContext(false)) {
+        }
     }
 
     @Test

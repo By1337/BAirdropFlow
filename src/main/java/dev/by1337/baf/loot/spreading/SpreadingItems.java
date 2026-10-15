@@ -29,13 +29,23 @@ public final class SpreadingItems implements Listener, AutoCloseable {
     private final Component maskName;
     private final int interval, pickupDelay, lifetime, trailInterval;
     private final double horizontalSpeed, verticalSpeed;
+    private final java.util.function.Consumer<Item> configure;
     private final EmitterGraph trail;
     private int tick;
+    private int trailLifetime = Integer.MAX_VALUE;
     private boolean closed;
 
     public SpreadingItems(Plugin plugin, Location origin, List<ItemStack> loot, int interval,
                           double horizontalSpeed, double verticalSpeed, int pickupDelay, int lifetime,
                           List<Material> masks, Component maskName, EmitterGraph trail, int trailInterval) {
+        this(plugin, origin, loot, interval, horizontalSpeed, verticalSpeed, pickupDelay, lifetime, masks, maskName, trail, trailInterval, item -> {});
+    }
+
+    public SpreadingItems(Plugin plugin, Location origin, List<ItemStack> loot, int interval,
+                          double horizontalSpeed, double verticalSpeed, int pickupDelay, int lifetime,
+                          List<Material> masks, Component maskName, EmitterGraph trail, int trailInterval,
+                          java.util.function.Consumer<Item> configure) {
+        this.configure = java.util.Objects.requireNonNull(configure);
         if (interval < 1 || pickupDelay < 0 || lifetime < 1 || trailInterval < 1)
             throw new IllegalArgumentException("Invalid spreading timing");
         if (!Double.isFinite(horizontalSpeed) || horizontalSpeed < 0 ||
@@ -59,6 +69,12 @@ public final class SpreadingItems implements Listener, AutoCloseable {
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
+    public SpreadingItems limitTrailLifetime(int ticks) {
+        if (ticks < 0) throw new IllegalArgumentException("Invalid trail lifetime");
+        trailLifetime = ticks;
+        return this;
+    }
+
     public void tick() {
         if (closed) return;
         if (!pending.isEmpty() && tick % interval == 0) emit();
@@ -68,7 +84,7 @@ public final class SpreadingItems implements Listener, AutoCloseable {
                 drops.remove(drop.entity.getUniqueId());
                 continue;
             }
-            if (trail != null && !drop.entity.isOnGround() && (tick - drop.born) % trailInterval == 0) {
+            if (trail != null && tick - drop.born < trailLifetime && !drop.entity.isOnGround() && (tick - drop.born) % trailInterval == 0) {
                 Location at = drop.entity.getLocation();
                 var particles = trail.make(tick - drop.born);
                 for (Player player : at.getWorld().getPlayers()) {
@@ -93,17 +109,35 @@ public final class SpreadingItems implements Listener, AutoCloseable {
         }
         double angle = ThreadLocalRandom.current().nextDouble(Math.PI * 2);
         Vector velocity = new Vector(Math.cos(angle) * horizontalSpeed, verticalSpeed, Math.sin(angle) * horizontalSpeed);
+        if (!origin.getWorld().isChunkLoaded(origin.getBlockX() >> 4, origin.getBlockZ() >> 4)) return;
         Item entity = origin.getWorld().dropItem(origin, visible, item -> {
             item.setPersistent(false);
             item.setPickupDelay(pickupDelay);
             item.setVelocity(velocity);
+            configure.accept(item);
         });
+        if (closed || !entity.isValid()) {
+            entity.remove();
+            return;
+        }
         drops.put(entity.getUniqueId(), new Drop(entity, original, tick));
     }
 
-    public boolean isSpreadComplete() { return pending.isEmpty(); }
-    public boolean isFinished() { return pending.isEmpty() && drops.isEmpty(); }
-    public boolean isClosed() { return closed; }
+    public int queuedAndLiveCount() {
+        return pending.size() + drops.size();
+    }
+
+    public boolean isSpreadComplete() {
+        return pending.isEmpty();
+    }
+
+    public boolean isFinished() {
+        return pending.isEmpty() && drops.isEmpty();
+    }
+
+    public boolean isClosed() {
+        return closed;
+    }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void pickup(EntityPickupItemEvent event) {
@@ -132,6 +166,28 @@ public final class SpreadingItems implements Listener, AutoCloseable {
             event.setCancelled(true);
     }
 
+    @EventHandler
+    public void unload(org.bukkit.event.world.EntitiesUnloadEvent event) {
+        for (var entity : event.getEntities()) {
+            Drop drop = drops.remove(entity.getUniqueId());
+            if (drop != null) drop.entity.remove();
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void unload(org.bukkit.event.world.ChunkUnloadEvent event) {
+        for (Drop drop : List.copyOf(drops.values())) {
+            Location at = drop.entity.getLocation();
+            if (at.getWorld() == event.getWorld() && (at.getBlockX() >> 4) == event.getChunk().getX()
+                    && (at.getBlockZ() >> 4) == event.getChunk().getZ()) {
+                drops.remove(drop.entity.getUniqueId());
+                drop.entity.remove();
+            }
+        }
+        if (origin.getWorld() == event.getWorld() && (origin.getBlockX() >> 4) == event.getChunk().getX()
+                && (origin.getBlockZ() >> 4) == event.getChunk().getZ()) close();
+    }
+
     @Override
     public void close() {
         if (closed) return;
@@ -142,5 +198,5 @@ public final class SpreadingItems implements Listener, AutoCloseable {
         drops.clear();
     }
 
-    private record Drop(Item entity, ItemStack original, int born) { }
+    private record Drop(Item entity, ItemStack original, int born) {}
 }

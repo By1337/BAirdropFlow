@@ -2,20 +2,27 @@ package dev.by1337.baf.component.impl.loot;
 
 import dev.by1337.baf.Airdrop;
 import dev.by1337.baf.AirdropManager;
+import dev.by1337.baf.config.value.IntValue;
 import dev.by1337.baf.loot.LootTable;
 import dev.by1337.baf.loot.LootTables;
-import dev.by1337.baf.config.value.IntValue;
 import dev.by1337.edsl.EventHandler;
 import dev.by1337.edsl.context.EventContext;
 import dev.by1337.yaml.YamlValue;
 import org.bukkit.Location;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockbukkit.mockbukkit.MockBukkit;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class SpreadingComponentTest {
     private Airdrop airdrop;
@@ -23,7 +30,10 @@ class SpreadingComponentTest {
     private final List<String> events = new ArrayList<>();
 
     @BeforeAll
-    static void initContext() { try (var ignored = new EventContext(false)) { } }
+    static void initContext() {
+        try (var ignored = new EventContext(false)) {
+        }
+    }
 
     @BeforeEach
     void setup() {
@@ -88,7 +98,7 @@ class SpreadingComponentTest {
     @Test
     void failingRemovalStillReleasesTheListener() {
         var plugin = airdrop.manager().plugin();
-        var component = create(ignored -> true, ignored -> { throw new IllegalStateException("failed"); });
+        var component = create(ignored -> true, ignored -> {throw new IllegalStateException("failed");});
         assertFalse(org.bukkit.event.HandlerList.getRegisteredListeners(plugin).isEmpty());
         assertThrows(IllegalStateException.class, () -> component.markRemoved(ctx));
         assertTrue(org.bukkit.event.HandlerList.getRegisteredListeners(plugin).isEmpty());

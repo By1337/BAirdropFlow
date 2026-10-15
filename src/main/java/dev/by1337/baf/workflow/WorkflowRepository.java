@@ -12,6 +12,8 @@ import java.util.*;
 import java.util.function.Consumer;
 
 public final class WorkflowRepository {
+    private record Publisher(WorkflowRepository repository, String key) {}
+    private dev.by1337.baf.launch.LaunchRegistry launches;
     private final WorkflowFiles files;
     private final YamlDecoder<Workflow> decoder;
     private final Map<String, Workflow> workflows = new LinkedHashMap<>();
@@ -24,7 +26,13 @@ public final class WorkflowRepository {
         this.logger = logger;
     }
 
+    public void bindRegistry(dev.by1337.baf.launch.LaunchRegistry launches) {
+        this.launches = launches;
+        workflows.forEach((key, workflow) -> launches.publish(new Publisher(this, key), workflow.id(), workflow));
+    }
+
     public void load() throws IOException {
+        if (launches != null) workflows.keySet().forEach(key -> launches.unpublish(new Publisher(this, key)));
         workflows.clear();
         errors.clear();
         for (String key : files.keys()) {
@@ -41,9 +49,11 @@ public final class WorkflowRepository {
         var result = decoder.decode(doc.yaml().get());
         if (result.hasError() || result.result() == null) {
             workflows.remove(doc.key());
+            if (launches != null) launches.unpublish(new Publisher(this, doc.key()));
             errors.put(doc.key(), result.error());
             logger.accept(doc.key() + ": " + result.error());
         } else {
+            if (launches != null) launches.publish(new Publisher(this, doc.key()), result.result().id(), result.result());
             workflows.put(doc.key(), result.result());
             errors.remove(doc.key());
         }
@@ -70,6 +80,8 @@ public final class WorkflowRepository {
     public JsonArray list() throws IOException {
         JsonArray result = new JsonArray();
         List<String> keys = files.keys();
+        if (launches != null) workflows.keySet().stream().filter(key -> !keys.contains(key)).toList()
+                .forEach(key -> launches.unpublish(new Publisher(this, key)));
         workflows.keySet().retainAll(keys);
         errors.keySet().retainAll(keys);
         for (String key : keys) {
@@ -102,14 +114,16 @@ public final class WorkflowRepository {
     }
 
     public JsonObject save(String key, String revision, JsonObject nodes, JsonObject metadata, JsonObject settings) throws IOException {
-        var saved = files.save(key, revision, nodes, metadata, settings, yaml -> validate(nodes, metadata, yaml));
+        var saved = files.save(key, revision, nodes, metadata, settings, yaml -> validate(nodes, metadata, yaml, key));
         update(saved);
         return saved.json();
     }
 
     public synchronized JsonObject create(String key, String id, String world) throws IOException {
-        if (id == null || id.isBlank() || id.length() > 128) throw new IllegalArgumentException("Укажите ID аирдропа (до 128 символов)");
-        if (world == null || world.isBlank() || world.length() > 128) throw new IllegalArgumentException("Укажите мир (до 128 символов)");
+        if (id == null || id.isBlank() || id.length() > 128)
+            throw new IllegalArgumentException("Укажите ID аирдропа (до 128 символов)");
+        if (world == null || world.isBlank() || world.length() > 128)
+            throw new IllegalArgumentException("Укажите мир (до 128 символов)");
         // Refresh the repository before checking IDs, including files added outside the editor.
         list();
         if (getById(id) != null) throw new IllegalArgumentException("Аирдроп с таким ID уже существует: " + id);
@@ -136,24 +150,25 @@ public final class WorkflowRepository {
         yaml.set("world", world);
         var nodes = dev.by1337.baf.web.JsonValues.GSON.toJsonTree(yaml.getRaw("nodes")).getAsJsonObject();
         var metadata = new JsonObject();
-        var created = files.create(key, yaml, candidate -> validate(nodes, metadata, candidate));
+        var created = files.create(key, yaml, candidate -> validate(nodes, metadata, candidate, key));
         update(created);
         return created.json();
     }
 
     public synchronized JsonObject copy(String source, String key, String id) throws IOException {
-        if (id == null || id.isBlank() || id.length() > 128) throw new IllegalArgumentException("Укажите ID аирдропа (до 128 символов)");
+        if (id == null || id.isBlank() || id.length() > 128)
+            throw new IllegalArgumentException("Укажите ID аирдропа (до 128 символов)");
         list();
         if (getById(id) != null) throw new IllegalArgumentException("Аирдроп с таким ID уже существует: " + id);
         var copied = files.copy(source, key, id, yaml -> {
             var document = new WorkflowFiles.Document(key, "", yaml).json();
-            validate(document.getAsJsonObject("config").getAsJsonObject("nodes"), document.getAsJsonObject("metadata"), yaml);
+            validate(document.getAsJsonObject("config").getAsJsonObject("nodes"), document.getAsJsonObject("metadata"), yaml, key);
         });
         update(copied);
         return copied.json();
     }
 
-    private void validate(JsonObject nodes, JsonObject metadata, YamlMap yaml) {
+    private void validate(JsonObject nodes, JsonObject metadata, YamlMap yaml, String key) {
         if (nodes.size() > 512) throw new IllegalArgumentException("Максимум 512 нод в одном аирдропе");
         for (var node : nodes.entrySet()) {
             String name = node.getKey();
@@ -171,5 +186,6 @@ public final class WorkflowRepository {
         dev.by1337.baf.web.JsonValues.raw(metadata);
         var decoded = decoder.decode(yaml.get());
         if (decoded.hasError() || decoded.result() == null) throw new IllegalArgumentException(decoded.error());
+        if (launches != null) launches.checkPublish(new Publisher(this, key), decoded.result().id());
     }
 }

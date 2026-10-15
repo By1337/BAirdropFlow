@@ -59,6 +59,7 @@ class TunnelEditorTest {
     void setUp() {
         MockBukkit.mock();
     }
+
     @AfterEach
     void cleanup() {
         MockBukkit.unmock();

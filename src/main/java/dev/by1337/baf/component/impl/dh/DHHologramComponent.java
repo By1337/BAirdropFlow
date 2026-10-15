@@ -75,7 +75,8 @@ public class DHHologramComponent extends AbstractComponent {
         }
         return result;
     }
-    private String toLegacy(String s){
+
+    private String toLegacy(String s) {
         var c = MiniMessage.deserialize(s);
         return LegacyComponentSerializer.legacy('§').serialize(c);
     }

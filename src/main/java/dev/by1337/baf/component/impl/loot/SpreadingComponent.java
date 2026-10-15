@@ -86,7 +86,8 @@ public final class SpreadingComponent extends AbstractComponent implements Timer
                          DoubleValue horizontalSpeed, DoubleValue verticalSpeed, IntValue pickupDelayTicks,
                          IntValue itemLifetimeTicks, List<MaterialValue> obfuscationMaterials,
                          StringValue obfuscationName, StringValue trailAnimation, IntValue trailIntervalTicks,
-                         EventHandler onCreate, EventHandler onSpreadEnd, EventHandler onRemove) implements ComponentFactory {
+                         EventHandler onCreate, EventHandler onSpreadEnd,
+                         EventHandler onRemove) implements ComponentFactory {
         public static final NodeSchema WEB_SCHEMA = NodeSchema.of("Разброс лута", "Выбрасывает лут по очереди с маскировкой до подбора и трейлами в полёте. Удаление ноды убирает оставшиеся предметы.")
                 .text("loot_table", "Таблица лута", "loot/default", true)
                 .integer("rolls", "Количество выборок лута (с повторениями)", 10, 0, false)
@@ -136,9 +137,13 @@ public final class SpreadingComponent extends AbstractComponent implements Timer
         }
 
         @Override
-        public AirdropComponent create(Airdrop airdrop, String name) { return new SpreadingComponent(this, name, airdrop); }
+        public AirdropComponent create(Airdrop airdrop, String name) {
+            return new SpreadingComponent(this, name, airdrop);
+        }
 
         @Override
-        public YamlDecoder<? extends ComponentFactory> codec() { return DECODER; }
+        public YamlDecoder<? extends ComponentFactory> codec() {
+            return DECODER;
+        }
     }
 }

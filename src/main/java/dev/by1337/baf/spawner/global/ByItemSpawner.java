@@ -11,8 +11,6 @@ import org.bukkit.Location;
 import org.bukkit.block.Block;
 
 import java.util.Map;
-import java.util.function.Consumer;
-import java.util.function.Function;
 
 public final class ByItemSpawner implements GlobalSpawner {
     public static final String SPACE = "baf_airdrop";
@@ -72,7 +70,7 @@ public final class ByItemSpawner implements GlobalSpawner {
         }
     }
 
-    public static final YamlDecoder<ByItemSpawner> DECODER =DecoderHolder.DECODER;
+    public static final YamlDecoder<ByItemSpawner> DECODER = DecoderHolder.DECODER;
 
     private static final class DecoderHolder {
         private static final YamlDecoder<ByItemSpawner> DECODER = RecordYamlDecoder.mapOf(
@@ -90,10 +88,10 @@ public final class ByItemSpawner implements GlobalSpawner {
     }
 
     @Override
-    public void start(Function<String, Workflow> workflows, Consumer<TickableEntity> launch) {
+    public void start(SpawnerContext context) {
         for (SpawnItem item : items) {
-            if (workflows.apply(item.workflow()) == null)
-                throw new IllegalArgumentException("Unknown workflow: " + item.workflow());
+            if (!(context.launches().get(item.workflow()) instanceof Workflow))
+                throw new IllegalArgumentException("Item spawn requires a workflow: " + item.workflow());
         }
     }
 

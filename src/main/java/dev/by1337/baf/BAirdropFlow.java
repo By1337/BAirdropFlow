@@ -47,6 +47,7 @@ public class BAirdropFlow extends BasePlugin {
     WorldDataContainer<WorldData> worldData;
     WorldDataContainer<FakeBlockSetter> fakeBlocks;
     WorkflowRepository workflows;
+    dev.by1337.baf.launch.LaunchRegistry launches;
     AirdropWeb web;
     GPSRegistry gps;
     GlobalSpawners globalSpawners;
@@ -77,9 +78,13 @@ public class BAirdropFlow extends BasePlugin {
         ResourceUtil.saveIfNotExist("workflow/default.yml", this);
         workflows = new WorkflowRepository(new WorkflowFiles(getDataFolder().toPath().resolve("workflow"),
                 getDataFolder().toPath().resolve("backups/workflow")), Workflow.CODEC, log::warn);
+        launches = new dev.by1337.baf.launch.LaunchRegistry();
+        workflows.bindRegistry(launches);
         ResourceUtil.saveIfNotExist("menu/lool_table.yml", this);
+        ResourceUtil.saveIfNotExist("menu/vote.yml", this);
         menus = new MenuSubLoader(new File(getDataFolder(), "menu"), this, BMenu.menuLoader());
         menus.menuCodecRegistry().register("baf:loot", LootMenu.Config.CODEC);
+        menus.menuCodecRegistry().register("baf:vote", dev.by1337.baf.vote.VoteMenu.CODEC);
         BMenu.menuLoader().registerSubLoader(this, menus);
         addCloseHook(() -> BMenu.menuLoader().unregisterSubLoader(this));
         addCloseHook(() -> Bukkit.getOnlinePlayers().forEach(player -> {
@@ -88,10 +93,15 @@ public class BAirdropFlow extends BasePlugin {
 
     }
 
-    private void startWorkflow(String key) {
-        Workflow workflow = workflows.get(key);
-        if (workflow == null) throw new CommandMsgError("Аирдроп не загружен или имеет ошибки: " + key);
-        manager.addTicking(workflow.createSpawner());
+    private void startEvent(String key) {
+        String id = key;
+        // Keep old filename-based commands working, but always launch through the registry.
+        if (launches.get(id) == null) {
+            Workflow workflow = workflows.get(key);
+            if (workflow != null) id = workflow.id();
+        }
+        try { launches.start(id); }
+        catch (IllegalArgumentException | IllegalStateException error) { throw new CommandMsgError(error.getMessage()); }
     }
 
     @Override
@@ -126,22 +136,34 @@ public class BAirdropFlow extends BasePlugin {
             ResourceUtil.saveIfNotExist("spawner/by_time.yml", this);
             ResourceUtil.saveIfNotExist("spawner/by_item.yml", this);
         }
+        ResourceUtil.saveIfNotExist("spawner/vote.yml", this);
         globalSpawners = new GlobalSpawners();
         addCloseHook(globalSpawners::close);
         try {
-            globalSpawners.load(getDataFolder().toPath().resolve("spawner"), workflows, manager, log::warn);
+            globalSpawners.load(getDataFolder().toPath().resolve("spawner"), launches, manager, log::warn);
         } catch (java.io.IOException e) {
             throw new IllegalStateException("Не удалось загрузить глобальные спавнеры", e);
         }
         globalSpawners.enableItems(this);
-        if (web != null && !web.config().equals(config.web)){
+        if (web != null && !web.config().equals(config.web)) {
             web.close();
             web = null;
         }
-        if (web == null){
+        if (web == null) {
             web = new AirdropWeb(workflows, config.web, action -> Bukkit.getScheduler().runTask(this, action));
+        } else {
+            web.reload(workflows, action -> Bukkit.getScheduler().runTask(this, action));
         }
 
+        registerCommand(new Command<CommandSender>("vote").executor(sender -> {
+            if (!(sender instanceof Player player)) throw new CommandMsgError("Команда доступна игроку");
+            var session = globalSpawners.voting().active();
+            if (session == null) throw new CommandMsgError("Сейчас голосование не проводится");
+            var menu = BMenu.menuLoader().create(session.config().menu(), player, null);
+            if (!(menu instanceof dev.by1337.baf.vote.VoteMenu))
+                throw new CommandMsgError("Меню голосования должно использовать provider: baf:vote");
+            menu.open();
+        }), null);
         registerCommand(new Command<CommandSender>("gps").executor(
                 new ArgumentString<CommandSender>("id", null),
                 (sender, id) -> {
@@ -168,7 +190,7 @@ public class BAirdropFlow extends BasePlugin {
                         if (x > 25) return;
                     }
                 }), null);
-        registerCommand(new Command<CommandSender>("baf").executor(sender -> startWorkflow("default.yml"))
+        registerCommand(new Command<CommandSender>("baf").executor(sender -> startEvent("default.yml"))
                 .sub(LootCommands.create())
                 .sub(new Command<CommandSender>("give").requires(new RequiresPermission<>("baf.admin"))
                         .executor(new ArgumentPlayers<>("player", true),
@@ -195,9 +217,9 @@ public class BAirdropFlow extends BasePlugin {
                             s.sendMessage("reloaded!");
                         }))
                 .sub(new Command<CommandSender>("start").requires(new RequiresPermission<>("baf.admin"))
-                        .executor(new ArgumentChoice<>("workflow", workflows::keys), (sender, key) -> {
-                            if (key == null) throw new CommandMsgError("/baf start <файл аирдропа>");
-                            startWorkflow(key);
+                        .executor(new ArgumentChoice<>("event", launches::ids), (sender, key) -> {
+                            if (key == null) throw new CommandMsgError("/baf start <id события>");
+                            startEvent(key);
                         }))
                 .sub(new Command<CommandSender>("web").requires(new RequiresPermission<>("baf.web.admin"))
                         .executor(sender -> {

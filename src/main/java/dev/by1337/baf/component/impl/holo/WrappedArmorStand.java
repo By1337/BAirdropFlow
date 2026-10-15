@@ -81,19 +81,24 @@ final class WrappedArmorStand {
 
     private static class ViewerHolder {
         private final Object2ObjectOpenHashMap<UUID, Player> viewers = new Object2ObjectOpenHashMap<>();
+
         public boolean contains(Player o) {
             return viewers.containsKey(o.getUniqueId());
         }
+
         public void add(Player element) {
             viewers.put(element.getUniqueId(), element);
         }
+
         public boolean remove(Player o) {
             return viewers.remove(o.getUniqueId()) != null;
         }
+
         public void clear() {
             viewers.clear();
         }
-        public void forEach(Consumer<Player> c){
+
+        public void forEach(Consumer<Player> c) {
             viewers.values().forEach(c::accept);
         }
     }

@@ -38,6 +38,10 @@ public class BAF {
         return plugin.gps;
     }
 
+    public static dev.by1337.baf.launch.LaunchRegistry launches() {
+        return plugin.launches;
+    }
+
     public static GlobalSpawners globalSpawners() {
         return plugin.globalSpawners;
     }

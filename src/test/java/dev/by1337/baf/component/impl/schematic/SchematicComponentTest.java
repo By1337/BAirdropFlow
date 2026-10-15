@@ -88,6 +88,60 @@ class SchematicComponentTest {
     }
 
     @Test
+    void animatedPasteBuildsLayersOverTimeCompletesOnceAndCanBeCancelled() {
+        var world = MockBukkit.getMock().addSimpleWorld("world");
+        var airdrop = new Airdrop(null, null, new Location(world, 10, 64, -20));
+        var blocks = List.of(Pair.of(new Vec3i(0, 1, 0), Material.BEACON.createBlockData()),
+                Pair.of(new Vec3i(0, 0, 0), Material.GOLD_BLOCK.createBlockData()),
+                Pair.of(new Vec3i(1, 0, 0), Material.GOLD_BLOCK.createBlockData()));
+        var completed = new java.util.concurrent.atomic.AtomicInteger();
+        var created = new java.util.concurrent.atomic.AtomicInteger();
+        var order = new ArrayList<Vec3i>();
+        try (var writers = mockConstruction(SchematicWriter.class, (writer, context) -> {
+            when(writer.writeBlock(any(), any(), any())).thenAnswer(call -> {
+                order.add(call.getArgument(1));
+                return true;
+            });
+        }); var ctx = new EventContext(false)) {
+            var schematic = new Schematic(new SchematicFile(blocks), Set.of(), Set.of(), Map.of());
+            var config = new SchematicComponent.Config(schematic,
+                    new dev.by1337.baf.config.value.Vec3iValue(Vec3i.ZERO), c -> {
+                created.incrementAndGet();
+                return true;
+            },
+                    dev.by1337.baf.component.ComponentFactory.EMPTY_HANDLER,
+                    new SchematicComponent.Animation(2, 1, true, "", .8, 1.2), c -> {
+                completed.incrementAndGet();
+                return true;
+            });
+            var component = (SchematicComponent) config.create(airdrop, "structure");
+            airdrop.components().add(component, ctx);
+            assertEquals(1, created.get());
+            assertTrue(order.isEmpty());
+            for (int i = 0; i < 4; i++) component.onSyncTick(ctx);
+            assertEquals(2, order.size());
+            assertEquals(0, completed.get());
+            assertTrue(order.stream().allMatch(p -> p.y() == 0));
+            component.onSyncTick(ctx);
+            assertEquals(1, order.getLast().y());
+            assertEquals(1, completed.get());
+            component.onSyncTick(ctx);
+            assertEquals(1, completed.get());
+            component.markRemoved(ctx);
+            verify(writers.constructed().getFirst()).undoSchematics();
+            order.clear();
+            var cancelled = (SchematicComponent) config.create(airdrop, "cancelled");
+            airdrop.components().add(cancelled, ctx);
+            cancelled.onSyncTick(ctx);
+            cancelled.markRemoved(ctx);
+            for (int i = 0; i < 10; i++) cancelled.onSyncTick(ctx);
+            assertEquals(1, order.size());
+            assertEquals(1, completed.get());
+            verify(writers.constructed().getLast()).undoSchematics();
+        }
+    }
+
+    @Test
     void omittedOffsetsDefaultToTheAirdropPosition() {
         var world = MockBukkit.getMock().addSimpleWorld("world");
         var airdrop = new Airdrop(null, null, new Location(world, 10, 64, -20));

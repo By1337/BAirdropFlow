@@ -1,7 +1,7 @@
 package dev.by1337.baf.spawner.global;
 
-import dev.by1337.baf.Workflow;
-import dev.by1337.baf.entity.TickableEntity;
+import dev.by1337.baf.launch.LaunchRegistry;
+import dev.by1337.baf.launch.Startable;
 import dev.by1337.bmenu.random.WeightedItem;
 import dev.by1337.bmenu.random.WeightedItemSelector;
 import dev.by1337.yaml.decoder.RecordYamlDecoder;
@@ -16,8 +16,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
-import java.util.function.Consumer;
-import java.util.function.Function;
 
 public final class ByTimeSpawner implements GlobalSpawner {
     private static final Logger log = LoggerFactory.getLogger(ByTimeSpawner.class);
@@ -33,7 +31,14 @@ public final class ByTimeSpawner implements GlobalSpawner {
             YamlDecoder.STRING.map(value -> ZoneId.of(value)).fieldOf("time_zone", ZoneId.systemDefault()),
             YamlDecoder.BOOL.fieldOf("publish_gps", false),
             YamlDecoder.mapOf(YamlDecoder.STRING.map(Schedule::parse), CHOICES).fieldOf("workflows")
-    );
+    ).preDecode(yaml -> {
+        var map = yaml.asYamlMap().getOrThrow().deepCopy();
+        if (map.has("events")) {
+            if (map.has("workflows")) throw new IllegalArgumentException("Use events or workflows, not both");
+            map.set("workflows", map.getRaw("events"));
+        }
+        return map.get();
+    });
 
     private final ZoneId zone;
     private final boolean publishGps;
@@ -41,8 +46,7 @@ public final class ByTimeSpawner implements GlobalSpawner {
     private final Map<Schedule, Instant> next = new LinkedHashMap<>();
     private final Map<Schedule, String> selected = new HashMap<>();
     private final Clock clock;
-    private Function<String, Workflow> workflows;
-    private Consumer<TickableEntity> launch;
+    private LaunchRegistry launches;
 
     public ByTimeSpawner(ZoneId zone, boolean publishGps, Map<Schedule, Map<String, Double>> schedules) {
         this(zone, publishGps, schedules, Clock.systemUTC());
@@ -56,14 +60,14 @@ public final class ByTimeSpawner implements GlobalSpawner {
     }
 
     @Override
-    public void start(Function<String, Workflow> workflows, Consumer<TickableEntity> launch) {
+    public void start(SpawnerContext context) {
+        LaunchRegistry launches = context.launches();
         for (var choices : schedules.values()) {
             for (String id : choices.keySet()) {
-                if (workflows.apply(id) == null) throw new IllegalArgumentException("Unknown workflow: " + id);
+                launches.validate(id);
             }
         }
-        this.workflows = workflows;
-        this.launch = launch;
+        this.launches = launches;
         next.clear();
         selected.clear();
         Instant now = clock.instant();
@@ -80,13 +84,13 @@ public final class ByTimeSpawner implements GlobalSpawner {
 
     @Override
     public long getSecondsUntilNextEvent() {
-        if (!isGpsPublish() || workflows == null) return -1;
+        if (!isGpsPublish() || launches == null) return -1;
         Instant now = clock.instant();
         long nearest = Long.MAX_VALUE;
         for (var entry : next.entrySet()) {
             String id = selected.get(entry.getKey());
-            Workflow workflow = id == null ? null : workflows.apply(id);
-            boolean visible = workflow != null && workflow.spawner().isGpsPublish();
+            Startable event = id == null ? null : launches.get(id);
+            boolean visible = event != null && event.isGpsPublish();
             if (visible) {
                 long millis = Math.max(0, Duration.between(now, entry.getValue()).toMillis());
                 nearest = Math.min(nearest, (millis + 999) / 1000);
@@ -97,7 +101,7 @@ public final class ByTimeSpawner implements GlobalSpawner {
 
     @Override
     public void tick() {
-        if (workflows == null) return;
+        if (launches == null) return;
         Instant now = clock.instant();
         for (var entry : next.entrySet()) {
             if (entry.getValue().isAfter(now)) continue;
@@ -105,12 +109,12 @@ public final class ByTimeSpawner implements GlobalSpawner {
             // Advance before launching, so a failing workflow cannot launch repeatedly.
             entry.setValue(entry.getKey().next(now, zone, false));
             selected.put(entry.getKey(), select(entry.getKey()));
-            Workflow workflow = id == null ? null : workflows.apply(id);
-            if (workflow != null) {
+            Startable event = id == null ? null : launches.get(id);
+            if (event != null) {
                 try {
-                    launch.accept(workflow.createSpawner());
+                    launches.start(id);
                 } catch (Exception e) {
-                    log.error("Failed to start scheduled workflow {}", id, e);
+                    log.error("Failed to start scheduled event {}", id, e);
                 }
             }
         }
@@ -120,7 +124,7 @@ public final class ByTimeSpawner implements GlobalSpawner {
         var choices = schedules.get(schedule);
         double max = choices.values().stream().mapToDouble(Double::doubleValue).max().orElseThrow();
         var available = choices.entrySet().stream()
-                .filter(choice -> workflows.apply(choice.getKey()) != null)
+                .filter(choice -> launches.get(choice.getKey()) != null)
                 .map(choice -> WeightedItem.of(choice.getValue() / max, choice.getKey())).toList();
         // Choose ahead of time so GPS describes the workflow that will actually launch.
         return available.isEmpty() ? null : new WeightedItemSelector<>(available).getRandomItem();

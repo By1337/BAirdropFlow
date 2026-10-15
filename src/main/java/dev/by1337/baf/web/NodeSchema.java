@@ -115,6 +115,22 @@ public final class NodeSchema {
         return this;
     }
 
+    public NodeSchema strings(String key, String title, java.util.List<String> defaults) {
+        strings(key, title);
+        JsonArray values = new JsonArray();
+        defaults.forEach(values::add);
+        properties.getAsJsonObject(key).add("default", values);
+        return this;
+    }
+
+    public NodeSchema materials(String key, String title, java.util.List<String> defaults) {
+        materials(key, title);
+        JsonArray values = new JsonArray();
+        defaults.forEach(values::add);
+        properties.getAsJsonObject(key).add("default", values);
+        return this;
+    }
+
     public NodeSchema materials(String key, String title) {
         JsonObject f = field(key, title, "array");
         JsonObject item = new JsonObject();
@@ -132,6 +148,20 @@ public final class NodeSchema {
         f.add("additionalProperties", value);
         f.add("default", new JsonObject());
         f.addProperty("x-control", "material-map");
+        return this;
+    }
+
+    public NodeSchema objects(String key, String title, NodeSchema element) {
+        return objects(key, title, element, java.util.List.of());
+    }
+
+    public NodeSchema objects(String key, String title, NodeSchema element, java.util.List<?> defaults) {
+        JsonObject f = field(key, title, "array");
+        JsonObject item = new JsonObject();
+        item.addProperty("type", "object");
+        item.add("properties", element.properties.deepCopy());
+        f.add("items", item);
+        f.add("default", new com.google.gson.Gson().toJsonTree(defaults));
         return this;
     }
 

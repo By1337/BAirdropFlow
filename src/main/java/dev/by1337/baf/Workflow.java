@@ -15,7 +15,7 @@ import org.bukkit.Location;
 import java.util.Map;
 import java.util.Objects;
 
-public class Workflow {
+public class Workflow implements dev.by1337.baf.launch.Startable {
     public static final YamlDecoder<Workflow> CODEC = RecordYamlDecoder.mapOf(
             Workflow::new,
             YamlDecoder.STRING.fieldOf("id"),
@@ -64,6 +64,12 @@ public class Workflow {
     public AirdropSpawner spawner() {
         return spawner;
     }
+
+    @Override
+    public void start() { BAF.manager().addTicking(createSpawner()); }
+
+    @Override
+    public boolean isGpsPublish() { return spawner.isGpsPublish(); }
 
     public TickableEntity createSpawner() {
         return spawner.create(this);

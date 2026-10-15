@@ -19,17 +19,17 @@ public class SchematicWriter {
     }
 
     public void writeSchematic(Schematic schematic) {
-        schematic.schematicFile().stream().forEach(pair -> {
-            if (schematic.no_place().contains(pair.getRight().getMaterial())) return;
-            var p = pair.getKey();
-            int x = p.x() + at.x();
-            int y = p.y() + at.y();
-            int z = p.z() + at.z();
-            var current = world.getBlockAt(x, y, z);
-            if (schematic.no_replace().contains(current.getType())) return;
-            placedBlocks.add(Vec3i.asLong(x, y, z));
-            fakeBlockSetter.set(x, y, z, schematic.replace(pair.getRight()));
-        });
+        schematic.schematicFile().stream().forEach(pair -> writeBlock(schematic, pair.getKey(), pair.getRight()));
+    }
+
+    public boolean writeBlock(Schematic schematic, Vec3i position, org.bukkit.block.data.BlockData data) {
+        if (schematic.no_place().contains(data.getMaterial())) return false;
+        int x = position.x() + at.x(), y = position.y() + at.y(), z = position.z() + at.z();
+        if (y < world.getMinHeight() || y >= world.getMaxHeight()) return false;
+        if (schematic.no_replace().contains(world.getBlockAt(x, y, z).getType())) return false;
+        placedBlocks.add(Vec3i.asLong(x, y, z));
+        fakeBlockSetter.set(x, y, z, schematic.replace(data));
+        return true;
     }
 
     public void undoSchematics() {

@@ -1,0 +1,21 @@
+id: baf:vote
+provider: baf:vote
+title: '<gold>Выбор события'
+size: 27
+items:
+  event:
+    slot: 13
+    material: chest
+    name: '<gold>Аирдроп'
+    lore:
+    - '<gray>Голосов: <yellow>{votes:example:default}'
+    - '<gray>Осталось: <yellow>{time_left} сек.'
+    - '<gray>Ваш выбор: <yellow>{selected}'
+    on_click:
+    - '[vote] example:default'
+  close:
+    slot: 26
+    material: barrier
+    name: '<red>Закрыть'
+    on_click:
+    - '[close]'
