@@ -4,6 +4,7 @@ import dev.by1337.baf.component.impl.*;
 import dev.by1337.baf.component.impl.block.BreakBlockComponent;
 import dev.by1337.baf.component.impl.block.ClickBlockComponent;
 import dev.by1337.baf.component.impl.dh.DHHologramComponent;
+import dev.by1337.baf.component.impl.holo.HologramComponent;
 import dev.by1337.baf.component.impl.loot.LooterComponent;
 import dev.by1337.baf.component.impl.loot.SpreadingComponent;
 import dev.by1337.baf.component.impl.schematic.SchematicComponent;
@@ -26,6 +27,7 @@ public class AirdropComponents {
         AirdropComponent.REGISTRY.register("block:break", BreakBlockComponent.Config.DECODER, BreakBlockComponent.Config.WEB_SCHEMA);
         AirdropComponent.REGISTRY.register("block:click", ClickBlockComponent.Config.DECODER, ClickBlockComponent.Config.WEB_SCHEMA);
         AirdropComponent.REGISTRY.register("schematic:paster", SchematicComponent.Config.DECODER, SchematicComponent.Config.WEB_SCHEMA);
+        AirdropComponent.REGISTRY.register("default:hologram", HologramComponent.Config.DECODER, HologramComponent.Config.WEB_SCHEMA);
         if (hasClass("eu.decentsoftware.holograms.api.DHAPI")) {
             AirdropComponent.REGISTRY.register("dh:hologram", DHHologramComponent.Config.DECODER, DHHologramComponent.Config.WEB_SCHEMA);
         }

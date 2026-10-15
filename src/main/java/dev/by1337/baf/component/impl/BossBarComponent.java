@@ -29,7 +29,6 @@ public class BossBarComponent extends AbstractComponent implements TimerSystem.T
     private final Location location;
     private final Set<Player> viewers = new HashSet<>();
     private final CleanerSlot<BossBar> bossBar;
-    private double radius;
     private float configuredProgress;
     private boolean progressFromTime;
     private double initialTime;
@@ -90,7 +89,6 @@ public class BossBarComponent extends AbstractComponent implements TimerSystem.T
     }
 
     private void readAppearance() {
-        radius = config.radius.getDouble(airdrop);
         configuredProgress = (float) config.progress.getDouble(airdrop);
         progressFromTime = config.progressFromTime.getBoolean(airdrop);
     }
@@ -118,11 +116,7 @@ public class BossBarComponent extends AbstractComponent implements TimerSystem.T
     }
 
     private void updateViewers(BossBar bar) {
-        Set<Player> nearby = new HashSet<>();
-        double radiusSquared = radius * radius;
-        for (Player player : airdrop.world().getPlayers()) {
-            if (player.getLocation().distanceSquared(location) <= radiusSquared) nearby.add(player);
-        }
+        Set<Player> nearby = airdrop.nearbyPlayers();
         var iterator = viewers.iterator();
         while (iterator.hasNext()) {
             Player player = iterator.next();
@@ -148,7 +142,6 @@ public class BossBarComponent extends AbstractComponent implements TimerSystem.T
     public static class Config implements ComponentFactory {
         public static final NodeSchema WEB_SCHEMA = NodeSchema.of("Боссбар", "Боссбар в радиусе аирдропа. Текст, время и видимость обновляются каждый тик.")
                 .text("title", "Заголовок (MiniMessage)", "<gold>Аирдроп", false)
-                .number("radius", "Радиус видимости, блоков", 64, 0, null)
                 .choice("color", "Цвет", "green", names(BossBar.Color.values()))
                 .choice("overlay", "Деления шкалы", "progress", names(BossBar.Overlay.values()))
                 .strings("flags", "Флаги: darken_screen, play_boss_music, create_world_fog")
@@ -162,7 +155,6 @@ public class BossBarComponent extends AbstractComponent implements TimerSystem.T
         public static final YamlDecoder<Config> DECODER = RecordYamlDecoder.mapOf(
                 Config::new,
                 StringValue.DECODER.fieldOf("title", new StringValue("<gold>Аирдроп")),
-                DoubleValue.DECODER.fieldOf("radius", new DoubleValue(64)),
                 Parameter.enumDecoder(BossBar.Color.class).fieldOf("color", Parameter.constant(BossBar.Color.GREEN)),
                 Parameter.enumDecoder(BossBar.Overlay.class).fieldOf("overlay", Parameter.constant(BossBar.Overlay.PROGRESS)),
                 Parameter.enumDecoder(BossBar.Flag.class).listOf().fieldOf("flags", List.of()),
@@ -174,7 +166,6 @@ public class BossBarComponent extends AbstractComponent implements TimerSystem.T
         );
 
         private final StringValue title;
-        private final DoubleValue radius;
         private final Parameter<BossBar.Color> color;
         private final Parameter<BossBar.Overlay> overlay;
         private final List<Parameter<BossBar.Flag>> flags;
@@ -184,22 +175,21 @@ public class BossBarComponent extends AbstractComponent implements TimerSystem.T
         private final EventHandler onCreate;
         private final EventHandler onRemove;
 
-        public Config(String title, double radius, BossBar.Color color, BossBar.Overlay overlay, List<BossBar.Flag> flags,
+        public Config(String title, BossBar.Color color, BossBar.Overlay overlay, List<BossBar.Flag> flags,
                       float progress, String time, boolean progressFromTime,
                       EventHandler onCreate, EventHandler onRemove) {
-            this(new StringValue(title), new DoubleValue(radius), Parameter.constant(color), Parameter.constant(overlay),
+            this(new StringValue(title), Parameter.constant(color), Parameter.constant(overlay),
                     flags.stream().map(Parameter::constant).toList(), new DoubleValue(progress), new TimeValue(time),
                     new BooleanValue(progressFromTime), onCreate, onRemove);
         }
 
-        public Config(StringValue title, DoubleValue radius, Parameter<BossBar.Color> color,
+        public Config(StringValue title, Parameter<BossBar.Color> color,
                       Parameter<BossBar.Overlay> overlay, List<Parameter<BossBar.Flag>> flags,
                       DoubleValue progress, TimeValue time, BooleanValue progressFromTime,
                       EventHandler onCreate, EventHandler onRemove) {
             if (progressFromTime.isConstant() && progressFromTime.getBoolean(null) && time.isConstant() && time.get(null).isEmpty())
                 throw new IllegalArgumentException("Bossbar progress_from_time requires a time source");
             this.title = title;
-            this.radius = radius.checked(v -> v >= 0, "Bossbar radius must be non-negative");
             this.color = color;
             this.overlay = overlay;
             this.flags = List.copyOf(flags);

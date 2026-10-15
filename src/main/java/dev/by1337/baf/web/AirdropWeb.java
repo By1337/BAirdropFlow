@@ -19,13 +19,30 @@ import java.util.concurrent.Executor;
 import java.util.function.Supplier;
 
 public final class AirdropWeb implements Closeable {
+    private static final String CONTENT = "bair-v1";
     private final WebEndpoint endpoint;
     private final WebConfig config;
+    private Data data;
+
+    private AirdropWeb(Data data) {
+        this.data = data;
+        endpoint = null;
+        config = null;
+    }
+
+    public void reload(WorkflowRepository workflows, Executor executor) {
+        data = new Data(workflows, () -> JsonValues.GSON.toJsonTree(AirdropComponent.REGISTRY.schemas()), executor);
+    }
+
+    public WebConfig config() {
+        return config;
+    }
 
     public AirdropWeb(WorkflowRepository workflows, WebConfig config, Executor executor) {
         this.config = config;
-        endpoint = new WebEndpoint(router(workflows, () -> JsonValues.GSON.toJsonTree(AirdropComponent.REGISTRY.schemas()), executor),
-                false, config.url(), "bair-v1", config.secret().isBlank() ? null : config.secret(), config.description());
+        data = new Data(workflows, () -> JsonValues.GSON.toJsonTree(AirdropComponent.REGISTRY.schemas()), executor);
+        endpoint = new WebEndpoint(router(),
+                false, config.url(), CONTENT, config.secret().isBlank() ? null : config.secret(), config.description());
     }
 
     public CompletableFuture<String> link() {
@@ -33,18 +50,22 @@ public final class AirdropWeb implements Closeable {
             if (conn == null) throw new IllegalStateException("Не удалось подключиться к BWebTunnel");
             URI uri = URI.create(config.url());
             String scheme = uri.getScheme().equals("wss") ? "https" : "http";
-            return scheme + "://" + uri.getRawAuthority() + "/" + conn.getToken() + "/" + "bair-v1" + "/";
+            return scheme + "://" + uri.getRawAuthority() + "/" + conn.getToken() + "/" + CONTENT + "/";
         });
     }
 
     public static RequestRouter router(WorkflowRepository workflows, Supplier<JsonElement> schemas, Executor executor) {
+        return new AirdropWeb(new Data(workflows, schemas, executor)).router();
+    }
+
+    private RequestRouter router() {
         return new RequestRouter()
-                .get("/airdrops", h -> dispatch(h, executor, workflows::list))
-                .get("/schemas", h -> dispatch(h, executor, schemas::get))
-                .get("/generator-schemas", h -> dispatch(h, executor, () -> JsonValues.GSON.toJsonTree(Generators.schemas())))
-                .get("/spawner-schemas", h -> dispatch(h, executor, () -> JsonValues.GSON.toJsonTree(AirdropSpawnerBoot.schemas())))
-                .get("/airdrop", h -> dispatch(h, executor, () -> workflows.read(h.params().getString("key"))))
-                .post("/airdrop/create", h -> dispatch(h, executor, () -> {
+                .get("/airdrops", h -> dispatch(h, data.executor, () -> data.workflows.list()))
+                .get("/schemas", h -> dispatch(h, data.executor, () -> data.schemas.get()))
+                .get("/generator-schemas", h -> dispatch(h, data.executor, () -> JsonValues.GSON.toJsonTree(Generators.schemas())))
+                .get("/spawner-schemas", h -> dispatch(h, data.executor, () -> JsonValues.GSON.toJsonTree(AirdropSpawnerBoot.schemas())))
+                .get("/airdrop", h -> dispatch(h, data.executor, () -> data.workflows.read(h.params().getString("key"))))
+                .post("/airdrop/create", h -> dispatch(h, data.executor, () -> {
                     if (!h.params().contentType().split(";", 2)[0].trim().equalsIgnoreCase("application/json")) {
                         throw new IllegalArgumentException("Ожидалось application/json");
                     }
@@ -52,9 +73,9 @@ public final class AirdropWeb implements Closeable {
                     if (!body.has("key") || !body.has("id") || !body.has("world")) {
                         throw new IllegalArgumentException("Нужны key, id и world");
                     }
-                    return workflows.create(body.get("key").getAsString(), body.get("id").getAsString(), body.get("world").getAsString());
+                    return data.workflows.create(body.get("key").getAsString(), body.get("id").getAsString(), body.get("world").getAsString());
                 }))
-                .post("/airdrop/copy", h -> dispatch(h, executor, () -> {
+                .post("/airdrop/copy", h -> dispatch(h, data.executor, () -> {
                     if (!h.params().contentType().split(";", 2)[0].trim().equalsIgnoreCase("application/json")) {
                         throw new IllegalArgumentException("Ожидалось application/json");
                     }
@@ -62,15 +83,15 @@ public final class AirdropWeb implements Closeable {
                     if (!body.has("source") || !body.has("key") || !body.has("id")) {
                         throw new IllegalArgumentException("Нужны source, key и id");
                     }
-                    return workflows.copy(body.get("source").getAsString(), body.get("key").getAsString(), body.get("id").getAsString());
+                    return data.workflows.copy(body.get("source").getAsString(), body.get("key").getAsString(), body.get("id").getAsString());
                 }))
-                .post("/commands/parse", h -> dispatch(h, executor, () -> {
+                .post("/commands/parse", h -> dispatch(h, data.executor, () -> {
                     JsonObject body = JsonParser.parseString(h.params().body()).getAsJsonObject();
                     if (!body.has("yaml") || !body.get("yaml").isJsonPrimitive())
                         throw new IllegalArgumentException("Нужен текст YAML");
                     return CommandYaml.parse(body.get("yaml").getAsString());
                 }))
-                .post("/airdrop", h -> dispatch(h, executor, () -> {
+                .post("/airdrop", h -> dispatch(h, data.executor, () -> {
                     if (!h.params().contentType().split(";", 2)[0].trim().equalsIgnoreCase("application/json")) {
                         throw new IllegalArgumentException("Ожидалось application/json");
                     }
@@ -78,7 +99,7 @@ public final class AirdropWeb implements Closeable {
                     if (!body.has("key") || !body.has("revision") || !body.has("nodes") || !body.has("metadata")) {
                         throw new IllegalArgumentException("Нужны key, revision, nodes, metadata");
                     }
-                    return workflows.save(body.get("key").getAsString(), body.get("revision").getAsString(),
+                    return data.workflows.save(body.get("key").getAsString(), body.get("revision").getAsString(),
                             body.getAsJsonObject("nodes"), body.getAsJsonObject("metadata"), body.getAsJsonObject("settings"));
                 }));
     }
@@ -122,5 +143,8 @@ public final class AirdropWeb implements Closeable {
     @Override
     public void close() {
         endpoint.close();
+    }
+
+    public record Data(WorkflowRepository workflows, Supplier<JsonElement> schemas, Executor executor) {
     }
 }

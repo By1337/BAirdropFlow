@@ -51,6 +51,7 @@ public class BAirdropFlow extends BasePlugin {
     GPSRegistry gps;
     GlobalSpawners globalSpawners;
     MenuSubLoader menus;
+    private boolean isReloading;
 
     @Override
     public void onLoad() {
@@ -96,6 +97,9 @@ public class BAirdropFlow extends BasePlugin {
     @Override
     public void onDisable() {
         super.onDisable();
+        if (!isReloading) {
+            web.close();
+        }
     }
 
     @Override
@@ -130,10 +134,14 @@ public class BAirdropFlow extends BasePlugin {
             throw new IllegalStateException("Не удалось загрузить глобальные спавнеры", e);
         }
         globalSpawners.enableItems(this);
-        if (config.web.enabled()) {
-            web = new AirdropWeb(workflows, config.web, action -> Bukkit.getScheduler().runTask(this, action));
-            addCloseHook(web);
+        if (web != null && !web.config().equals(config.web)){
+            web.close();
+            web = null;
         }
+        if (web == null){
+            web = new AirdropWeb(workflows, config.web, action -> Bukkit.getScheduler().runTask(this, action));
+        }
+
         registerCommand(new Command<CommandSender>("gps").executor(
                 new ArgumentString<CommandSender>("id", null),
                 (sender, id) -> {
@@ -176,9 +184,14 @@ public class BAirdropFlow extends BasePlugin {
                                 }))
                 .sub(new Command<CommandSender>("reload").requires(new RequiresPermission<>("baf.admin"))
                         .executor((s) -> {
-                            onDisable();
-                            onLoad();
-                            onEnable();
+                            try {
+                                isReloading = true;
+                                onDisable();
+                                onLoad();
+                                onEnable();
+                            } finally {
+                                isReloading = false;
+                            }
                             s.sendMessage("reloaded!");
                         }))
                 .sub(new Command<CommandSender>("start").requires(new RequiresPermission<>("baf.admin"))
@@ -188,12 +201,15 @@ public class BAirdropFlow extends BasePlugin {
                         }))
                 .sub(new Command<CommandSender>("web").requires(new RequiresPermission<>("baf.web.admin"))
                         .executor(sender -> {
-                            if (web == null) throw new CommandMsgError("Включите web.enabled в config.yml");
-                            web.link().whenComplete((link, error) -> Bukkit.getScheduler().runTask(this, () -> {
+                            var future = web.link();
+                            if (!future.isDone()) {
+                                sender.sendMessage("Создание ссылки...");
+                            }
+                            future.whenComplete((link, error) -> Bukkit.getScheduler().runTask(this, () -> {
                                 if (error != null)
                                     sender.sendMessage("Не удалось получить ссылку: " + error.getMessage() + " Возможно нужен VPN");
                                 else
-                                    sender.sendMessage(Component.text("Открыть редактор аирдропов")
+                                    sender.sendMessage(Component.text(link)
                                             .clickEvent(ClickEvent.openUrl(link))
                                             .hoverEvent(Component.text(link)));
                             }));

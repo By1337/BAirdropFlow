@@ -24,7 +24,8 @@ public class Workflow {
             Generator.REGISTRY.decoder.fieldOf("generator", new FixedGenerator(new Vec3i(0, 100, 0))),
             YamlDecoder.STRING_TO_STRING.fieldOf("args", Map.of()),
             YamlDecoder.STRING.fieldOf("world", "world"),
-            AirdropSpawner.REGISTRY.decoder.fieldOf("spawner")
+            AirdropSpawner.REGISTRY.decoder.fieldOf("spawner"),
+            YamlDecoder.INT.fieldOf("nearby_radius", 30)
     ).preDecode(yaml -> {
         if (yaml.isMap()) {
             var map = yaml.asYamlMap().getOrThrow().deepCopy();
@@ -47,15 +48,17 @@ public class Workflow {
     private final Map<String, String> args;
     private final String world;
     private final AirdropSpawner spawner;
+    private final int nearbyRadius;
 
 
-    public Workflow(String id, Map<String, ComponentFactory> nodes, Generator generator, Map<String, String> args, String world, AirdropSpawner spawner) {
+    public Workflow(String id, Map<String, ComponentFactory> nodes, Generator generator, Map<String, String> args, String world, AirdropSpawner spawner, int nearbyRadius) {
         this.id = id;
         this.nodes = nodes;
         this.generator = generator;
         this.args = args;
         this.world = world;
         this.spawner = Objects.requireNonNull(spawner);
+        this.nearbyRadius = nearbyRadius;
     }
 
     public AirdropSpawner spawner() {
@@ -90,5 +93,9 @@ public class Workflow {
 
     public String world() {
         return world;
+    }
+
+    public int nearbyRadius() {
+        return nearbyRadius;
     }
 }

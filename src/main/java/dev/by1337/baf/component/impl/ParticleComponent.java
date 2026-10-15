@@ -18,11 +18,9 @@ import dev.by1337.particle.flow.emit.EmitterGraph;
 import dev.by1337.yaml.decoder.RecordYamlDecoder;
 import dev.by1337.yaml.decoder.YamlDecoder;
 import org.bukkit.Location;
-import org.bukkit.World;
 import org.bukkit.entity.Player;
 
 public class ParticleComponent extends AbstractComponent implements TimerSystem.Tickable {
-    private static final double VIEW_DISTANCE_SQUARED = 30 * 30;
     private final Config config;
     private Location location;
     private final Airdrop airdrop;
@@ -69,15 +67,9 @@ public class ParticleComponent extends AbstractComponent implements TimerSystem.
             }
             return;
         }
-        World world = location.getWorld();
-        if (world != null) {
-            var particles = graph.make(tick);
-
-            for (Player player : world.getPlayers()) {
-                if (player.getLocation().distanceSquared(location) <= VIEW_DISTANCE_SQUARED) {
-                    ParticleRender.render(player, particles, location.getX(), location.getY(), location.getZ());
-                }
-            }
+        var particles = graph.make(tick);
+        for (Player player : airdrop.nearbyPlayers()) {
+            ParticleRender.render(player, particles, location.getX(), location.getY(), location.getZ());
         }
         tick++;
     }

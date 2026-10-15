@@ -198,7 +198,6 @@ class TunnelEditorTest {
             assertTrue(bossbar.getAsJsonObject("x-placeholders").has("time"));
             var bossbarFields = bossbar.getAsJsonObject("properties");
             assertEquals(JsonParser.parseString("[\"boolean\",\"string\"]"), bossbarFields.getAsJsonObject("progress_from_time").get("type"));
-            assertEquals(JsonParser.parseString("[\"number\",\"string\"]"), bossbarFields.getAsJsonObject("radius").get("type"));
             assertEquals(1D, bossbarFields.getAsJsonObject("progress").get("maximum").getAsDouble());
             assertEquals(7, bossbarFields.getAsJsonObject("color").getAsJsonArray("anyOf").get(0).getAsJsonObject().getAsJsonArray("enum").size());
             assertEquals("[{%]", bossbarFields.getAsJsonObject("color").getAsJsonArray("anyOf").get(1).getAsJsonObject().get("pattern").getAsString());

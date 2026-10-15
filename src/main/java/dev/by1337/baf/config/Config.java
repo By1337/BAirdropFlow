@@ -7,7 +7,7 @@ public class Config {
     public static final YamlDecoder<Config> DECODER = RecordYamlDecoder.mapOf(
             Config::new,
             YamlDecoder.BOOL.fieldOf("debug", true),
-            WebConfig.DECODER.fieldOf("web", new WebConfig(false, "wss://btunnel.bdev.space/api/ws", "", "BAirdropFlow"))
+            WebConfig.DECODER.fieldOf("web", new WebConfig("wss://btunnel.bdev.space/api/ws", "", "BAirdropFlow"))
     );
     public final boolean debug;
     public final WebConfig web;

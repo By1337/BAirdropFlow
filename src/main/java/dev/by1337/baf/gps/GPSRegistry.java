@@ -26,6 +26,7 @@ public class GPSRegistry implements Listener, Closeable {
     private final Plugin plugin;
     private final Map<Long, GPSEntry> entries = new LinkedHashMap<>();
     private final Map<UUID, Set<Long>> viewers = new HashMap<>();
+    private final @Nullable LocationBar locationBar = BCore.locationBar();
 
     public GPSRegistry(Plugin plugin) {
         this.plugin = plugin;
@@ -50,7 +51,8 @@ public class GPSRegistry implements Listener, Closeable {
             if (viewer.getValue().remove(id)) {
                 Player player = plugin.getServer().getPlayer(viewer.getKey());
                 if (player != null && entry.waypoint() != null) {
-                    BCore.locationBar().remove(player, entry.waypoint());
+                    if (locationBar != null)
+                        locationBar.remove(player, entry.waypoint());
                 }
             }
             if (viewer.getValue().isEmpty()) iterator.remove();
@@ -61,7 +63,8 @@ public class GPSRegistry implements Listener, Closeable {
         GPSEntry entry = entries.get(id);
         if (entry == null || entry.waypoint() == null) return false;
         var loc = entry.location;
-        BCore.locationBar().send(player, entry.waypoint());
+        if (locationBar != null)
+            locationBar.send(player, entry.waypoint());
         BAF.sendMessage("gps_waypoint_added", player, Placeholders.<EventContext>create()
                 .of("x", Integer.toString(loc.getBlockX()))
                 .of("y", Integer.toString(loc.getBlockY()))
@@ -77,7 +80,8 @@ public class GPSRegistry implements Listener, Closeable {
         if (ids == null || !ids.remove(id)) return;
         GPSEntry entry = entries.get(id);
         if (entry != null && entry.waypoint() != null) {
-            BCore.locationBar().remove(player, entry.waypoint());
+            if (locationBar != null)
+                locationBar.remove(player, entry.waypoint());
         }
         if (ids.isEmpty()) viewers.remove(player.getUniqueId());
     }
@@ -98,7 +102,8 @@ public class GPSRegistry implements Listener, Closeable {
         for (long id : ids) {
             GPSEntry entry = entries.get(id);
             if (entry != null && entry.waypoint() != null) {
-                BCore.locationBar().remove(player, entry.waypoint());
+                if (locationBar != null)
+                    locationBar.remove(player, entry.waypoint());
             }
         }
     }

@@ -31,6 +31,7 @@ public class TimerSystem implements Closeable {
 
     private void tick() {
         manager.forEachAirdrops(airdrop -> airdrop.components().forEach(c -> {
+            airdrop.tick();
             if (c instanceof Tickable t) {
                 try (var ctx = BAF.newContext(airdrop)) {
                     t.onSyncTick(ctx);

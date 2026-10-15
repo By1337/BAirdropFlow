@@ -1,7 +1,5 @@
 version: 1
 web:
-  enabled: false
   url: 'wss://btunnel.bdev.space/api/ws'
-  #url: 'ws://localhost:4443/api/ws'
   secret: ''
   description: 'BAirdropFlow'

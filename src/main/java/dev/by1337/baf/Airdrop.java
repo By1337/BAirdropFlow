@@ -10,10 +10,9 @@ import dev.by1337.plc.PlaceholderResolver;
 import dev.by1337.plc.Placeholders;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.entity.Player;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 public class Airdrop implements PlaceholderApplier {
     private static final Random RANDOM = new Random();
@@ -43,6 +42,7 @@ public class Airdrop implements PlaceholderApplier {
     private final ComponentHolder components = new ComponentHolder();
     private final AirdropCleaner cleaner;
     private final Map<String, String> args = new HashMap<>();
+    private final Set<Player> nearbyPlayers = new HashSet<>();
 
     public Airdrop(Workflow config, AirdropManager manager, Location location) {
         cleaner = new AirdropCleaner();
@@ -55,6 +55,17 @@ public class Airdrop implements PlaceholderApplier {
         this.z = location.getBlockZ();
     }
 
+    public void tick(int radiusSq) {
+        nearbyPlayers.clear();
+        for (Player player : world.getPlayers()) {
+            if (player.getLocation().distanceSquared(location) <= radiusSq) nearbyPlayers.add(player);
+        }
+    }
+
+    public void tick() {
+        tick(config.nearbyRadius() * config.nearbyRadius());
+    }
+
     public Map<String, String> args() {
         return args;
     }
@@ -62,7 +73,6 @@ public class Airdrop implements PlaceholderApplier {
     public Command<EventContext> getCommands() {
         return AirdropCommands.getCommands();
     }
-
 
     @Override
     public String setPlaceholders(String s) {
@@ -117,5 +127,9 @@ public class Airdrop implements PlaceholderApplier {
 
     public static Random random() {
         return RANDOM;
+    }
+
+    public Set<Player> nearbyPlayers() {
+        return nearbyPlayers;
     }
 }
