@@ -5,6 +5,13 @@
 Зависимость для сборки:
 
 ```xml
+<repositories>
+    <repository>
+        <id>bdev-repo</id>
+        <url>https://repo.by1337.space/repository/maven-releases/</url>
+    </repository>
+</repositories>
+
 <dependency>
     <groupId>dev.by1337.baf</groupId>
     <artifactId>BAirdropFlow</artifactId>

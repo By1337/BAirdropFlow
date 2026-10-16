@@ -140,7 +140,7 @@
             <url>https://repo.papermc.io/repository/maven-public/</url>
         </repository>
         <repository>
-            <id>by1337-repo</id>
+            <id>bdev-repo</id>
             <url>https://repo.by1337.space/repository/maven-releases/</url>
         </repository>
         <repository>
