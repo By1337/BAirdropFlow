@@ -1,15 +1,21 @@
+# Публикует запускаемое голосование; само по себе при загрузке не стартует.
 type: default:vote
-id: example:vote
+id: ft:vote
 duration: 60s
 menu: baf:vote
 publish_gps: true
-# Keys are IDs from the common launch registry, values are display names.
 options:
-  example:default: Аирдроп
+  ft:mystic: Мистический сундук
+  ft:deathchest: Сундук смерти
+  ft:altar: Мистический алтарь
+  ft:beacon: Маяк убийца
+  ft:meteorite: Метеорит
+  ft:volcano: Вулкан
+  ft:geyser: Гейзер
 tie: random
 no_votes: random
 messages:
-  started: "<gold>Выберите следующее событие: <click:run_command:'/vote'><green>[/vote]</green></click> <gray>{time_left} сек."
-  ended: "<gold>Победитель: <yellow>{winner}"
+  started: "<gold>[Голосование] <white>Выберите следующее событие: <click:run_command:'/vote'><green>[/vote]</green></click> <gray>Осталось {time_left} сек."
+  ended: "<gold>[Голосование] <white>Победитель: <yellow>{winner}"
   voted: "<green>Ваш голос: <yellow>{selected}"
   cancelled: "<gray>Голосование завершено без запуска события."

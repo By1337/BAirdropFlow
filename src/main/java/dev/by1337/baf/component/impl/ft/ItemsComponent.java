@@ -15,7 +15,7 @@ import java.util.List;
 
 public final class ItemsComponent extends FtComponent {
     private final Config config;
-    private int emitted, next, wave, rolls, waveSize, interval, gap;
+    private int emitted, next, wave, rolls, waveSize, interval, gap, duration;
     private Vec3d min, max;
 
     private ItemsComponent(Config c, String name, Airdrop air) {
@@ -26,6 +26,7 @@ public final class ItemsComponent extends FtComponent {
     @Override
     protected void start(EventContext ctx) {
         rolls = config.rolls.getInt(airdrop);
+        duration = config.spreadDuration.getInt(airdrop);
         waveSize = config.waveSize.getInt(airdrop);
         interval = config.interval.getInt(airdrop);
         gap = config.waveInterval.getInt(airdrop);
@@ -37,9 +38,12 @@ public final class ItemsComponent extends FtComponent {
 
     @Override
     protected void tick(EventContext ctx) {
-        if (emitted < rolls && age >= next) {
+        int due = duration == 0 ? (age >= next ? emitted + 1 : emitted)
+                : (int) (Math.min((long) age + 1, duration) * rolls / duration);
+        while (!isRemoved() && emitted < rolls && emitted < due) {
             boolean reverse = config.alternate.getBoolean(airdrop) && (wave % 2 == 1);
             if (emitted % waveSize == 0) emit(config.onWave, origin, null, null);
+            if (isRemoved()) return;
             boolean success = scatter(origin, config.lootTable.getString(airdrop), 1, config.masks.stream().map(v -> v.getMaterial(airdrop)).toList(), config.maskName.getString(airdrop), item -> {
                 double x = random(min.x(), max.x());
                 item.setVelocity(new Vector(reverse ? -x : x, random(min.y(), max.y()), random(min.z(), max.z())));
@@ -66,11 +70,12 @@ public final class ItemsComponent extends FtComponent {
                          IntValue pickupDelay,
                          BooleanValue visibleName, List<MaterialValue> masks, StringValue maskName,
                          dev.by1337.edsl.EventHandler onEachSpread,
-                         dev.by1337.edsl.EventHandler onWave) implements ComponentFactory {
+                         dev.by1337.edsl.EventHandler onWave, IntValue spreadDuration) implements ComponentFactory {
         public static final NodeSchema WEB_SCHEMA = FtSettings.schema("FT: волны предметов", "Вулкан/Санта: существующий лут, диапазоны скорости, волны и безопасная очистка.")
                 .text("loot_table", "Таблица лута", "", true).integer("rolls", "Число предметов", 20, 0, false)
                 .integer("wave_size", "Предметов в волне", 5, 1, false).integer("interval_ticks", "Между предметами", 5, 1, false)
                 .integer("wave_interval_ticks", "Между волнами", 60, 1, false)
+                .integer("spread_duration_ticks", "Выбросить весь лут за N тиков (0 — интервалы волн)", 0, 0, false)
                 .vector("velocity_min", "Минимальная скорость", "0.4;0.3;-0.25", true).vector("velocity_max", "Максимальная скорость", "0.9;0.6;0.25", true)
                 .bool("alternate_x", "Чередовать направление волн", true).integer("fire_ticks", "Горение предмета", 100, 0, false)
                 .integer("pickup_delay_ticks", "Задержка подбора", 60, 0, false).bool("item_name_visible", "Показывать имя", true)
@@ -84,9 +89,11 @@ public final class ItemsComponent extends FtComponent {
                 IntValue.DECODER.fieldOf("fire_ticks", new IntValue(100)), IntValue.DECODER.fieldOf("pickup_delay_ticks", new IntValue(60)),
                 BooleanValue.DECODER.fieldOf("item_name_visible", new BooleanValue(true)), MaterialValue.DECODER.listOf().fieldOf("obfuscation_materials", List.of()),
                 StringValue.DECODER.fieldOf("obfuscation_name", new StringValue("")),
-                HANDLER.fieldOf("on_each_spread", EMPTY_HANDLER), HANDLER.fieldOf("on_wave", EMPTY_HANDLER));
+                HANDLER.fieldOf("on_each_spread", EMPTY_HANDLER), HANDLER.fieldOf("on_wave", EMPTY_HANDLER),
+                IntValue.DECODER.fieldOf("spread_duration_ticks", new IntValue(0)));
 
         public Config {
+            spreadDuration = spreadDuration.checked(v -> v >= 0, "Invalid spread_duration_ticks");
             rolls = rolls.checked(v -> v >= 0 && v <= 4096, "Invalid rolls");
             waveSize = waveSize.checked(v -> v > 0 && v <= 4096, "Invalid wave_size");
             interval = interval.checked(v -> v > 0, "Invalid interval_ticks");

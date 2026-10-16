@@ -1,0 +1,422 @@
+defaults:
+  air_name: "Маяк убийца"
+id: "ft:beacon"
+world: "world"
+generator:
+  type: "generator:random"
+  center: "0;0;0"
+  radius: 2500
+  min_y: 30
+  max_y: 120
+  clear_zone: 5
+  clear_y: 4
+  air_tester: "!solid & !water & !lava"
+  solid_tester: "solid & !water & !lava & !snow & !oak_leaves & !spruce_leaves & !birch_leaves & !jungle_leaves & !acacia_leaves & !dark_oak_leaves & !azure_bluet & !allium & !blue_orchid & !poppy & !dandelion & !seagrass & !dead_bush & !fern & !short_grass & !red_mushroom & !brown_mushroom & !lily_of_the_valley & !cornflower & !oxeye_daisy & !pink_tulip & !white_tulip & !orange_tulip & !red_tulip & !large_fern & !tall_grass & !peony & !rose_bush & !sunflower & !lilac & !cactus & !sugar_cane & !kelp & !lily_pad"
+  offsets: "0;3;0"
+args:
+  loot_count: "20"
+  air_type: "<hover:show_text:'<dark_gray>[<#AAAAAA>★<gray>★★★★<dark_gray>]'><#AAAAAA>Обычный</hover>"
+  rarity_selected: "0"
+spawner:
+  type: "spawner:timer"
+  time: "180s"
+  gps:
+    publish: true
+    publish_location: false
+    gps_line: "<hover:show_text:'<#FF7700>{air_name}<newline><gray>Событие появится через <green>{formated_time_left}<newline><gray>Координаты будут доступны после появления.'><#FF7700>{air_name}</hover> <white>{value:air_type}</white> <gray>через <#3EF6A6>{formated_time_left}</#3EF6A6></gray>"
+  on_create:
+    - weights:
+        "11":
+          - set_value: "air_type \"<hover:show_text:'<dark_gray>[<#FFFF00>★★★★★<dark_gray>]'><gradient:#ADFF00:#FF7400>Легендарный</gradient></hover>\""
+          - set_value: "loot_count 100"
+        "12":
+          - set_value: "air_type \"<hover:show_text:'<dark_gray>[<#FB0000>★★★★<gray>★<dark_gray>]'><#FB0000>Элитный</hover>\""
+          - set_value: "loot_count 70"
+        "17":
+          - set_value: "air_type \"<hover:show_text:'<dark_gray>[<#E65400>★★★<gray>★★<dark_gray>]'><#E65400>Богатый</hover>\""
+          - set_value: "loot_count 50"
+        "20":
+          - set_value: "air_type \"<hover:show_text:'<dark_gray>[<#EB996A>★★<gray>★★★<dark_gray>]'><#EB996A>Солидный</hover>\""
+          - set_value: "loot_count 30"
+        "30":
+          - set_value: "air_type \"<hover:show_text:'<dark_gray>[<#AAAAAA>★<gray>★★★★<dark_gray>]'><#AAAAAA>Обычный</hover>\""
+          - set_value: "loot_count 20"
+    - bc: |-
+        <gradient:#AC2600:#FF9D00:#830000> ╔═══╦═╦══╦═╦══╦══╦══╦══╗</gradient>
+        <#981300> ║
+        <#830000> ║<#FFFFE6>     <obf><#FF7200>|||</obf><#FF7700>   [Маяк убийца]   <obf><#FF7200>|||</obf>
+        <#830000> ║<#FFFFE6>   Появится уже через<#FFCC00> 3 минуты!
+        <#981300> ║
+        <gradient:#AC2600:#FF9D00:#830000> ╚═══╩═╩══╩═╩══╩══╩══╩══╝</gradient>
+  when: {}
+  on_timer_end:
+    - make:
+        loot_count: "{value:loot_count}"
+        air_type: "{value:air_type}"
+        rarity_selected: "1"
+nodes:
+  __init__:
+    type: "__init__"
+    on_init:
+      - create: "start_actions"
+  __destroy__:
+    type: "__destroy__"
+    on_destroy: []
+  region:
+    type: "wg:region"
+    size: "20;200;20"
+    flags:
+      - "pvp allow"
+      - "build deny"
+      - "block-break deny"
+      - "block-place deny"
+      - "tnt deny"
+      - "lighter deny"
+      - "creeper-explosion deny"
+      - "ghast-fireball deny"
+      - "other-explosion deny"
+      - "enderman-grief deny"
+      - "fire-spread deny"
+      - "snowman-trails deny"
+      - "ravager-grief deny"
+      - "lava-fire deny"
+      - "water-flow deny"
+      - "lava-flow deny"
+      - "ice-melt deny"
+      - "chest-access deny"
+    on_create:
+      - create: "gps"
+  gps:
+    type: "default:gps"
+    publish_location: true
+    gps_line: "<#FF7700>● <hover:show_text:'<#FF7700>{air_name}<newline><gray>Мир: <white>{world}<newline><gray>Координаты: <white>{x} {y} {z}<newline><green>Нажмите, чтобы установить GPS.'><click:run_command:'/gps {ctx:gps.gps_id}'>{air_name}</click></hover> <white>{args:air_type}</white> <gray>[{world} {x}/{y}/{z}]</gray> <hover:show_text:'<green>Поставить GPS'><click:run_command:'/gps {ctx:gps.gps_id}'><green>[GPS]</green></click></hover>"
+    on_create:
+      - create: "structure"
+  structure:
+    type: "schematic:paster"
+    path: "../BAirdropFlow/schematics/beacon.schem"
+    offsets: "0;0;0"
+    no_replace:
+      - "bedrock"
+    no_place:
+      - "air"
+      - "cave_air"
+      - "void_air"
+    on_create:
+      - create: "ambient"
+    replace:
+      barrier: "air"
+  loot_1:
+    type: "loot:looter"
+    offsets: "6;-2;4"
+    loot_table: "beacon"
+    rolls: "{args:loot_count}"
+    title: "Маяк убийца"
+    take_cooldown_ticks: 5
+    fill_duration_ticks: 100
+    on_create:
+      - create: "chest_1_open_holo"
+      - create: "loot_2"
+    on_remove:
+      - remove: "chest_1_open_holo"
+      - remove: "loot_2"
+    on_open:
+      - create: "loot_1_open_commands"
+    obfuscation_materials:
+      - "nautilus_shell"
+      - "phantom_membrane"
+      - "gunpowder"
+      - "gray_dye"
+    obfuscation_name: "<gold>Богатое сокровище"
+  open_chests:
+    type: "default:commands"
+    on_run:
+      - remove: "closed_1"
+      - create: "loot_1"
+  closed_1:
+    type: "block:click"
+    offsets: "6;-2;4"
+    count: 2147483647
+    on_click:
+      - create: "closed_1_click_commands"
+    on_create:
+      - create: "chest_1_closed_holo"
+      - create: "closed_2"
+    on_remove:
+      - remove: "chest_1_closed_holo"
+      - remove: "closed_2"
+  closed_2:
+    type: "block:click"
+    offsets: "-6;-2;4"
+    count: 2147483647
+    on_click:
+      - create: "closed_1_click_commands"
+    on_create:
+      - create: "chest_2_closed_holo"
+      - create: "closed_3"
+    on_remove:
+      - remove: "chest_2_closed_holo"
+      - remove: "closed_3"
+  closed_3:
+    type: "block:click"
+    offsets: "0;-2;10"
+    count: 2147483647
+    on_click:
+      - create: "closed_1_click_commands"
+    on_create:
+      - create: "chest_3_closed_holo"
+      - create: "closed_4"
+    on_remove:
+      - remove: "chest_3_closed_holo"
+      - remove: "closed_4"
+  closed_4:
+    type: "block:click"
+    offsets: "0;-2;-2"
+    count: 2147483647
+    on_click:
+      - create: "closed_1_click_commands"
+    on_create:
+      - create: "chest_4_closed_holo"
+    on_remove:
+      - remove: "chest_4_closed_holo"
+  loot_2:
+    type: "loot:looter"
+    offsets: "-6;-2;4"
+    loot_table: "beacon"
+    rolls: "{args:loot_count}"
+    title: "Маяк убийца"
+    take_cooldown_ticks: 5
+    fill_duration_ticks: 100
+    on_create:
+      - create: "chest_2_open_holo"
+      - create: "loot_3"
+    on_remove:
+      - remove: "chest_2_open_holo"
+      - remove: "loot_3"
+    on_open:
+      - create: "loot_1_open_commands"
+    obfuscation_materials:
+      - "nautilus_shell"
+      - "phantom_membrane"
+      - "gunpowder"
+      - "gray_dye"
+    obfuscation_name: "<gold>Богатое сокровище"
+  loot_3:
+    type: "loot:looter"
+    offsets: "0;-2;10"
+    loot_table: "beacon"
+    rolls: "{args:loot_count}"
+    title: "Маяк убийца"
+    take_cooldown_ticks: 5
+    fill_duration_ticks: 100
+    on_create:
+      - create: "chest_3_open_holo"
+      - create: "loot_4"
+    on_remove:
+      - remove: "chest_3_open_holo"
+      - remove: "loot_4"
+    on_open:
+      - create: "loot_1_open_commands"
+    obfuscation_materials:
+      - "nautilus_shell"
+      - "phantom_membrane"
+      - "gunpowder"
+      - "gray_dye"
+    obfuscation_name: "<gold>Богатое сокровище"
+  loot_4:
+    type: "loot:looter"
+    offsets: "0;-2;-2"
+    loot_table: "beacon"
+    rolls: "{args:loot_count}"
+    title: "Маяк убийца"
+    take_cooldown_ticks: 5
+    fill_duration_ticks: 100
+    on_create:
+      - create: "chest_4_open_holo"
+    on_remove:
+      - remove: "chest_4_open_holo"
+    on_open:
+      - create: "loot_1_open_commands"
+    obfuscation_materials:
+      - "nautilus_shell"
+      - "phantom_membrane"
+      - "gunpowder"
+      - "gray_dye"
+    obfuscation_name: "<gold>Богатое сокровище"
+  ambient:
+    type: "particle:animation"
+    animation: "beacon-ambient"
+    offsets: "0;0;0"
+    ticks: -1
+    on_create:
+      - create: "spawn_announcement"
+  started_bar:
+    type: "default:bossbar"
+    title: "<red>Маяк убийца <gold>- до открытия: <red>{ctx:started.timer} сек"
+    radius: 50
+    color: "red"
+    overlay: "notched_20"
+    time: "{ctx:started.timer}"
+    progress_from_time: true
+    on_create:
+      - create: "beacon_pulse"
+    on_remove:
+      - remove: "beacon_pulse"
+  started:
+    type: "tick:timer"
+    timer: 180
+    on_create:
+      - create: "started_bar"
+      - create: "closed_1"
+    on_tick:
+      - create: "started_money"
+    on_timer_end:
+      - create: "open_chests"
+      - create: "active"
+    on_remove:
+      - remove: "started_bar"
+  active_bar:
+    type: "default:bossbar"
+    title: "<red>Маяк убийца <gold>- до удаления: <red>{ctx:active.timer} сек"
+    radius: 50
+    color: "red"
+    overlay: "notched_20"
+    time: "{ctx:active.timer}"
+    progress_from_time: true
+  active:
+    type: "tick:timer"
+    timer: 60
+    on_create:
+      - create: "active_bar"
+    on_tick:
+      - create: "active_tick"
+    on_timer_end: []
+    on_remove:
+      - remove: "active_bar"
+  started_money:
+    type: "default:commands"
+    on_run:
+      - if: "{ctx:started.timer} % 3 == 0"
+        do:
+          - nearby-15:
+              - console: "eco give {target:player_name} 300"
+              - message: "<dark_green>[$] <white>Вы получили <gold>$300 <white>от <aqua>Маяка<white>!"
+  active_money:
+    type: "default:commands"
+    on_run:
+      - if: "{ctx:active.timer} % 3 == 0"
+        do:
+          - nearby-15:
+              - console: "eco give {target:player_name} 500"
+              - message: "<dark_green>[$] <white>Вы получили <gold>$500 <white>от <aqua>Маяка<white>!"
+  loot_1_open_commands:
+    type: "default:commands"
+    on_run:
+      - sound: "block.chest.open 1 1"
+  closed_1_click_commands:
+    type: "default:commands"
+    on_run:
+      - message: "<center:200><red>Сундук закрыт."
+  start_actions:
+    type: "default:commands"
+    on_run:
+      - if: "{args:rarity_selected} == 0"
+        do:
+          - weights:
+              "11":
+                - set_arg: "air_type <hover:show_text:'<dark_gray>[<#FFFF00>★★★★★<dark_gray>]'><gradient:#ADFF00:#FF7400>Легендарный</gradient></hover>"
+                - set_arg: "loot_count 100"
+              "12":
+                - set_arg: "air_type <hover:show_text:'<dark_gray>[<#FB0000>★★★★<gray>★<dark_gray>]'><#FB0000>Элитный</hover>"
+                - set_arg: "loot_count 70"
+              "17":
+                - set_arg: "air_type <hover:show_text:'<dark_gray>[<#E65400>★★★<gray>★★<dark_gray>]'><#E65400>Богатый</hover>"
+                - set_arg: "loot_count 50"
+              "20":
+                - set_arg: "air_type <hover:show_text:'<dark_gray>[<#EB996A>★★<gray>★★★<dark_gray>]'><#EB996A>Солидный</hover>"
+                - set_arg: "loot_count 30"
+              "30":
+                - set_arg: "air_type <hover:show_text:'<dark_gray>[<#AAAAAA>★<gray>★★★★<dark_gray>]'><#AAAAAA>Обычный</hover>"
+                - set_arg: "loot_count 20"
+      - create: "region"
+  spawn_announcement:
+    type: "default:commands"
+    on_run:
+      - bc: |-
+          <gradient:#AC2600:#FF9D00:#830000> ╔═══╦═╦══╦═╦══╦══╦══╦══╗</gradient>
+          <#981300> ║
+          <#830000> ║<#FFFFE6>     <obf><#FF7200>|||</obf><#FF7700>   [Маяк убийца]   <obf><#FF7200>|||</obf>
+          <#830000> ║<#FFFFE6>   Уровень лута:<#F5E23D> {args:air_type}
+          <#830000> ║<#FFFFE6>   Появился на координатах<#FFCC00> <hover:show_text:'<#FFCC00>➥ Нажмите<white>, чтобы установить <#FFCC00>GPS<newline><white>Стрелка компаса будет<newline>указывать на место ивента.'><click:run_command:'/gps {ctx:gps.gps_id}'>{x} {y} {z}</click></hover><white>
+          <#981300> ║
+          <gradient:#AC2600:#FF9D00:#830000> ╚═══╩═╩══╩═╩══╩══╩══╩══╝</gradient>
+      - sound_all: "entity.lightning_bolt.thunder 1 1"
+      - create: "started"
+  beacon_pulse:
+    type: "ft:beacon_pulse"
+    offsets: "0.5;6.5;4.5"
+    interval_ticks: 600
+    radius: 15
+    effect_ticks: 80
+  ending_tnt:
+    type: "ft:tnt"
+    offsets: "0.5;56.5;4.5"
+    fuse_ticks: 100
+    entity_lifetime_ticks: 200
+    damage: false
+    on_finish:
+      - destroy: ""
+  active_tick:
+    type: "default:commands"
+    on_run:
+      - create: "active_money"
+      - if: "{ctx:active.timer} == 5"
+        do:
+          - create: "close_chests"
+          - create: "ending_tnt"
+  close_chests:
+    type: "default:commands"
+    on_run:
+      - remove: "loot_1"
+      - create: "closed_1"
+  chest_1_closed_holo:
+    type: "default:hologram"
+    offsets: "6.5;-0.5;4.5"
+    lines:
+      - "Сундук закрыт"
+  chest_1_open_holo:
+    type: "default:hologram"
+    offsets: "6.5;-0.5;4.5"
+    lines:
+      - "Сундук открыт"
+  chest_2_closed_holo:
+    type: "default:hologram"
+    offsets: "-5.5;-0.5;4.5"
+    lines:
+      - "Сундук закрыт"
+  chest_2_open_holo:
+    type: "default:hologram"
+    offsets: "-5.5;-0.5;4.5"
+    lines:
+      - "Сундук открыт"
+  chest_3_closed_holo:
+    type: "default:hologram"
+    offsets: "0.5;-0.5;10.5"
+    lines:
+      - "Сундук закрыт"
+  chest_3_open_holo:
+    type: "default:hologram"
+    offsets: "0.5;-0.5;10.5"
+    lines:
+      - "Сундук открыт"
+  chest_4_closed_holo:
+    type: "default:hologram"
+    offsets: "0.5;-0.5;-1.5"
+    lines:
+      - "Сундук закрыт"
+  chest_4_open_holo:
+    type: "default:hologram"
+    offsets: "0.5;-0.5;-1.5"
+    lines:
+      - "Сундук открыт"
+"$web_meta": "{\"version\":3,\"webNodes\":{},\"nodes\":{\"__init__\":{\"x\":-1999.0835402411951,\"y\":696.4278983388915},\"__destroy__\":{\"x\":4954.536015321273,\"y\":2729.104775691866},\"region\":{\"x\":-123.16512794075948,\"y\":701.2725436894937},\"gps\":{\"x\":364.33827924849777,\"y\":708.6282973369321},\"structure\":{\"x\":910.8508124277914,\"y\":684.4421279227582},\"loot_1\":{\"x\":5804.059682230368,\"y\":2774.730578967149},\"open_chests\":{\"x\":4985.962760994475,\"y\":2007.784926008723},\"closed_1\":{\"x\":5799.360812653788,\"y\":963.0815700562167},\"closed_2\":{\"x\":5796.7597828509615,\"y\":1352.1520256898848},\"closed_3\":{\"x\":5768.046972798148,\"y\":1798.894561090226},\"closed_4\":{\"x\":5787.875832365495,\"y\":2222.609959903004},\"loot_2\":{\"x\":5831.747535372354,\"y\":3160.7498724885354},\"loot_3\":{\"x\":5833.544971009434,\"y\":3523.134733170034},\"loot_4\":{\"x\":5834.924047687013,\"y\":3890.4313243821302},\"ambient\":{\"x\":1438.499607537149,\"y\":809.542626651333},\"started_bar\":{\"x\":3771.644219784278,\"y\":1317.8492150530271},\"started\":{\"x\":3202.3789280685705,\"y\":846.1867377082315},\"active_bar\":{\"x\":3839.9282341388193,\"y\":1871.64048620953},\"active\":{\"x\":3250.7869210296403,\"y\":1833.4012709016488},\"started_money\":{\"x\":3771.8530377176144,\"y\":876.2348411436188,\"width\":532.8902585663254,\"height\":297.32179467894355},\"active_money\":{\"x\":4387.789756975933,\"y\":3144.9393961997034,\"width\":930.5046928676626,\"height\":325.39007434386906},\"loot_1_open_commands\":{\"x\":6300.160877224542,\"y\":3240.1737847804734},\"closed_1_click_commands\":{\"x\":6228.585821893032,\"y\":1565.4279270919199,\"width\":445.10661689279414,\"height\":191.3172660395142},\"start_actions\":{\"x\":-1488,\"y\":708.9998779296875,\"width\":1078.66650390625,\"height\":595.3333740234375},\"spawn_announcement\":{\"x\":1927.5243804137237,\"y\":798.4762959119937,\"width\":950.4232201876454,\"height\":398.102320439454},\"beacon_pulse\":{\"x\":4244.336450769378,\"y\":1285.434399822029},\"ending_tnt\":{\"x\":4406.897872277844,\"y\":2595.1486395398283},\"active_tick\":{\"x\":3821.3712371129964,\"y\":2279.0598953112844,\"width\":409.55755493137076,\"height\":306.5664175220432},\"close_chests\":{\"x\":5028.542643398951,\"y\":2405.5484096369564,\"width\":352.52876373948067,\"height\":210.44247416623836},\"chest_1_closed_holo\":{\"x\":6756.178734764309,\"y\":974.8876155371487},\"chest_1_open_holo\":{\"x\":6674.518777327134,\"y\":2752.1921151095594},\"chest_2_closed_holo\":{\"x\":6761.407591380359,\"y\":1421.185159957379},\"chest_2_open_holo\":{\"x\":6680.937116904894,\"y\":3113.973543641977},\"chest_3_closed_holo\":{\"x\":6779.794255742807,\"y\":1824.2884832922382},\"chest_3_open_holo\":{\"x\":6686.493348549653,\"y\":3487.694852207406},\"chest_4_closed_holo\":{\"x\":6790.792796265223,\"y\":2246.2553479079743},\"chest_4_open_holo\":{\"x\":6685.808700835953,\"y\":3880.0741949086337}},\"viewport\":{\"x\":135.63753270958023,\"y\":-34.449945519800394,\"zoom\":0.25},\"defaultsNode\":{\"x\":-1789.6371270312636,\"y\":-86.00458212733729}}"

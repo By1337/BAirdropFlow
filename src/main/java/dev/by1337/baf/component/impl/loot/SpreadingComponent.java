@@ -51,7 +51,7 @@ public final class SpreadingComponent extends AbstractComponent implements Timer
                     config.pickupDelayTicks.getInt(airdrop), config.itemLifetimeTicks.getInt(airdrop),
                     config.obfuscationMaterials.stream().map(v -> v.getMaterial(airdrop)).toList(),
                     maskName.isEmpty() ? null : MiniMessage.deserialize(maskName), graph,
-                    config.trailIntervalTicks.getInt(airdrop)));
+                    config.trailIntervalTicks.getInt(airdrop)).spreadOver(config.spreadDurationTicks.getInt(airdrop)));
             config.onCreate.handle(ctx);
         }
     }
@@ -87,12 +87,22 @@ public final class SpreadingComponent extends AbstractComponent implements Timer
                          IntValue itemLifetimeTicks, List<MaterialValue> obfuscationMaterials,
                          StringValue obfuscationName, StringValue trailAnimation, IntValue trailIntervalTicks,
                          EventHandler onCreate, EventHandler onSpreadEnd,
-                         EventHandler onRemove) implements ComponentFactory {
+                         EventHandler onRemove, IntValue spreadDurationTicks) implements ComponentFactory {
+        public Config(StringValue lootTable, IntValue rolls, Vec3dValue offsets, IntValue intervalTicks,
+                      DoubleValue horizontalSpeed, DoubleValue verticalSpeed, IntValue pickupDelayTicks,
+                      IntValue itemLifetimeTicks, List<MaterialValue> obfuscationMaterials,
+                      StringValue obfuscationName, StringValue trailAnimation, IntValue trailIntervalTicks,
+                      EventHandler onCreate, EventHandler onSpreadEnd, EventHandler onRemove) {
+            this(lootTable, rolls, offsets, intervalTicks, horizontalSpeed, verticalSpeed, pickupDelayTicks,
+                    itemLifetimeTicks, obfuscationMaterials, obfuscationName, trailAnimation, trailIntervalTicks,
+                    onCreate, onSpreadEnd, onRemove, new IntValue(0));
+        }
         public static final NodeSchema WEB_SCHEMA = NodeSchema.of("Разброс лута", "Выбрасывает лут по очереди с маскировкой до подбора и трейлами в полёте. Удаление ноды убирает оставшиеся предметы.")
                 .text("loot_table", "Таблица лута", "loot/default", true)
                 .integer("rolls", "Количество выборок лута (с повторениями)", 10, 0, false)
                 .vector("offsets", "Смещение точки выброса", "0.5;1;0.5", true)
                 .integer("interval_ticks", "Интервал выброса, тиков", 2, 1, false)
+                .integer("spread_duration_ticks", "Выбросить весь лут за N тиков (0 — интервалы)", 0, 0, false)
                 .number("horizontal_speed", "Горизонтальная скорость", 0.4, 0, null)
                 .number("vertical_speed", "Скорость вверх", 0.6, 0, null)
                 .integer("pickup_delay_ticks", "Задержка подбора, тиков", 20, 0, false)
@@ -119,9 +129,11 @@ public final class SpreadingComponent extends AbstractComponent implements Timer
                 IntValue.DECODER.fieldOf("trail_interval_ticks", new IntValue(1)),
                 HANDLER.fieldOf("on_create", EMPTY_HANDLER),
                 HANDLER.fieldOf("on_spread_end", EMPTY_HANDLER),
-                HANDLER.fieldOf("on_remove", EMPTY_HANDLER));
+                HANDLER.fieldOf("on_remove", EMPTY_HANDLER),
+                IntValue.DECODER.fieldOf("spread_duration_ticks", new IntValue(0)));
 
         public Config {
+            spreadDurationTicks = spreadDurationTicks.checked(v -> v >= 0, "spread_duration_ticks must be >= 0");
             rolls = rolls.checked(v -> v >= 0, "rolls must be >= 0");
             intervalTicks = intervalTicks.checked(v -> v > 0, "interval_ticks must be positive");
             horizontalSpeed = horizontalSpeed.checked(v -> v >= 0, "horizontal_speed must be >= 0");

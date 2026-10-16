@@ -30,14 +30,16 @@ public class TimerSystem implements Closeable {
     }
 
     private void tick() {
-        manager.forEachAirdrops(airdrop -> airdrop.components().forEach(c -> {
+        manager.forEachAirdrops(airdrop -> {
             airdrop.tick();
-            if (c instanceof Tickable t) {
-                try (var ctx = BAF.newContext(airdrop)) {
-                    t.onSyncTick(ctx);
+            airdrop.components().forEach(c -> {
+                if (c instanceof Tickable t) {
+                    try (var ctx = BAF.newContext(airdrop)) {
+                        t.onSyncTick(ctx);
+                    }
                 }
-            }
-        }));
+            });
+        });
     }
 
     private void stop() {

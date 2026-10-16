@@ -18,7 +18,8 @@ import java.util.concurrent.CompletableFuture;
 
 public class RandomGenerator implements Generator {
     public static final NodeSchema WEB_SCHEMA = NodeSchema.of("Случайная точка", "Ищет свободную область с подходящими блоками.")
-            .integer("radius", "Радиус", 2500, 1, false)
+            .integer("radius", "Радиус по X/Z", 2500, 1, false)
+            .vector("center", "Центр X/Z (Y определяется поиском)", "0;0;0", false)
             .integer("min_y", "Минимальная высота", 50, -2048, false)
             .integer("max_y", "Максимальная высота", 100, -2048, false)
             .integer("clear_zone", "Радиус свободной зоны", 4, 1, false)
@@ -36,9 +37,11 @@ public class RandomGenerator implements Generator {
             YamlDecoder.INT.fieldOf("clear_y", 3),
             MaterialTester.DECODER.fieldOf("air_tester", m -> true),
             MaterialTester.DECODER.fieldOf("solid_tester", m -> true),
-            Vec3i.DECODER.fieldOf("offsets", Vec3i.ZERO)
+            Vec3i.DECODER.fieldOf("offsets", Vec3i.ZERO),
+            Vec3i.DECODER.fieldOf("center", Vec3i.ZERO)
     );
 
+    private final Vec3i center;
     private final int radius;
     private final int min_y;
     private final int max_y;
@@ -49,6 +52,16 @@ public class RandomGenerator implements Generator {
     private final Vec3i offsets;
 
     public RandomGenerator(int radius, int minY, int maxY, int clearZone, int clearY, MaterialTester.Tester airTester, MaterialTester.Tester solidTester, Vec3i offsets) {
+        this(radius, minY, maxY, clearZone, clearY, airTester, solidTester, offsets, Vec3i.ZERO);
+    }
+
+    public RandomGenerator(int radius, int minY, int maxY, int clearZone, int clearY, MaterialTester.Tester airTester,
+                           MaterialTester.Tester solidTester, Vec3i offsets, Vec3i center) {
+        if (radius < 1 || clearZone < 1 || clearZone > 128 || clearY < 0 || minY >= maxY
+                || Math.abs((long) center.x()) + radius + clearZone > Integer.MAX_VALUE
+                || Math.abs((long) center.z()) + radius + clearZone > Integer.MAX_VALUE)
+            throw new IllegalArgumentException("Invalid random generator bounds");
+        this.center = center;
         this.radius = radius;
         min_y = minY;
         max_y = maxY;
@@ -63,8 +76,8 @@ public class RandomGenerator implements Generator {
     public CompletableFuture<@Nullable Location> tryGenerate(World world) {
         WorldData data = BAF.worldData().getIn(world);
 
-        int x = radius - random.nextInt(radius);
-        int z = radius - random.nextInt(radius);
+        Vec3i point = randomPoint();
+        int x = point.x(), z = point.z();
 
         int layersSize = square(clear_zone * 2);
         int reqBlocks = layersSize - 3;
@@ -90,6 +103,11 @@ public class RandomGenerator implements Generator {
             System.out.println("SKIP " + x + " " + z);
             return null;
         });
+    }
+
+    Vec3i randomPoint() {
+        return new Vec3i(center.x() + (int) random.nextLong(-(long) radius, (long) radius + 1), 0,
+                center.z() + (int) random.nextLong(-(long) radius, (long) radius + 1));
     }
 
     public static int square(int num) {

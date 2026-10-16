@@ -1,0 +1,19 @@
+# Приближение: Gaussian dispersion вместо случайных центров/сканирования мира.
+# Точный перенос см. PARTICLES_TODO.md.
+__root__:
+  type: base:root
+  connections:
+    p0: '%2'
+    p1: '%2'
+p0:
+  type: base:particle
+  particle: campfire_cosy_smoke
+  count: 0
+  dist: 0.5;0.3;0.5
+  maxSpeed: 0.05
+p1:
+  type: base:particle
+  particle: lava
+  count: 5
+  dist: 0.5;0.3;0.5
+  maxSpeed: 0.05

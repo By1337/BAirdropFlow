@@ -1,30 +1,35 @@
+# ПКМ по опоре призывным предметом.
 type: default:by_item
 items:
-  default:
+  airdrop:
+    item:
+      material: REDSTONE_TORCH
+      name: <gradient:#FF1515:#FF9800>[★] Аи</gradient><#FFA50E>р<gradient:#FFB21D:#FFDA48>дроп</gradient>
+      lore:
+      - <#FF9800>➥ Установите<#FFFFE6>, чтобы отправить
+      - <#FFFFE6>сигнал в воздух для
+      - <#FFFFE6>призыва <#FFDA48>Аирдропа
+    workflow: ft:airdrop
+    consume: true
+    requirements:
+      min_y: -64
+      max_y: 319
+      flat_surface: false
+      radius: 0
+      clear_height: 1
+      outside_regions: true
+  strange_beacon:
     item:
       material: BEACON
-      name: '<gold>Вызов аирдропа'
+      name: <gold>Загадочный маяк
       lore:
-        - '<gray>ПКМ по блоку — вызвать аирдроп'
-    workflow: example:default
+      - <gray>ПКМ по ровной площадке 5×5 для призыва.
+    workflow: ft:strange_beacon
     consume: true
-    # Дополняют args из workflow. Доступны в нодах как {args:loot_count}.
-    # player и player_uuid передаются автоматически и имеют приоритет.
-    args:
-      player: "%player_name%"
-      loot_count: '10'
-      air_type: 'default'
     requirements:
-      # Высота появления: на один блок выше выбранного блока.
-      min_y: 50
-      max_y: 120
+      min_y: -64
+      max_y: 315
       flat_surface: true
-      # Радиус площадки: 2 => 5x5, твёрдая опора на одной высоте.
       radius: 2
-      clear_height: 3
-      # При true требуется работающий WorldGuard. Проверяется вся область
-      # от опоры до clear_height, в радиусе radius, включая регионы аирдропов.
-      outside_regions: false
-# Выдать: /baf give <игрок> default (право baf.admin).
-# Глобальный идентификатор предмета: baf_airdrop:default.
-# Использование: предмет в основной руке, ПКМ по блоку.
+      clear_height: 5
+      outside_regions: true

@@ -1,0 +1,10 @@
+__root__:
+  type: base:root
+  connections:
+    p: ''
+p:
+  type: base:particle
+  particle: flame
+  count: 1
+  maxSpeed: 0
+  dist: 0;0;0

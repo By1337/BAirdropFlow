@@ -1,0 +1,267 @@
+defaults:
+  air_name: Аирдроп
+id: ft:airdrop
+world: world
+generator:
+  type: generator:fixed
+  at: 0;100;0
+args:
+  loot_count: '20'
+  air_type: <hover:show_text:'<dark_gray>[<#AAAAAA>★<gray>★★★★<dark_gray>]'><#AAAAAA>Обычный</hover>
+spawner:
+  type: spawner:timer
+  time: 1s
+  on_create: []
+  when: {}
+  on_timer_end:
+    - make: {}
+nodes:
+  __init__:
+    type: __init__
+    on_init:
+      - create: start_actions
+  __destroy__:
+    type: __destroy__
+    on_destroy: []
+  region:
+    type: wg:region
+    size: 5;5;5
+    flags:
+      - block-break deny
+      - block-place deny
+    on_create:
+      - create: torch
+  torch:
+    type: schematic:paster
+    path: ../BAirdropFlow/schematics/block-redstone_torch.schem
+    offsets: 0;0;0
+    no_replace: []
+    no_place:
+      - air
+      - cave_air
+      - void_air
+    on_create:
+      - create: summon_animation
+    replace:
+      barrier: air
+  barrel:
+    type: schematic:paster
+    path: ../BAirdropFlow/schematics/block-barrel.schem
+    offsets: 0;0;0
+    no_replace: []
+    no_place:
+      - air
+      - cave_air
+      - void_air
+    replace:
+      barrier: air
+    on_create:
+      - create: active
+  summon_animation:
+    type: particle:animation
+    animation: airdrop-summon
+    offsets: 0;0;0
+    ticks: 300
+    on_create:
+      - create: summon_falling
+  animation_wait:
+    type: tick:timer
+    timer: 15
+    on_create:
+      - create: summon_sound_start
+    on_tick:
+      - create: summon_sound_tick
+    on_timer_end:
+      - create: summon_sound_end
+  started_bar:
+    type: default:bossbar
+    title: '<#FF1515>Аир-дроп <#FF9800>- вызвали: <#FF1515>{ctx:started.timer} сек'
+    radius: 80
+    color: red
+    overlay: notched_20
+    time: '{ctx:started.timer}'
+    progress_from_time: true
+    on_create:
+      - create: started_holo
+    on_remove:
+      - remove: started_holo
+  started_holo:
+    type: default:hologram
+    offsets: 0.5;2;0.5
+    lines:
+      - <bold><gradient:#FF4B00:#FF8900>Аирдроп</gradient></bold>
+      - <gold>Сигнал отправлен
+  started:
+    type: tick:timer
+    timer: 60
+    on_create:
+      - create: started_bar
+    on_timer_end:
+      - remove: torch
+      - create: barrel
+    on_remove:
+      - remove: started_bar
+  active_bar:
+    type: default:bossbar
+    title: '<#FF1515>Аир-дроп <#FF9800>- получаем: <#FF1515>{ctx:active.timer} сек'
+    radius: 80
+    color: red
+    overlay: notched_20
+    time: '{ctx:active.timer}'
+    progress_from_time: true
+    on_create:
+      - create: active_holo
+    on_remove:
+      - remove: active_holo
+  active_holo:
+    type: default:hologram
+    offsets: 0.5;2;0.5
+    lines:
+      - <bold><gradient:#FF4B00:#FF8900>Аирдроп</gradient></bold>
+      - <green>Открыт
+    on_create:
+      - create: looter
+    on_remove:
+      - remove: looter
+  active:
+    type: tick:timer
+    timer: 300
+    on_create:
+      - create: active_bar
+    on_timer_end:
+      - destroy: ''
+    on_remove:
+      - remove: active_bar
+  looter:
+    type: loot:looter
+    loot_table: airdrop
+    rolls: '{args:loot_count}'
+    title: <#E63434><bold>★ <gradient:#F71111:#FF8900>Аирдроп ★</gradient>
+    inventory_type: dispenser
+    size: 9
+    fill_interval_ticks: 100
+    fill_interval_max_ticks: 200
+    reveal_delay_ticks: 100
+    reveal_delay_max_ticks: 140
+    obfuscation_materials:
+      - blaze_powder
+    obfuscation_name: <gradient:#251F1F:#2E1919>[.] </gradient><gradient:#371212:#FFF701>Предмет
+      ещё не остыл</gradient>
+  summon_sound_start:
+    type: default:commands
+    on_run:
+      - nearby-30:
+          - sound: entity.blaze.shoot 0.4 1.2
+  summon_sound_tick:
+    type: default:commands
+    on_run:
+      - if: '{ctx:animation_wait.timer} % 3 == 0 && {ctx:animation_wait.timer} > 2'
+        do:
+          - nearby-30:
+              - sound: block.fire.extinguish 0.4 1.0
+  summon_sound_end:
+    type: default:commands
+    on_run:
+      - nearby-30:
+          - sound: entity.generic.explode 1.0 0.8
+      - create: started
+  start_actions:
+    type: default:commands
+    on_run:
+      - weights:
+          '11':
+            - set_arg: air_type <hover:show_text:'<dark_gray>[<#FFFF00>★★★★★<dark_gray>]'><gradient:#ADFF00:#FF7400>Легендарный</gradient></hover>
+            - set_arg: loot_count 100
+          '12':
+            - set_arg: air_type <hover:show_text:'<dark_gray>[<#FB0000>★★★★<gray>★<dark_gray>]'><#FB0000>Элитный</hover>
+            - set_arg: loot_count 70
+          '17':
+            - set_arg: air_type <hover:show_text:'<dark_gray>[<#E65400>★★★<gray>★★<dark_gray>]'><#E65400>Богатый</hover>
+            - set_arg: loot_count 50
+          '20':
+            - set_arg: air_type <hover:show_text:'<dark_gray>[<#EB996A>★★<gray>★★★<dark_gray>]'><#EB996A>Солидный</hover>
+            - set_arg: loot_count 30
+          '30':
+            - set_arg: air_type <hover:show_text:'<dark_gray>[<#AAAAAA>★<gray>★★★★<dark_gray>]'><#AAAAAA>Обычный</hover>
+            - set_arg: loot_count 20
+      - create: region
+  summon_falling:
+    type: ft:falling_blocks
+    ground_material: true
+    entity_lifetime_ticks: 200
+    steps:
+      - tick: 211
+        offsets: 1.51;1.86;-0.88
+        material: stone
+        velocity: 0.498;0.654;-0.685
+      - tick: 211
+        offsets: -0.01;1.4;2.12
+        material: stone
+        velocity: -0.252;0.425;0.801
+      - tick: 211
+        offsets: 1.68;1.71;0.94
+        material: stone
+        velocity: 0.585;0.578;0.218
+      - tick: 211
+        offsets: 3.09;1.24;-0.58
+        material: stone
+        velocity: 1.28;0.345;-0.536
+      - tick: 211
+        offsets: -0.79;0.88;0.95
+        material: stone
+        velocity: -0.641;0.168;0.224
+      - tick: 211
+        offsets: 0.1;1.56;-1.61
+        material: stone
+        velocity: -0.196;0.502;-1.044
+      - tick: 211
+        offsets: -0.08;1.43;1.96
+        material: stone
+        velocity: -0.289;0.442;0.721
+      - tick: 211
+        offsets: 0.58;2.35;-0.32
+        material: stone
+        velocity: 0.04;0.895;-0.404
+      - tick: 211
+        offsets: 1.22;1.77;-0.16
+        material: stone
+        velocity: 0.358;0.61;-0.325
+      - tick: 211
+        offsets: 1;1.06;-0.5
+        material: stone
+        velocity: 0.25;0.258;-0.496
+      - tick: 211
+        offsets: 1.15;2.66;-1.04
+        material: stone
+        velocity: 0.323;1.051;-0.762
+      - tick: 211
+        offsets: 0.36;1.06;1.79
+        material: stone
+        velocity: -0.071;0.257;0.637
+      - tick: 211
+        offsets: 0.77;1.22;-0.19
+        material: stone
+        velocity: 0.136;0.337;-0.339
+      - tick: 211
+        offsets: 1.1;2.03;0.72
+        material: stone
+        velocity: 0.299;0.739;0.107
+      - tick: 211
+        offsets: 0.16;1.68;1.58
+        material: stone
+        velocity: -0.167;0.564;0.533
+      - tick: 231
+        offsets: 4.1;1.56;-4.06
+        material: stone
+        velocity: 0.349;0.505;0.458
+      - tick: 237
+        offsets: 13.7;4.03;4.52
+        material: stone
+        velocity: 0.429;0.241;-0.441
+      - tick: 249
+        offsets: 9.91;1.77;4.5
+        material: stone
+        velocity: 0.358;0.609;0.283
+    on_create:
+      - create: animation_wait
+$web_meta: '{"version":3,"webNodes":{},"nodes":{"__init__":{"x":-1964.180636135044,"y":1538.1025306105555},"__destroy__":{"x":-2132.156480849982,"y":2002.2698143864013},"region":{"x":-283.5537106144694,"y":1981.588728851445},"torch":{"x":167.58435285686087,"y":1987.2900787564472,"width":379.82086014141163,"height":330.85263496856174},"barrel":{"x":2864.5828724815838,"y":3177.254230464718},"summon_animation":{"x":616.2827849362351,"y":1895.715629111887,"width":354.2947300628765,"height":369.6525097338454},"animation_wait":{"x":1534.7351611659378,"y":1925.4482515594293,"width":331.94147382804186,"height":302.98494782138243},"started_bar":{"x":3096.4566739449738,"y":2722.9483695525964},"started_holo":{"x":3579.0671062579327,"y":2673.695924675801},"started":{"x":2307.0652806002076,"y":2733.932821916044},"active_bar":{"x":3876.1861521978653,"y":3154.2461106519368},"active_holo":{"x":4380.043672792725,"y":3155.898754291442},"active":{"x":3336.9962125916663,"y":3177.033329495925},"looter":{"x":4887.624710346732,"y":3147.157609503382},"summon_sound_start":{"x":2098.450500511652,"y":1723.443933015973,"width":577.33349609375,"height":259.333251953125},"summon_sound_tick":{"x":2233.957960176307,"y":2027.771677678545,"width":719.0176774168312,"height":291.8279553894944},"summon_sound_end":{"x":1643.767825969374,"y":2339.7331897788536,"width":555.4691570862808,"height":239.9076751417641},"start_actions":{"x":-1653.2518136873762,"y":1994.2304716540327,"width":1250.2957457175794,"height":542.6961337038672},"summon_falling":{"x":1092.1854055039905,"y":1909.7035464360738}},"viewport":{"x":786.0288909222004,"y":-266.38153016638387,"zoom":0.25},"defaultsNode":{"x":295.4234993400854,"y":-680.0489681876847}}'

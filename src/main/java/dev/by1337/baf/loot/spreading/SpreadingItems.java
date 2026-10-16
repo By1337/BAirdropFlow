@@ -32,6 +32,8 @@ public final class SpreadingItems implements Listener, AutoCloseable {
     private final java.util.function.Consumer<Item> configure;
     private final EmitterGraph trail;
     private int tick;
+    private int spreadDuration;
+    private final int total;
     private int trailLifetime = Integer.MAX_VALUE;
     private boolean closed;
 
@@ -57,6 +59,7 @@ public final class SpreadingItems implements Listener, AutoCloseable {
         for (ItemStack item : loot) {
             if (item != null && !item.getType().isAir() && item.getAmount() > 0) pending.add(item.clone());
         }
+        this.total = pending.size();
         this.interval = interval;
         this.horizontalSpeed = horizontalSpeed;
         this.verticalSpeed = verticalSpeed;
@@ -69,6 +72,13 @@ public final class SpreadingItems implements Listener, AutoCloseable {
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
+    /** Distribute all stacks over exactly this many tick calls; zero preserves interval mode. */
+    public SpreadingItems spreadOver(int ticks) {
+        if (ticks < 0 || tick != 0) throw new IllegalArgumentException("Set spread duration before ticking");
+        spreadDuration = ticks;
+        return this;
+    }
+
     public SpreadingItems limitTrailLifetime(int ticks) {
         if (ticks < 0) throw new IllegalArgumentException("Invalid trail lifetime");
         trailLifetime = ticks;
@@ -77,7 +87,10 @@ public final class SpreadingItems implements Listener, AutoCloseable {
 
     public void tick() {
         if (closed) return;
-        if (!pending.isEmpty() && tick % interval == 0) emit();
+        if (spreadDuration > 0) {
+            int due = (int) ((long) Math.min((long) tick + 1, spreadDuration) * total / spreadDuration);
+            while (!pending.isEmpty() && total - pending.size() < due) emit();
+        } else if (!pending.isEmpty() && tick % interval == 0) emit();
         for (Drop drop : List.copyOf(drops.values())) {
             if (!drop.entity.isValid() || tick - drop.born >= lifetime) {
                 drop.entity.remove();

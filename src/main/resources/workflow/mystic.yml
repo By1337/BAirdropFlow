@@ -1,0 +1,276 @@
+defaults:
+  air_name: Мистический сундук
+id: ft:mystic
+world: world
+generator:
+  type: generator:random
+  center: 0;0;0
+  radius: 2500
+  min_y: 30
+  max_y: 120
+  clear_zone: 5
+  clear_y: 4
+  air_tester: '!solid & !water & !lava'
+  solid_tester: solid & !water & !lava & !snow & !oak_leaves & !spruce_leaves & !birch_leaves & !jungle_leaves & !acacia_leaves & !dark_oak_leaves & !azure_bluet
+    & !allium & !blue_orchid & !poppy & !dandelion & !seagrass & !dead_bush & !fern & !short_grass & !red_mushroom & !brown_mushroom & !lily_of_the_valley & !cornflower
+    & !oxeye_daisy & !pink_tulip & !white_tulip & !orange_tulip & !red_tulip & !large_fern & !tall_grass & !peony & !rose_bush & !sunflower & !lilac & !cactus & !sugar_cane
+    & !kelp & !lily_pad
+  offsets: 0;0;0
+args:
+  loot_count: '20'
+  air_type: <hover:show_text:'<dark_gray>[<#AAAAAA>★<gray>★★★★<dark_gray>]'><#AAAAAA>Обычный</hover>
+  rarity_selected: '0'
+spawner:
+  type: spawner:timer
+  time: 120s
+  gps:
+    publish: true
+    publish_location: false
+    gps_line: <hover:show_text:'<#E026E6>{air_name}<newline><gray>Событие появится через <green>{formated_time_left}<newline><gray>Координаты будут доступны после
+      появления.'><#E026E6>{air_name}</hover> <white>{value:air_type}</white> <gray>через <#3EF6A6>{formated_time_left}</#3EF6A6></gray>
+  on_create:
+  - weights:
+      '30':
+      - set_value: air_type "<hover:show_text:'<dark_gray>[<#AAAAAA>★<gray>★★★★<dark_gray>]'><#AAAAAA>Обычный</hover>"
+      - set_value: loot_count 20
+      '20':
+      - set_value: air_type "<hover:show_text:'<dark_gray>[<#EB996A>★★<gray>★★★<dark_gray>]'><#EB996A>Солидный</hover>"
+      - set_value: loot_count 30
+      '17':
+      - set_value: air_type "<hover:show_text:'<dark_gray>[<#E65400>★★★<gray>★★<dark_gray>]'><#E65400>Богатый</hover>"
+      - set_value: loot_count 50
+      '12':
+      - set_value: air_type "<hover:show_text:'<dark_gray>[<#FB0000>★★★★<gray>★<dark_gray>]'><#FB0000>Элитный</hover>"
+      - set_value: loot_count 70
+      '11':
+      - set_value: air_type "<hover:show_text:'<dark_gray>[<#FFFF00>★★★★★<dark_gray>]'><gradient:#ADFF00:#FF7400>Легендарный</gradient></hover>"
+      - set_value: loot_count 100
+  - bc: |-
+      <gradient:#6C00C5:#FB00B4:#6C00C5> ╔══╦══╦══╦══╦══╦══╦══╦══╗</gradient>
+      <#6C00C5> ║
+      <#6C00C5> ║<#FFFFE6>     <#e026e6><obfuscated>|||</obfuscated><#e026e6>  [Мистический сундук]   <#e026e6><obfuscated>|||</obfuscated>
+      <#6C00C5> ║<#FFFFE6>   Появится уже через<#3EF6A6> 3 минуты!
+      <#6C00C5> ║
+      <gradient:#6C00C5:#FB00B4:#6C00C5> ╚══╩══╩══╩══╩══╩══╩══╩══╝</gradient>
+  when: {}
+  on_timer_end:
+  - make:
+      loot_count: '{value:loot_count}'
+      air_type: '{value:air_type}'
+      rarity_selected: '1'
+nodes:
+  __init__:
+    type: __init__
+    on_init:
+    - create: start_actions
+  __destroy__:
+    type: __destroy__
+    on_destroy:
+    - remove: loot_1
+    - remove: chest_1
+  region:
+    type: wg:region
+    size: 15;200;15
+    flags:
+    - pvp allow
+    - build deny
+    - block-break deny
+    - block-place deny
+    - tnt deny
+    - lighter deny
+    - creeper-explosion deny
+    - ghast-fireball deny
+    - other-explosion deny
+    - enderman-grief deny
+    - fire-spread deny
+    - snowman-trails deny
+    - ravager-grief deny
+    - lava-fire deny
+    - water-flow deny
+    - lava-flow deny
+    - ice-melt deny
+    - chest-access deny
+    on_create:
+    - create: gps
+  gps:
+    type: default:gps
+    publish_location: true
+    gps_line: '<#E026E6>● <hover:show_text:''<#E026E6>{air_name}<newline><gray>Мир: <white>{world}<newline><gray>Координаты: <white>{x} {y} {z}<newline><green>Нажмите,
+      чтобы установить GPS.''><click:run_command:''/gps {ctx:gps.gps_id}''>{air_name}</click></hover> <white>{args:air_type}</white> <gray>[{world} {x}/{y}/{z}]</gray>
+      <hover:show_text:''<green>Поставить GPS''><click:run_command:''/gps {ctx:gps.gps_id}''><green>[GPS]</green></click></hover>'
+    on_create:
+    - create: chest_1
+  chest_1:
+    type: schematic:paster
+    path: ../BAirdropFlow/schematics/block-ender_chest.schem
+    offsets: 0;0;0
+    no_replace:
+    - bedrock
+    no_place:
+    - air
+    - cave_air
+    - void_air
+    on_create:
+    - create: closed_1
+    replace:
+      barrier: air
+  loot_1:
+    type: loot:looter
+    offsets: 0;0;0
+    loot_table: mystic
+    rolls: '{args:loot_count}'
+    title: Мистический сундук
+    take_cooldown_ticks: 5
+    fill_duration_ticks: 100
+    on_open:
+      - sound: block.chest.open 1 1
+    obfuscation_materials:
+      - nautilus_shell
+      - phantom_membrane
+      - gunpowder
+      - gray_dye
+    obfuscation_name: <gold>Богатое сокровище
+    on_create:
+      - create: active
+  open_chests:
+    type: default:commands
+    on_run:
+    - remove: closed_1
+    - create: loot_1
+  closed_1:
+    type: block:click
+    offsets: 0;0;0
+    count: 2147483647
+    on_click:
+      - message: <center:200><red>Сундук ещё закрыт.
+    on_create:
+      - create: particles_started
+  particles_started:
+    type: particle:animation
+    animation: mystic-started
+    offsets: 0.5;0.1;0.5
+    ticks: -1
+    on_create:
+    - create: spawn_announcement
+  particles_activated:
+    type: particle:animation
+    animation: mystic-activated
+    offsets: 0.5;0.1;0.5
+    ticks: -1
+    on_create:
+      - create: fireworks
+  started_holo:
+    type: default:hologram
+    offsets: 0.5;2.5;0.5
+    lines:
+      - <#e026e6>[Мистический сундук]
+      - <#e026e6>||| <white>Идёт активация. <#e026e6>|||
+      - '<white>До открытия: <#ffa359>{ctx:started.timer} сек'
+    on_create:
+      - create: started_bar
+    on_remove:
+      - remove: started_bar
+  started_bar:
+    type: default:bossbar
+    title: '<red>Мистический сундук <gold>- до открытия: <red>{ctx:started.timer} сек'
+    radius: 50
+    color: red
+    overlay: notched_20
+    time: '{ctx:started.timer}'
+    progress_from_time: true
+  started:
+    type: tick:timer
+    timer: 180
+    on_create:
+      - create: started_holo
+    on_tick:
+      - call: update started_holo
+      - if: '{ctx:started.timer} <= 5'
+        do:
+          - nearby-50:
+              - sound: block.note_block.pling 2 1
+    on_timer_end:
+      - remove: particles_started
+      - create: particles_activated
+    on_remove:
+      - remove: started_holo
+  active_holo:
+    type: default:hologram
+    offsets: 0.5;2.5;0.5
+    lines:
+      - <#e026e6>[Мистический сундук]
+      - <#e026e6>||| <#34E95E>Сундук открыт! <#e026e6>|||
+    on_create:
+      - create: active_bar
+    on_remove:
+      - remove: active_bar
+  active_bar:
+    type: default:bossbar
+    title: '<red>Мистический сундук <gold>- открыт: <red>{ctx:active.timer} сек'
+    radius: 50
+    color: red
+    overlay: notched_20
+    time: '{ctx:active.timer}'
+    progress_from_time: true
+  active:
+    type: tick:timer
+    timer: 60
+    on_create:
+      - create: active_holo
+    on_tick:
+      - call: update active_holo
+    on_timer_end:
+      - destroy: ''
+    on_remove:
+      - remove: active_holo
+  start_actions:
+    type: default:commands
+    on_run:
+    - if: '{args:rarity_selected} == 0'
+      do:
+      - weights:
+          '30':
+          - set_arg: air_type <hover:show_text:'<dark_gray>[<#AAAAAA>★<gray>★★★★<dark_gray>]'><#AAAAAA>Обычный</hover>
+          - set_arg: loot_count 20
+          '20':
+          - set_arg: air_type <hover:show_text:'<dark_gray>[<#EB996A>★★<gray>★★★<dark_gray>]'><#EB996A>Солидный</hover>
+          - set_arg: loot_count 30
+          '17':
+          - set_arg: air_type <hover:show_text:'<dark_gray>[<#E65400>★★★<gray>★★<dark_gray>]'><#E65400>Богатый</hover>
+          - set_arg: loot_count 50
+          '12':
+          - set_arg: air_type <hover:show_text:'<dark_gray>[<#FB0000>★★★★<gray>★<dark_gray>]'><#FB0000>Элитный</hover>
+          - set_arg: loot_count 70
+          '11':
+          - set_arg: air_type <hover:show_text:'<dark_gray>[<#FFFF00>★★★★★<dark_gray>]'><gradient:#ADFF00:#FF7400>Легендарный</gradient></hover>
+          - set_arg: loot_count 100
+    - create: region
+  spawn_announcement:
+    type: default:commands
+    on_run:
+    - bc: |-
+        <gradient:#6C00C5:#FB00B4:#6C00C5> ╔══╦══╦══╦══╦══╦══╦══╦══╗</gradient>
+        <#6C00C5> ║
+        <#6C00C5> ║<#FFFFE6>     <#e026e6><obfuscated>|||</obfuscated><#e026e6>  [Мистический сундук]   <#e026e6><obfuscated>|||</obfuscated>
+        <#6C00C5> ║<#FFFFE6>   Уровень лута: {args:air_type}
+        <#6C00C5> ║<#FFFFE6>   Появился на координатах <white><hover:show_text:'<green>Поставить GPS'><click:run_command:'/gps {ctx:gps.gps_id}'><white>[{x} {y} {z}]</white></click></hover>
+        <#6C00C5> ║
+        <gradient:#6C00C5:#FB00B4:#6C00C5> ╚══╩══╩══╩══╩══╩══╩══╩══╝</gradient>
+    - create: started
+
+  fireworks:
+    type: ft:firework
+    offsets: 0.5;2;0.5
+    count: 1
+    power: 1
+    flicker: true
+    trail: true
+    colors:
+      - '#ff0000'
+      - '#ffa500'
+    fade:
+      - '#ffff00'
+    entity_lifetime_ticks: 200
+    on_create:
+      - create: open_chests
+$web_meta: '{"version":3,"nodes":{"__init__":{"x":0,"y":0,"width":400,"height":420,"title":"Запуск события"},"start_actions":{"x":520,"y":0,"width":900,"height":580,"title":"Выбор редкости"},"region":{"x":1540,"y":0,"width":400,"height":520,"title":"Защита территории"},"gps":{"x":2060,"y":0,"width":400,"height":420,"title":"Метка GPS"},"chest_1":{"x":2580,"y":0,"width":400,"height":620,"title":"Установка сундука"},"closed_1":{"x":0,"y":1100,"width":400,"height":420,"title":"Закрытый сундук"},"particles_started":{"x":520,"y":1100,"width":400,"height":420,"title":"Оформление закрытого сундука"},"spawn_announcement":{"x":1040,"y":1100,"width":960,"height":450,"title":"Объявление о появлении"},"started":{"x":2500,"y":1100,"width":480,"height":640,"title":"Ожидание открытия"},"started_holo":{"x":3100,"y":1100,"width":440,"height":480,"title":"Голограмма до открытия"},"started_bar":{"x":3660,"y":1100,"width":400,"height":420,"title":"Боссбар до открытия"},"particles_activated":{"x":200,"y":2300,"width":400,"height":420,"title":"Частицы открытия"},"fireworks":{"x":720,"y":2300,"width":400,"height":420,"title":"Фейерверки открытия"},"open_chests":{"x":1240,"y":2300,"width":620,"height":340,"title":"Открытие сундука"},"loot_1":{"x":1980,"y":2300,"width":400,"height":420,"title":"Лут сундука"},"active":{"x":2500,"y":2300,"width":480,"height":640,"title":"Время открытого события"},"active_holo":{"x":3100,"y":2300,"width":440,"height":480,"title":"Голограмма после открытия"},"active_bar":{"x":3660,"y":2300,"width":400,"height":420,"title":"Боссбар после открытия"},"__destroy__":{"x":2500,"y":3400,"width":400,"height":420,"title":"Удаление события"}},"webNodes":{"note_setup":{"type":"web:note","x":0,"y":-380,"width":850,"height":260,"title":"1. Подготовка","text":"Запуск → редкость → регион → GPS → постройка. Дальше цепочка продолжается в следующем ряду."},"note_wait":{"type":"web:note","x":0,"y":700,"width":850,"height":260,"title":"2. Ожидание открытия","text":"Оформление и объявление → таймер. Справа от таймера — его голограмма и боссбар."},"note_active":{"type":"web:note","x":0,"y":1900,"width":850,"height":260,"title":"3. Открытое событие","text":"Эффекты открытия → таймер работы события → удаление. Оформление удаляется по обратной цепочке."}},"defaultsNode":{"x":1000,"y":-380,"width":400,"height":310},"viewport":{"x":60,"y":180,"zoom":0.5}}'

@@ -214,4 +214,16 @@ class SpreadingItemsTest {
         spreading.close();
         entities.forEach(entity -> verify(entity, times(1)).remove());
     }
+    @Test
+    void durationSpreadsAllStacksByTheLastTickEvenWithMoreStacksThanTicks() {
+        create(java.util.Collections.nCopies(13, new ItemStack(Material.DIAMOND)), false, 100, null);
+        spreading.spreadOver(5);
+        for (int tick = 1; tick <= 5; tick++) {
+            spreading.tick(); assertEquals(tick * 13 / 5, entities.size());
+        }
+        assertTrue(spreading.isSpreadComplete()); assertFalse(spreading.isFinished());
+        assertThrows(IllegalArgumentException.class, () -> spreading.spreadOver(1));
+        spreading.close(); spreading.tick(); assertEquals(13, entities.size());
+    }
+
 }

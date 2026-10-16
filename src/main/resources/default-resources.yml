@@ -1,0 +1,45 @@
+# Список дефолтов для первичного сохранения отсутствующих папок.
+folders:
+  workflow:
+  - airdrop.yml
+  - altar.yml
+  - beacon.yml
+  - deathchest.yml
+  - geyser.yml
+  - meteorite.yml
+  - mystic.yml
+  - strange-beacon.yml
+  - volcano.yml
+  particles:
+  - airdrop-summon.yml
+  - altar-ambient.yml
+  - beacon-ambient.yml
+  - deathchest-activated.yml
+  - deathchest-destroy.yml
+  - deathchest-started.yml
+  - geyser-ambient.yml
+  - geyser-trail.yml
+  - mystic-activated.yml
+  - mystic-destroy.yml
+  - mystic-started.yml
+  - volcano-ambient.yml
+  - volcano-trail.yml
+  schematics:
+  - altar.schem
+  - beacon.schem
+  - block-barrel.schem
+  - block-ender_chest.schem
+  - block-redstone_torch.schem
+  - geyser.schem
+  - meteorite.schem
+  - strange-beacon.schem
+  - volcano.schem
+  spawner:
+  - by_item.yml
+  - by_time.yml
+  - vote.yml
+  menu:
+  - lool_table.yml
+  - vote.yml
+files:
+- loot.yml

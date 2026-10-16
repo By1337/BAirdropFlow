@@ -1,0 +1,354 @@
+defaults:
+  air_name: Мистический алтарь
+id: ft:altar
+world: world
+generator:
+  type: generator:random
+  center: 0;0;0
+  radius: 2500
+  min_y: 30
+  max_y: 120
+  clear_zone: 3
+  clear_y: 1
+  air_tester: '!solid & !water & !lava'
+  solid_tester: solid & !water & !lava & !snow & !oak_leaves & !spruce_leaves & !birch_leaves
+    & !jungle_leaves & !acacia_leaves & !dark_oak_leaves & !azure_bluet & !allium
+    & !blue_orchid & !poppy & !dandelion & !seagrass & !dead_bush & !fern & !short_grass
+    & !red_mushroom & !brown_mushroom & !lily_of_the_valley & !cornflower & !oxeye_daisy
+    & !pink_tulip & !white_tulip & !orange_tulip & !red_tulip & !large_fern & !tall_grass
+    & !peony & !rose_bush & !sunflower & !lilac & !cactus & !sugar_cane & !kelp &
+    !lily_pad
+  offsets: 0;2;0
+args:
+  loot_count: '20'
+  air_type: <hover:show_text:'<dark_gray>[<#AAAAAA>★<gray>★★★★<dark_gray>]'><#AAAAAA>Обычный</hover>
+  rarity_selected: '0'
+spawner:
+  type: spawner:timer
+  time: 180s
+  gps:
+    publish: true
+    publish_location: false
+    gps_line: <hover:show_text:'<#E026E6>{air_name}<newline><gray>Событие появится
+      через <green>{formated_time_left}<newline><gray>Координаты будут доступны после
+      появления.'><#E026E6>{air_name}</hover> <white>{value:air_type}</white> <gray>через
+      <#3EF6A6>{formated_time_left}</#3EF6A6></gray>
+  on_create:
+    - weights:
+        '11':
+          - set_value: air_type "<hover:show_text:'<dark_gray>[<#FFFF00>★★★★★<dark_gray>]'><gradient:#ADFF00:#FF7400>Легендарный</gradient></hover>"
+          - set_value: loot_count 100
+        '12':
+          - set_value: air_type "<hover:show_text:'<dark_gray>[<#FB0000>★★★★<gray>★<dark_gray>]'><#FB0000>Элитный</hover>"
+          - set_value: loot_count 70
+        '17':
+          - set_value: air_type "<hover:show_text:'<dark_gray>[<#E65400>★★★<gray>★★<dark_gray>]'><#E65400>Богатый</hover>"
+          - set_value: loot_count 50
+        '20':
+          - set_value: air_type "<hover:show_text:'<dark_gray>[<#EB996A>★★<gray>★★★<dark_gray>]'><#EB996A>Солидный</hover>"
+          - set_value: loot_count 30
+        '30':
+          - set_value: air_type "<hover:show_text:'<dark_gray>[<#AAAAAA>★<gray>★★★★<dark_gray>]'><#AAAAAA>Обычный</hover>"
+          - set_value: loot_count 20
+    - bc: |-
+        <gradient:#6C00C5:#FB00B4:#6C00C5> ╔══╦══╦══╦══╦══╦══╦══╦══╗</gradient>
+        <#6C00C5> ║
+        <#6C00C5> ║<#FFFFE6>     <#e026e6><obfuscated>|||</obfuscated><#e026e6>  [Мистический алтарь]   <#e026e6><obfuscated>|||</obfuscated>
+        <#6C00C5> ║<#FFFFE6>   Появится уже через<#3EF6A6> 3 минуты!
+        <#6C00C5> ║
+        <gradient:#6C00C5:#FB00B4:#6C00C5> ╚══╩══╩══╩══╩══╩══╩══╩══╝</gradient>
+  when: {}
+  on_timer_end:
+    - make:
+        loot_count: '{value:loot_count}'
+        air_type: '{value:air_type}'
+        rarity_selected: '1'
+$web_meta: '{"version":3,"webNodes":{},"nodes":{"__init__":{"x":-4421.960793648726,"y":-343.3138693505264},"__destroy__":{"x":1960.032765405825,"y":2704.827124099884},"region":{"x":-2867.839515614167,"y":-347.3029604321098},"gps":{"x":-2408.0718209117526,"y":-330.21743582367384},"structure":{"x":-1925.0640162326997,"y":-323.41728876081396},"loot_1":{"x":-66.63738942383097,"y":-283.48827857464397,"width":332.29227454792897,"height":310.2822634613394},"open_chests":{"x":-2219.9825721285347,"y":226.37262028856918,"width":400.24187637988996,"height":270.17913985858837},"closed_1":{"x":-1376.8369033734373,"y":-321.1841453042596},"closed_2":{"x":-1345.9723221748673,"y":136.1567373409182},"closed_3":{"x":-1343.3881279259176,"y":584.9051186416115},"closed_4":{"x":-1379.9701244697937,"y":1011.519800180249},"loot_2":{"x":-69.05620552914228,"y":60.460553632987434},"loot_3":{"x":-53.81876900830332,"y":427.80262346315067},"loot_4":{"x":-50.14338354039756,"y":829.8550262605454},"ambient":{"x":-818.7196294361394,"y":1213.2130546217531,"width":332.21196390464047,"height":401.6023343907696},"started_holo":{"x":1615.2193572051558,"y":1572.0578028153377,"width":456.820860821859,"height":341.62237990990064},"started_bar":{"x":2219.022631692235,"y":1574.0382800043287},"started":{"x":1035.8305155319752,"y":1617.5616038859787},"active_holo":{"x":2041.5231008247824,"y":2166.633039954561},"active_bar":{"x":2523.760376758498,"y":2169.5309756626957},"active":{"x":1520.7109577608276,"y":2158.282075515118},"loot_1_open_commands":{"x":632.699245699486,"y":203.58027997749036,"width":440.6553310203562,"height":217.59506384700433},"closed_1_click_commands":{"x":-691.620736576935,"y":456.93705067996984,"width":514.2910016040321,"height":211.20829849279775},"start_actions":{"x":-4010.434554243636,"y":-350.49635243844943,"width":1051.3073759335052,"height":570.8992091945447},"spawn_announcement":{"x":-217.7949532490893,"y":1554.3215481872962,"width":1127.1209228197165,"height":387.90892732587065}},"viewport":{"x":588.6848143298765,"y":-2109.7514009002853,"zoom":1.3413889927804956},"defaultsNode":{"x":-853.6822421299173,"y":-873.4214712785667}}'
+nodes:
+  __init__:
+    type: __init__
+    on_init:
+      - create: start_actions
+  __destroy__:
+    type: __destroy__
+    on_destroy: []
+  region:
+    type: wg:region
+    size: 20;200;20
+    flags:
+      - pvp allow
+      - build deny
+      - block-break deny
+      - block-place deny
+      - tnt deny
+      - lighter deny
+      - creeper-explosion deny
+      - ghast-fireball deny
+      - other-explosion deny
+      - enderman-grief deny
+      - fire-spread deny
+      - snowman-trails deny
+      - ravager-grief deny
+      - lava-fire deny
+      - water-flow deny
+      - lava-flow deny
+      - ice-melt deny
+      - chest-access deny
+    on_create:
+      - create: gps
+  gps:
+    type: default:gps
+    publish_location: true
+    gps_line: '<#E026E6>● <hover:show_text:''<#E026E6>{air_name}<newline><gray>Мир:
+      <white>{world}<newline><gray>Координаты: <white>{x} {y} {z}<newline><green>Нажмите,
+      чтобы установить GPS.''><click:run_command:''/gps {ctx:gps.gps_id}''>{air_name}</click></hover>
+      <white>{args:air_type}</white> <gray>[{world} {x}/{y}/{z}]</gray> <hover:show_text:''<green>Поставить
+      GPS''><click:run_command:''/gps {ctx:gps.gps_id}''><green>[GPS]</green></click></hover>'
+    on_create:
+      - create: structure
+  structure:
+    type: schematic:paster
+    path: ../BAirdropFlow/schematics/altar.schem
+    offsets: 0;0;0
+    no_replace:
+      - bedrock
+    no_place:
+      - air
+      - cave_air
+      - void_air
+    on_create:
+      - create: closed_1
+    replace:
+      barrier: air
+  loot_1:
+    type: loot:looter
+    offsets: 1;0;0
+    loot_table: altar
+    rolls: '{args:loot_count}'
+    title: Мистический алтарь
+    take_cooldown_ticks: 5
+    fill_duration_ticks: 100
+    on_open:
+      - create: loot_1_open_commands
+    obfuscation_materials:
+      - nautilus_shell
+      - phantom_membrane
+      - gunpowder
+      - gray_dye
+    obfuscation_name: <gold>Богатое сокровище
+    on_create:
+      - create: loot_2
+    on_remove:
+      - remove: loot_2
+  open_chests:
+    type: default:commands
+    on_run:
+      - remove: closed_1
+      - create: loot_1
+  closed_1:
+    type: block:click
+    offsets: 1;0;0
+    count: 2147483647
+    on_click:
+      - create: closed_1_click_commands
+    on_create:
+      - create: closed_2
+    on_remove:
+      - remove: closed_2
+  closed_2:
+    type: block:click
+    offsets: -1;0;0
+    count: 2147483647
+    on_click:
+      - create: closed_1_click_commands
+    on_create:
+      - create: closed_3
+    on_remove:
+      - remove: closed_3
+  closed_3:
+    type: block:click
+    offsets: 0;0;1
+    count: 2147483647
+    on_click:
+      - create: closed_1_click_commands
+    on_create:
+      - create: closed_4
+    on_remove:
+      - remove: closed_4
+  closed_4:
+    type: block:click
+    offsets: 0;0;-1
+    count: 2147483647
+    on_click:
+      - create: closed_1_click_commands
+    on_create:
+      - create: ambient
+  loot_2:
+    type: loot:looter
+    offsets: -1;0;0
+    loot_table: altar
+    rolls: '{args:loot_count}'
+    title: Мистический алтарь
+    take_cooldown_ticks: 5
+    fill_duration_ticks: 100
+    on_open:
+      - create: loot_1_open_commands
+    obfuscation_materials:
+      - nautilus_shell
+      - phantom_membrane
+      - gunpowder
+      - gray_dye
+    obfuscation_name: <gold>Богатое сокровище
+    on_create:
+      - create: loot_3
+    on_remove:
+      - remove: loot_3
+  loot_3:
+    type: loot:looter
+    offsets: 0;0;1
+    loot_table: altar
+    rolls: '{args:loot_count}'
+    title: Мистический алтарь
+    take_cooldown_ticks: 5
+    fill_duration_ticks: 100
+    on_open:
+      - create: loot_1_open_commands
+    obfuscation_materials:
+      - nautilus_shell
+      - phantom_membrane
+      - gunpowder
+      - gray_dye
+    obfuscation_name: <gold>Богатое сокровище
+    on_create:
+      - create: loot_4
+    on_remove:
+      - remove: loot_4
+  loot_4:
+    type: loot:looter
+    offsets: 0;0;-1
+    loot_table: altar
+    rolls: '{args:loot_count}'
+    title: Мистический алтарь
+    take_cooldown_ticks: 5
+    fill_duration_ticks: 100
+    on_open:
+      - create: loot_1_open_commands
+    obfuscation_materials:
+      - nautilus_shell
+      - phantom_membrane
+      - gunpowder
+      - gray_dye
+    obfuscation_name: <gold>Богатое сокровище
+  ambient:
+    type: particle:animation
+    animation: altar-ambient
+    offsets: 0;0;0
+    ticks: -1
+    on_create:
+      - create: spawn_announcement
+  started_holo:
+    type: default:hologram
+    offsets: 0.5;2.5;0.5
+    lines:
+      - <#e026e6>[Мистический алтарь]
+      - <#e026e6>||| <white>Идёт активация. <#e026e6>|||
+      - '<white>До открытия: <#ffa359>{ctx:started.timer} сек'
+    on_create:
+      - create: started_bar
+    on_remove:
+      - remove: started_bar
+  started_bar:
+    type: default:bossbar
+    title: '<red>Мистический алтарь <gold>- до открытия: <red>{ctx:started.timer}
+      сек'
+    radius: 50
+    color: red
+    overlay: notched_20
+    time: '{ctx:started.timer}'
+    progress_from_time: true
+    on_create: []
+    on_remove: []
+  started:
+    type: tick:timer
+    timer: 180
+    on_create:
+      - create: started_holo
+    on_tick:
+      - call: update started_holo
+    on_timer_end:
+      - create: open_chests
+      - create: active
+    on_remove:
+      - remove: started_holo
+  active_holo:
+    type: default:hologram
+    offsets: 0.5;2.5;0.5
+    lines:
+      - <#e026e6>[Мистический алтарь]
+      - <#e026e6>||| <#34E95E>Алтарь открыт! <#e026e6>|||
+    on_create:
+      - create: active_bar
+    on_remove:
+      - remove: active_bar
+  active_bar:
+    type: default:bossbar
+    title: '<red>Мистический алтарь <gold>- открыт: <red>{ctx:active.timer} сек'
+    radius: 50
+    color: red
+    overlay: notched_20
+    time: '{ctx:active.timer}'
+    progress_from_time: true
+  active:
+    type: tick:timer
+    timer: 60
+    on_create:
+      - create: active_holo
+    on_tick:
+      - call: update active_holo
+    on_timer_end:
+      - destroy: ''
+    on_remove:
+      - remove: active_holo
+  loot_1_open_commands:
+    type: default:commands
+    on_run:
+      - sound: block.chest.open 1 1
+  closed_1_click_commands:
+    type: default:commands
+    on_run:
+      - message: <center:200><red>Сундук ещё закрыт.
+  start_actions:
+    type: default:commands
+    on_run:
+      - if: '{args:rarity_selected} == 0'
+        do:
+          - weights:
+              '11':
+                - set_arg: air_type <hover:show_text:'<dark_gray>[<#FFFF00>★★★★★<dark_gray>]'><gradient:#ADFF00:#FF7400>Легендарный</gradient></hover>
+                - set_arg: loot_count 100
+              '12':
+                - set_arg: air_type <hover:show_text:'<dark_gray>[<#FB0000>★★★★<gray>★<dark_gray>]'><#FB0000>Элитный</hover>
+                - set_arg: loot_count 70
+              '17':
+                - set_arg: air_type <hover:show_text:'<dark_gray>[<#E65400>★★★<gray>★★<dark_gray>]'><#E65400>Богатый</hover>
+                - set_arg: loot_count 50
+              '20':
+                - set_arg: air_type <hover:show_text:'<dark_gray>[<#EB996A>★★<gray>★★★<dark_gray>]'><#EB996A>Солидный</hover>
+                - set_arg: loot_count 30
+              '30':
+                - set_arg: air_type <hover:show_text:'<dark_gray>[<#AAAAAA>★<gray>★★★★<dark_gray>]'><#AAAAAA>Обычный</hover>
+                - set_arg: loot_count 20
+      - create: region
+  spawn_announcement:
+    type: default:commands
+    on_run:
+      - bc: |-
+          <gradient:#6C00C5:#FB00B4:#6C00C5> ╔══╦══╦══╦══╦══╦══╦══╦══╗</gradient>
+          <#6C00C5> ║
+          <#6C00C5> ║<#FFFFE6>     <#e026e6><obfuscated>|||</obfuscated><#e026e6>  [Мистический алтарь]   <#e026e6><obfuscated>|||</obfuscated>
+          <#6C00C5> ║<#FFFFE6>   Уровень лута: {args:air_type}
+          <#6C00C5> ║<#FFFFE6>   Появился на координатах <white><hover:show_text:'<green>Поставить GPS'><click:run_command:'/gps {ctx:gps.gps_id}'><white>[{x} {y} {z}]</white></click></hover>
+          <#6C00C5> ║
+          <gradient:#6C00C5:#FB00B4:#6C00C5> ╚══╩══╩══╩══╩══╩══╩══╩══╝</gradient>
+      - sound_all: entity.lightning_bolt.thunder 1 1
+      - create: started

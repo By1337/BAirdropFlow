@@ -41,6 +41,7 @@ public class LootingInventory implements Listener, InventoryHolder {
     private final NamespacedKey maskKey;
     private final Map<String, ItemStack> hiddenItems = new HashMap<>();
     private final Map<UUID, Integer> cooldowns = new HashMap<>();
+    private final Deque<ItemStack> pending = new ArrayDeque<>();
     private BukkitTask fillTask;
     private boolean closed;
 
@@ -56,7 +57,16 @@ public class LootingInventory implements Listener, InventoryHolder {
     public LootingInventory(int size, @NotNull Component title, Location center, Plugin plugin,
                             int takeCooldownTicks, List<Material> obfuscationMaterials, Component obfuscationName,
                             int revealDelayTicks, int revealDelayMaxTicks) {
-        if (size < 9 || size > 54 || size % 9 != 0) throw new IllegalArgumentException("Invalid inventory size");
+        this(InventoryType.CHEST, size, title, center, plugin, takeCooldownTicks, obfuscationMaterials,
+                obfuscationName, revealDelayTicks, revealDelayMaxTicks);
+    }
+
+    public LootingInventory(InventoryType type, int size, @NotNull Component title, Location center, Plugin plugin,
+                            int takeCooldownTicks, List<Material> obfuscationMaterials, Component obfuscationName,
+                            int revealDelayTicks, int revealDelayMaxTicks) {
+        if (!type.isCreatable() || type.getDefaultSize() <= 0) throw new IllegalArgumentException("Inventory type cannot be created: " + type);
+        if (type == InventoryType.CHEST && (size < 9 || size > 54 || size % 9 != 0))
+            throw new IllegalArgumentException("Invalid chest inventory size");
         if (revealDelayTicks < 0 || revealDelayMaxTicks < revealDelayTicks || (revealDelayTicks == 0 && revealDelayMaxTicks != 0))
             throw new IllegalArgumentException("Invalid reveal delay range");
         this.revealDelayTicks = revealDelayTicks;
@@ -70,7 +80,8 @@ public class LootingInventory implements Listener, InventoryHolder {
         this.obfuscationName = obfuscationName;
         this.maskKey = new NamespacedKey(plugin, "loot_mask");
         this.center = center;
-        this.inventory = Bukkit.createInventory(this, size, title);
+        this.inventory = type == InventoryType.CHEST ? Bukkit.createInventory(this, size, title)
+                : Bukkit.createInventory(this, type, title);
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
@@ -79,7 +90,7 @@ public class LootingInventory implements Listener, InventoryHolder {
     }
 
     /**
-     * Every stack gets one insertion attempt; a full inventory discards that attempt.
+     * Stacks wait in a queue when the inventory is full. Removal cancels the remaining queue.
      */
     public void fill(List<ItemStack> list, int durationTicks) {
         fill(list, durationTicks, 0, 0);
@@ -96,25 +107,30 @@ public class LootingInventory implements Listener, InventoryHolder {
             fillTask = null;
         }
         if (closed) return;
-        List<ItemStack> items = list.stream().filter(item -> !empty(item)).map(ItemStack::clone).toList();
-        if (intervalTicks > 0) {
-            if (!items.isEmpty()) fillAtIntervals(items.iterator(), intervalTicks, intervalMaxTicks);
-            return;
-        }
-        if (durationTicks == 0) {
-            items.forEach(this::insert);
-            return;
-        }
-        if (items.isEmpty()) return;
+        pending.clear();
+        list.stream().filter(item -> !empty(item)).map(ItemStack::clone).forEach(pending::addLast);
+        if (pending.isEmpty()) return;
+        final int total = pending.size();
+        // Immediate fills still queue overflow; gradual fills release stacks according to their schedule.
+        if (durationTicks == 0 && intervalTicks == 0) drain(total);
+        if (pending.isEmpty()) return;
         fillTask = plugin.getServer().getScheduler().runTaskTimer(plugin, new Runnable() {
-            private int elapsed;
-            private int inserted;
+            private long elapsed;
+            private long next = intervalTicks > 0 ? randomTicks(intervalTicks, intervalMaxTicks) : 0;
+            private int released = durationTicks == 0 && intervalTicks == 0 ? total : 0;
 
-            @Override
-            public void run() {
-                int due = (int) ((long) ++elapsed * items.size() / durationTicks);
-                while (inserted < due) insert(items.get(inserted++));
-                if (elapsed >= durationTicks) {
+            @Override public void run() {
+                if (closed) return;
+                elapsed++;
+                if (intervalTicks > 0 && released < total && elapsed >= next) {
+                    released++;
+                    next = elapsed + randomTicks(intervalTicks, intervalMaxTicks);
+                } else if (durationTicks > 0) {
+                    released = (int) (Math.min(elapsed, durationTicks) * total / durationTicks);
+                }
+                int placed = total - pending.size();
+                drain(released - placed);
+                if (pending.isEmpty()) {
                     fillTask.cancel();
                     fillTask = null;
                 }
@@ -122,17 +138,15 @@ public class LootingInventory implements Listener, InventoryHolder {
         }, 1, 1);
     }
 
-    private static int randomTicks(int min, int max) {
-        return (int) ThreadLocalRandom.current().nextLong(min, (long) max + 1);
+    private void drain(int limit) {
+        for (int i = 0; i < limit && !pending.isEmpty(); i++) {
+            if (!insert(pending.peekFirst())) return;
+            pending.removeFirst();
+        }
     }
 
-    private void fillAtIntervals(Iterator<ItemStack> items, int min, int max) {
-        fillTask = plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-            fillTask = null;
-            if (closed) return;
-            insert(items.next());
-            if (items.hasNext()) fillAtIntervals(items, min, max);
-        }, randomTicks(min, max));
+    private static int randomTicks(int min, int max) {
+        return (int) ThreadLocalRandom.current().nextLong(min, (long) max + 1);
     }
 
     private String maskId(ItemStack item) {
@@ -150,12 +164,12 @@ public class LootingInventory implements Listener, InventoryHolder {
         }
     }
 
-    private void insert(ItemStack item) {
+    private boolean insert(ItemStack item) {
         List<Integer> free = new ArrayList<>();
         for (int slot = 0; slot < inventory.getSize(); slot++) {
             if (empty(inventory.getItem(slot))) free.add(slot);
         }
-        if (free.isEmpty()) return;
+        if (free.isEmpty()) return false;
         int slot = free.get(ThreadLocalRandom.current().nextInt(free.size()));
         ItemStack displayed = item;
         if (!obfuscationMaterials.isEmpty()) {
@@ -176,6 +190,7 @@ public class LootingInventory implements Listener, InventoryHolder {
         for (HumanEntity viewer : inventory.getViewers()) {
             if (viewer instanceof Player player) applyCooldown(player, remainingCooldown(player));
         }
+        return true;
     }
 
     private boolean managed() {
@@ -333,6 +348,7 @@ public class LootingInventory implements Listener, InventoryHolder {
 
     public void close() {
         closed = true;
+        pending.clear();
         if (fillTask != null) {
             fillTask.cancel();
             fillTask = null;

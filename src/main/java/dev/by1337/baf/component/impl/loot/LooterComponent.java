@@ -6,6 +6,8 @@ import dev.by1337.baf.component.AbstractComponent;
 import dev.by1337.baf.component.AirdropComponent;
 import dev.by1337.baf.component.ComponentFactory;
 import dev.by1337.baf.config.value.IntValue;
+import dev.by1337.baf.config.value.Parameter;
+import org.bukkit.event.inventory.InventoryType;
 import dev.by1337.baf.config.value.MaterialValue;
 import dev.by1337.baf.config.value.StringValue;
 import dev.by1337.baf.config.value.Vec3iValue;
@@ -89,7 +91,7 @@ public class LooterComponent extends AbstractComponent {
                     LooterComponent.this::on
             ));
             inventoryHolder.set(new LootingInventory(
-                    size,
+                    config.inventoryType.get(airdrop), size,
                     MiniMessage.deserialize(config.title.getString(airdrop)),
                     airdrop.location().add(offsets.x(), offsets.y(), offsets.z()),
                     airdrop.manager().plugin(),
@@ -137,7 +139,9 @@ public class LooterComponent extends AbstractComponent {
                 .text("loot_table", "Таблица лута", "loot/default", true)
                 .integer("rolls", "Количество выборок лута (с повторениями)", 1, 0, false)
                 .text("title", "Заголовок инвентаря", "&7Title", false)
-                .integer("size", "Размер GUI (9–54, кратно 9)", 54, 9, false)
+                .choice("inventory_type", "Тип инвентаря", "chest", java.util.Arrays.stream(InventoryType.values())
+                        .filter(type -> type.isCreatable() && type.getDefaultSize() > 0).map(v -> v.name().toLowerCase(java.util.Locale.ROOT)).toArray(String[]::new))
+                .integer("size", "Размер CHEST (для других типов фиксирован)", 54, 1, false)
                 .integer("fill_interval_ticks", "Минимальный интервал добавления, тиков (0 — выключен)", 0, 0, false)
                 .integer("fill_interval_max_ticks", "Максимальный интервал (0 — равен минимальному)", 0, 0, false)
                 .integer("reveal_delay_ticks", "Минимальное остывание маски, тиков (0 — раскрытие при подборе)", 0, 0, false)
@@ -166,12 +170,14 @@ public class LooterComponent extends AbstractComponent {
                 IntValue.DECODER.fieldOf("fill_interval_ticks", new IntValue(0)),
                 IntValue.DECODER.fieldOf("fill_interval_max_ticks", new IntValue(0)),
                 IntValue.DECODER.fieldOf("reveal_delay_ticks", new IntValue(0)),
-                IntValue.DECODER.fieldOf("reveal_delay_max_ticks", new IntValue(0))
+                IntValue.DECODER.fieldOf("reveal_delay_max_ticks", new IntValue(0)),
+                Parameter.enumDecoder(InventoryType.class).fieldOf("inventory_type", Parameter.constant(InventoryType.CHEST))
         );
         private final Vec3iValue offsets;
         private final StringValue lootTable;
         private final IntValue rolls;
         private final IntValue size;
+        private final Parameter<InventoryType> inventoryType;
         private final IntValue fillIntervalTicks;
         private final IntValue fillIntervalMaxTicks;
         private final IntValue revealDelayTicks;
@@ -217,7 +223,21 @@ public class LooterComponent extends AbstractComponent {
                       List<MaterialValue> obfuscationMaterials, StringValue obfuscationName, IntValue rolls,
                       IntValue size, IntValue fillIntervalTicks, IntValue fillIntervalMaxTicks,
                       IntValue revealDelayTicks, IntValue revealDelayMaxTicks) {
-            this.size = size.checked(v -> v >= 9 && v <= 54 && v % 9 == 0, "size must be a multiple of 9 between 9 and 54");
+            this(offsets, lootTable, create, open, remove, title, takeCooldownTicks, fillDurationTicks,
+                    obfuscationMaterials, obfuscationName, rolls, size, fillIntervalTicks, fillIntervalMaxTicks,
+                    revealDelayTicks, revealDelayMaxTicks, Parameter.constant(InventoryType.CHEST));
+        }
+
+        public Config(Vec3iValue offsets, StringValue lootTable, EventHandler create, EventHandler open, EventHandler remove,
+                      StringValue title, IntValue takeCooldownTicks, IntValue fillDurationTicks,
+                      List<MaterialValue> obfuscationMaterials, StringValue obfuscationName, IntValue rolls,
+                      IntValue size, IntValue fillIntervalTicks, IntValue fillIntervalMaxTicks,
+                      IntValue revealDelayTicks, IntValue revealDelayMaxTicks, Parameter<InventoryType> inventoryType) {
+            this.inventoryType = inventoryType.checked(type -> type.isCreatable() && type.getDefaultSize() > 0,
+                    "Inventory type cannot be created");
+            this.size = size.checked(v -> v >= 1 && v <= 54, "size must be 1..54");
+            if (this.inventoryType.isConstant() && this.inventoryType.get(null) == InventoryType.CHEST)
+                this.size.checked(v -> v >= 9 && v % 9 == 0, "CHEST size must be a multiple of 9 between 9 and 54");
             this.fillIntervalTicks = fillIntervalTicks.checked(v -> v >= 0, "fill_interval_ticks must be >= 0");
             this.fillIntervalMaxTicks = fillIntervalMaxTicks.checked(v -> v >= 0, "fill_interval_max_ticks must be >= 0");
             this.revealDelayTicks = revealDelayTicks.checked(v -> v >= 0, "reveal_delay_ticks must be >= 0");

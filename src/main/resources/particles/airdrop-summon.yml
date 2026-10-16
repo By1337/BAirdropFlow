@@ -1,0 +1,64 @@
+__root__:
+  type: base:root
+  connections:
+    warming_ring: <160&%4
+    rising_sparks: '>=160&<260&%3'
+    final_burst: '>=260&<280&%4'
+    final_smoke: '>=260&<300&%5'
+warming_ring:
+  type: base:circle
+  points: 24
+  radius: 2
+  offsets: 0.5;0.15;0.5
+  connections:
+    flame: ''
+    spark: '%8'
+flame:
+  type: base:particle
+  particle: flame
+  count: 1
+  maxSpeed: 0.01
+  dist: 0.02;0.02;0.02
+spark:
+  type: base:particle
+  particle: firework
+  count: 1
+  maxSpeed: 0.02
+  dist: 0.08;0.05;0.08
+rising_sparks:
+  type: base:line
+  points: 16
+  length: 10
+  offsets: 0.5;5.5;0.5
+  rotation: 0;0;90
+  connections:
+    rising_flame: ''
+rising_flame:
+  type: base:particle
+  particle: flame
+  count: 1
+  maxSpeed: 0.04
+  dist: 0.35;0.2;0.35
+final_burst:
+  type: base:sphere
+  points: 32
+  radius: 3
+  offsets: 0.5;5;0.5
+  dist: outward
+  connections:
+    red_dust: ''
+red_dust:
+  type: base:particle
+  particle: dust
+  count: 1
+  maxSpeed: 0.15
+  data:
+    rgb: '#FF3020'
+    size: 2
+final_smoke:
+  type: base:particle
+  particle: large_smoke
+  offsets: 0.5;5;0.5
+  count: 10
+  maxSpeed: 0.08
+  dist: 2;1;2

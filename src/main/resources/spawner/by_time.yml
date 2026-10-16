@@ -1,9 +1,6 @@
 type: default:by_time
 time_zone: Europe/Moscow
 publish_gps: true
-# ID from the common launch registry: a workflow or a named vote.
+# ID из общего реестра: здесь голосование, а его победитель запустит свой спавнер.
 events:
-  '13:00': example:vote
-# A bare time repeats daily. Weekly example: 'SATURDAY 18:00'.
-# Values can also be weighted choices: { 'example:vote': 10, 'example:default': 20 }.
-# The old workflows: key remains supported as an alias for events:.
+  '13:00': ft:vote

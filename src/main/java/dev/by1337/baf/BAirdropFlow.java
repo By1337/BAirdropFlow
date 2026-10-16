@@ -6,6 +6,7 @@ import dev.by1337.baf.component.AirdropComponents;
 import dev.by1337.baf.component.system.AsyncTimerSystem;
 import dev.by1337.baf.component.system.TimerSystem;
 import dev.by1337.baf.config.Config;
+import dev.by1337.baf.config.DefaultResources;
 import dev.by1337.baf.generator.Generators;
 import dev.by1337.baf.gps.GPSRegistry;
 import dev.by1337.baf.loot.menu.LootMenu;
@@ -28,7 +29,6 @@ import dev.by1337.core.command.bcmd.argument.ArgumentChoice;
 import dev.by1337.core.command.bcmd.argument.ArgumentPlayers;
 import dev.by1337.core.command.bcmd.requires.RequiresPermission;
 import dev.by1337.core.plugin.BasePlugin;
-import dev.by1337.core.util.io.ResourceUtil;
 import dev.by1337.core.util.text.minimessage.BMM;
 import dev.by1337.edsl.context.EventContext;
 import dev.by1337.plc.Placeholders;
@@ -59,6 +59,7 @@ public class BAirdropFlow extends BasePlugin {
         BAF.plugin = this;
         super.onLoad();
         getDataFolder().mkdirs();
+        DefaultResources.save(this);
         //AirdropCommands.resetCommands(); TimerSpawner в static блоке команды рерает
         Generators.boot();
         AirdropSpawnerBoot.boot();
@@ -68,20 +69,12 @@ public class BAirdropFlow extends BasePlugin {
         messages.setCommands(AirdropCommands.getCommands());
         //messages.setDebug(config.debug);
         BAF.manager = manager = new AirdropManager(this, messages);
-        if (!new File(getDataFolder(), "particles").exists()) {
-            ResourceUtil.saveIfNotExist("particles/example.yml", this);
-            ResourceUtil.saveIfNotExist("particles/explosion.yml", this);
-            ResourceUtil.saveIfNotExist("particles/spreading_flame.yml", this);
-        }
         particleGraphs = new ParticleGraphs(this);
         particleGraphs.load();
-        ResourceUtil.saveIfNotExist("workflow/default.yml", this);
         workflows = new WorkflowRepository(new WorkflowFiles(getDataFolder().toPath().resolve("workflow"),
                 getDataFolder().toPath().resolve("backups/workflow")), Workflow.CODEC, log::warn);
         launches = new dev.by1337.baf.launch.LaunchRegistry();
         workflows.bindRegistry(launches);
-        ResourceUtil.saveIfNotExist("menu/lool_table.yml", this);
-        ResourceUtil.saveIfNotExist("menu/vote.yml", this);
         menus = new MenuSubLoader(new File(getDataFolder(), "menu"), this, BMenu.menuLoader());
         menus.menuCodecRegistry().register("baf:loot", LootMenu.Config.CODEC);
         menus.menuCodecRegistry().register("baf:vote", dev.by1337.baf.vote.VoteMenu.CODEC);
@@ -132,11 +125,6 @@ public class BAirdropFlow extends BasePlugin {
         manager.enable();
         addCloseHook(new TimerSystem(this, manager).start());
         addCloseHook(new AsyncTimerSystem(this, manager).start());
-        if (!new File(getDataFolder(), "spawner").exists()) {
-            ResourceUtil.saveIfNotExist("spawner/by_time.yml", this);
-            ResourceUtil.saveIfNotExist("spawner/by_item.yml", this);
-        }
-        ResourceUtil.saveIfNotExist("spawner/vote.yml", this);
         globalSpawners = new GlobalSpawners();
         addCloseHook(globalSpawners::close);
         try {
@@ -190,7 +178,7 @@ public class BAirdropFlow extends BasePlugin {
                         if (x > 25) return;
                     }
                 }), null);
-        registerCommand(new Command<CommandSender>("baf").executor(sender -> startEvent("default.yml"))
+        registerCommand(new Command<CommandSender>("baf").executor(sender -> sender.sendMessage("/baf start <id события>"))
                 .sub(LootCommands.create())
                 .sub(new Command<CommandSender>("give").requires(new RequiresPermission<>("baf.admin"))
                         .executor(new ArgumentPlayers<>("player", true),

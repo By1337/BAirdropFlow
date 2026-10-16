@@ -1,0 +1,25 @@
+# Кольцо radius=1 из кода; cadence second приближён (см. PARTICLES_TODO.md).
+__root__:
+  type: base:root
+  connections:
+    ring: '%5'
+ring:
+  type: base:circle
+  points: 16
+  radius: 1
+  connections:
+    first: ''
+    second: '%20'
+first:
+  type: base:particle
+  particle: dragon_breath
+  count: 1
+  maxSpeed: 0
+  dist: 0;0;0
+second:
+  type: base:particle
+  particle: witch
+  count: 0
+  maxSpeed: 0.05
+  dist: 0;0.3;0
+  offsets: 0;0.05;0

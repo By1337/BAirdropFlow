@@ -287,6 +287,26 @@ class FtComponentsTest {
     }
 
     @Test
+    void itemDurationOverridesWaveGapsAndEmitsEveryRollWithinItsBudget() {
+        var table = mock(dev.by1337.baf.loot.LootTable.class);
+        when(table.generate(1)).thenReturn(List.of(new org.bukkit.inventory.ItemStack(Material.DIAMOND)));
+        when(air.manager().lootTables()).thenReturn(new dev.by1337.baf.loot.LootTables(Map.of("test", table)));
+        var drops = new ArrayList<Item>();
+        doAnswer(call -> {
+            Item item = mock(Item.class);
+            when(item.getUniqueId()).thenReturn(UUID.randomUUID()); when(item.isValid()).thenReturn(true);
+            when(item.getItemStack()).thenReturn(call.getArgument(1)); when(item.getLocation()).thenReturn(call.getArgument(0));
+            Consumer<Item> initialize = call.getArgument(2); initialize.accept(item); drops.add(item); return item;
+        }).when(world).dropItem(any(Location.class), any(org.bukkit.inventory.ItemStack.class), org.mockito.ArgumentMatchers.<Consumer<Item>>any());
+        var component = create(ItemsComponent.Config.DECODER.decode(YamlValue.wrap(Map.of(
+                "loot_table", "test", "rolls", 13, "spread_duration_ticks", 5, "wave_interval_ticks", 1000))).getOrThrow());
+        for (int i = 1; i <= 5; i++) { tick(component, 1); assertEquals(i * 13 / 5, drops.size()); }
+        assertTrue(drops.stream().allMatch(item -> item.getItemStack().getType() == Material.DIAMOND));
+        component.markRemoved(ctx); drops.forEach(item -> verify(item).remove());
+        tick(component, 10); assertEquals(13, drops.size());
+    }
+
+    @Test
     void allFtTypesAndTheShippedConfigsDecode() {
         AirdropComponents.boot();
         for (String key : List.of("falling_blocks", "tnt", "firework", "mobs", "meteorites", "geyser", "strange_beacon", "items", "beacon_pulse", "proximity_reward")) {
