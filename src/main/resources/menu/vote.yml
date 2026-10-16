@@ -8,74 +8,74 @@ items:
     material: ender_chest
     name: '<gold>Мистический сундук'
     lore:
-    - '<gray>Голосов: <yellow>{votes:ft:mystic}'
-    - '<gray>Осталось: <yellow>{time_left} сек.'
-    - '<gray>Ваш выбор: <yellow>{selected}'
+      - '<gray>Голосов: <yellow>{votes:ft:mystic}'
+      - '<gray>Осталось: <yellow>{time_left} сек.'
+      - '<gray>Ваш выбор: <yellow>{selected}'
     on_click:
-    - '[vote] ft:mystic'
+      - '[vote] ft:mystic'
   event_1:
     slot: 11
     material: soul_sand
     name: '<gold>Сундук смерти'
     lore:
-    - '<gray>Голосов: <yellow>{votes:ft:deathchest}'
-    - '<gray>Осталось: <yellow>{time_left} сек.'
-    - '<gray>Ваш выбор: <yellow>{selected}'
+      - '<gray>Голосов: <yellow>{votes:ft:deathchest}'
+      - '<gray>Осталось: <yellow>{time_left} сек.'
+      - '<gray>Ваш выбор: <yellow>{selected}'
     on_click:
-    - '[vote] ft:deathchest'
+      - '[vote] ft:deathchest'
   event_2:
     slot: 12
     material: enchanting_table
     name: '<gold>Мистический алтарь'
     lore:
-    - '<gray>Голосов: <yellow>{votes:ft:altar}'
-    - '<gray>Осталось: <yellow>{time_left} сек.'
-    - '<gray>Ваш выбор: <yellow>{selected}'
+      - '<gray>Голосов: <yellow>{votes:ft:altar}'
+      - '<gray>Осталось: <yellow>{time_left} сек.'
+      - '<gray>Ваш выбор: <yellow>{selected}'
     on_click:
-    - '[vote] ft:altar'
+      - '[vote] ft:altar'
   event_3:
     slot: 13
     material: beacon
     name: '<gold>Маяк убийца'
     lore:
-    - '<gray>Голосов: <yellow>{votes:ft:beacon}'
-    - '<gray>Осталось: <yellow>{time_left} сек.'
-    - '<gray>Ваш выбор: <yellow>{selected}'
+      - '<gray>Голосов: <yellow>{votes:ft:beacon}'
+      - '<gray>Осталось: <yellow>{time_left} сек.'
+      - '<gray>Ваш выбор: <yellow>{selected}'
     on_click:
-    - '[vote] ft:beacon'
+      - '[vote] ft:beacon'
   event_4:
     slot: 14
     material: magma_block
     name: '<gold>Метеорит'
     lore:
-    - '<gray>Голосов: <yellow>{votes:ft:meteorite}'
-    - '<gray>Осталось: <yellow>{time_left} сек.'
-    - '<gray>Ваш выбор: <yellow>{selected}'
+      - '<gray>Голосов: <yellow>{votes:ft:meteorite}'
+      - '<gray>Осталось: <yellow>{time_left} сек.'
+      - '<gray>Ваш выбор: <yellow>{selected}'
     on_click:
-    - '[vote] ft:meteorite'
+      - '[vote] ft:meteorite'
   event_5:
     slot: 15
     material: lava_bucket
     name: '<gold>Вулкан'
     lore:
-    - '<gray>Голосов: <yellow>{votes:ft:volcano}'
-    - '<gray>Осталось: <yellow>{time_left} сек.'
-    - '<gray>Ваш выбор: <yellow>{selected}'
+      - '<gray>Голосов: <yellow>{votes:ft:volcano}'
+      - '<gray>Осталось: <yellow>{time_left} сек.'
+      - '<gray>Ваш выбор: <yellow>{selected}'
     on_click:
-    - '[vote] ft:volcano'
+      - '[vote] ft:volcano'
   event_6:
     slot: 16
     material: netherrack
     name: '<gold>Гейзер'
     lore:
-    - '<gray>Голосов: <yellow>{votes:ft:geyser}'
-    - '<gray>Осталось: <yellow>{time_left} сек.'
-    - '<gray>Ваш выбор: <yellow>{selected}'
+      - '<gray>Голосов: <yellow>{votes:ft:geyser}'
+      - '<gray>Осталось: <yellow>{time_left} сек.'
+      - '<gray>Ваш выбор: <yellow>{selected}'
     on_click:
-    - '[vote] ft:geyser'
+      - '[vote] ft:geyser'
   close:
     slot: 26
     material: barrier
     name: '<red>Закрыть'
     on_click:
-    - '[close]'
+      - '[close]'

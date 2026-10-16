@@ -1,7 +1,6 @@
 package dev.by1337.baf.spawner.global;
 
 import dev.by1337.baf.Workflow;
-import dev.by1337.baf.entity.TickableEntity;
 import dev.by1337.item.ItemModel;
 import dev.by1337.item.registry.ItemModelHolder;
 import dev.by1337.item.registry.ItemRegistry;

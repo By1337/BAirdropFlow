@@ -57,7 +57,7 @@ spawner:
         <#6C00C5> ║<#FFFFE6>   Появится уже через<#3EF6A6> 3 минуты!
         <#6C00C5> ║
         <gradient:#6C00C5:#FB00B4:#6C00C5> ╚══╩══╩══╩══╩══╩══╩══╩══╝</gradient>
-  when: {}
+  when: { }
   on_timer_end:
     - make:
         loot_count: '{value:loot_count}'
@@ -71,7 +71,7 @@ nodes:
       - create: start_actions
   __destroy__:
     type: __destroy__
-    on_destroy: []
+    on_destroy: [ ]
   region:
     type: wg:region
     size: 20;200;20
@@ -266,8 +266,8 @@ nodes:
     overlay: notched_20
     time: '{ctx:started.timer}'
     progress_from_time: true
-    on_create: []
-    on_remove: []
+    on_create: [ ]
+    on_remove: [ ]
   started:
     type: tick:timer
     timer: 180

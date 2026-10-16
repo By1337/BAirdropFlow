@@ -10,7 +10,7 @@ import java.util.Map;
 
 public class AirdropSpawnerBoot {
     public static Map<String, JsonObject> schemas() {
-        return Map.of("spawner:timer", TimerSpawner.WEB_SCHEMA.json("spawner:timer"));
+        return AirdropSpawner.REGISTRY.schemas();
     }
 
     public static void boot() {
@@ -19,6 +19,6 @@ public class AirdropSpawnerBoot {
         GlobalSpawner.REGISTRY.register("default:by_item", ByItemSpawner.DECODER);
         GlobalSpawner.REGISTRY.register("default:vote", dev.by1337.baf.vote.VoteSpawner.DECODER);
         AirdropSpawner.REGISTRY.clear();
-        AirdropSpawner.REGISTRY.register("spawner:timer", TimerSpawner.DECODER);
+        AirdropSpawner.REGISTRY.register("spawner:timer", TimerSpawner.DECODER, TimerSpawner.WEB_SCHEMA);
     }
 }

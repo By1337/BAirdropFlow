@@ -64,7 +64,8 @@ public class LootingInventory implements Listener, InventoryHolder {
     public LootingInventory(InventoryType type, int size, @NotNull Component title, Location center, Plugin plugin,
                             int takeCooldownTicks, List<Material> obfuscationMaterials, Component obfuscationName,
                             int revealDelayTicks, int revealDelayMaxTicks) {
-        if (!type.isCreatable() || type.getDefaultSize() <= 0) throw new IllegalArgumentException("Inventory type cannot be created: " + type);
+        if (!type.isCreatable() || type.getDefaultSize() <= 0)
+            throw new IllegalArgumentException("Inventory type cannot be created: " + type);
         if (type == InventoryType.CHEST && (size < 9 || size > 54 || size % 9 != 0))
             throw new IllegalArgumentException("Invalid chest inventory size");
         if (revealDelayTicks < 0 || revealDelayMaxTicks < revealDelayTicks || (revealDelayTicks == 0 && revealDelayMaxTicks != 0))
@@ -119,7 +120,8 @@ public class LootingInventory implements Listener, InventoryHolder {
             private long next = intervalTicks > 0 ? randomTicks(intervalTicks, intervalMaxTicks) : 0;
             private int released = durationTicks == 0 && intervalTicks == 0 ? total : 0;
 
-            @Override public void run() {
+            @Override
+            public void run() {
                 if (closed) return;
                 elapsed++;
                 if (intervalTicks > 0 && released < total && elapsed >= next) {

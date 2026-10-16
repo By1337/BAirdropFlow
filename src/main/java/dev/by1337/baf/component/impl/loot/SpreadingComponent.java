@@ -97,6 +97,7 @@ public final class SpreadingComponent extends AbstractComponent implements Timer
                     itemLifetimeTicks, obfuscationMaterials, obfuscationName, trailAnimation, trailIntervalTicks,
                     onCreate, onSpreadEnd, onRemove, new IntValue(0));
         }
+
         public static final NodeSchema WEB_SCHEMA = NodeSchema.of("Разброс лута", "Выбрасывает лут по очереди с маскировкой до подбора и трейлами в полёте. Удаление ноды убирает оставшиеся предметы.")
                 .text("loot_table", "Таблица лута", "loot/default", true)
                 .integer("rolls", "Количество выборок лута (с повторениями)", 10, 0, false)

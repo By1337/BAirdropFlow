@@ -29,69 +29,69 @@ spawner:
     gps_line: <hover:show_text:'<#E026E6>{air_name}<newline><gray>Событие появится через <green>{formated_time_left}<newline><gray>Координаты будут доступны после
       появления.'><#E026E6>{air_name}</hover> <white>{value:air_type}</white> <gray>через <#3EF6A6>{formated_time_left}</#3EF6A6></gray>
   on_create:
-  - weights:
-      '30':
-      - set_value: air_type "<hover:show_text:'<dark_gray>[<#AAAAAA>★<gray>★★★★<dark_gray>]'><#AAAAAA>Обычный</hover>"
-      - set_value: loot_count 20
-      '20':
-      - set_value: air_type "<hover:show_text:'<dark_gray>[<#EB996A>★★<gray>★★★<dark_gray>]'><#EB996A>Солидный</hover>"
-      - set_value: loot_count 30
-      '17':
-      - set_value: air_type "<hover:show_text:'<dark_gray>[<#E65400>★★★<gray>★★<dark_gray>]'><#E65400>Богатый</hover>"
-      - set_value: loot_count 50
-      '12':
-      - set_value: air_type "<hover:show_text:'<dark_gray>[<#FB0000>★★★★<gray>★<dark_gray>]'><#FB0000>Элитный</hover>"
-      - set_value: loot_count 70
-      '11':
-      - set_value: air_type "<hover:show_text:'<dark_gray>[<#FFFF00>★★★★★<dark_gray>]'><gradient:#ADFF00:#FF7400>Легендарный</gradient></hover>"
-      - set_value: loot_count 100
-  - bc: |-
-      <gradient:#6C00C5:#FB00B4:#6C00C5> ╔══╦══╦══╦══╦══╦══╦══╦══╗</gradient>
-      <#6C00C5> ║
-      <#6C00C5> ║<#FFFFE6>     <#e026e6><obfuscated>|||</obfuscated><#e026e6>  [Мистический сундук]   <#e026e6><obfuscated>|||</obfuscated>
-      <#6C00C5> ║<#FFFFE6>   Появится уже через<#3EF6A6> 3 минуты!
-      <#6C00C5> ║
-      <gradient:#6C00C5:#FB00B4:#6C00C5> ╚══╩══╩══╩══╩══╩══╩══╩══╝</gradient>
-  when: {}
+    - weights:
+        '30':
+          - set_value: air_type "<hover:show_text:'<dark_gray>[<#AAAAAA>★<gray>★★★★<dark_gray>]'><#AAAAAA>Обычный</hover>"
+          - set_value: loot_count 20
+        '20':
+          - set_value: air_type "<hover:show_text:'<dark_gray>[<#EB996A>★★<gray>★★★<dark_gray>]'><#EB996A>Солидный</hover>"
+          - set_value: loot_count 30
+        '17':
+          - set_value: air_type "<hover:show_text:'<dark_gray>[<#E65400>★★★<gray>★★<dark_gray>]'><#E65400>Богатый</hover>"
+          - set_value: loot_count 50
+        '12':
+          - set_value: air_type "<hover:show_text:'<dark_gray>[<#FB0000>★★★★<gray>★<dark_gray>]'><#FB0000>Элитный</hover>"
+          - set_value: loot_count 70
+        '11':
+          - set_value: air_type "<hover:show_text:'<dark_gray>[<#FFFF00>★★★★★<dark_gray>]'><gradient:#ADFF00:#FF7400>Легендарный</gradient></hover>"
+          - set_value: loot_count 100
+    - bc: |-
+        <gradient:#6C00C5:#FB00B4:#6C00C5> ╔══╦══╦══╦══╦══╦══╦══╦══╗</gradient>
+        <#6C00C5> ║
+        <#6C00C5> ║<#FFFFE6>     <#e026e6><obfuscated>|||</obfuscated><#e026e6>  [Мистический сундук]   <#e026e6><obfuscated>|||</obfuscated>
+        <#6C00C5> ║<#FFFFE6>   Появится уже через<#3EF6A6> 3 минуты!
+        <#6C00C5> ║
+        <gradient:#6C00C5:#FB00B4:#6C00C5> ╚══╩══╩══╩══╩══╩══╩══╩══╝</gradient>
+  when: { }
   on_timer_end:
-  - make:
-      loot_count: '{value:loot_count}'
-      air_type: '{value:air_type}'
-      rarity_selected: '1'
+    - make:
+        loot_count: '{value:loot_count}'
+        air_type: '{value:air_type}'
+        rarity_selected: '1'
 nodes:
   __init__:
     type: __init__
     on_init:
-    - create: start_actions
+      - create: start_actions
   __destroy__:
     type: __destroy__
     on_destroy:
-    - remove: loot_1
-    - remove: chest_1
+      - remove: loot_1
+      - remove: chest_1
   region:
     type: wg:region
     size: 15;200;15
     flags:
-    - pvp allow
-    - build deny
-    - block-break deny
-    - block-place deny
-    - tnt deny
-    - lighter deny
-    - creeper-explosion deny
-    - ghast-fireball deny
-    - other-explosion deny
-    - enderman-grief deny
-    - fire-spread deny
-    - snowman-trails deny
-    - ravager-grief deny
-    - lava-fire deny
-    - water-flow deny
-    - lava-flow deny
-    - ice-melt deny
-    - chest-access deny
+      - pvp allow
+      - build deny
+      - block-break deny
+      - block-place deny
+      - tnt deny
+      - lighter deny
+      - creeper-explosion deny
+      - ghast-fireball deny
+      - other-explosion deny
+      - enderman-grief deny
+      - fire-spread deny
+      - snowman-trails deny
+      - ravager-grief deny
+      - lava-fire deny
+      - water-flow deny
+      - lava-flow deny
+      - ice-melt deny
+      - chest-access deny
     on_create:
-    - create: gps
+      - create: gps
   gps:
     type: default:gps
     publish_location: true
@@ -99,19 +99,19 @@ nodes:
       чтобы установить GPS.''><click:run_command:''/gps {ctx:gps.gps_id}''>{air_name}</click></hover> <white>{args:air_type}</white> <gray>[{world} {x}/{y}/{z}]</gray>
       <hover:show_text:''<green>Поставить GPS''><click:run_command:''/gps {ctx:gps.gps_id}''><green>[GPS]</green></click></hover>'
     on_create:
-    - create: chest_1
+      - create: chest_1
   chest_1:
     type: schematic:paster
     path: ../BAirdropFlow/schematics/block-ender_chest.schem
     offsets: 0;0;0
     no_replace:
-    - bedrock
+      - bedrock
     no_place:
-    - air
-    - cave_air
-    - void_air
+      - air
+      - cave_air
+      - void_air
     on_create:
-    - create: closed_1
+      - create: closed_1
     replace:
       barrier: air
   loot_1:
@@ -135,8 +135,8 @@ nodes:
   open_chests:
     type: default:commands
     on_run:
-    - remove: closed_1
-    - create: loot_1
+      - remove: closed_1
+      - create: loot_1
   closed_1:
     type: block:click
     offsets: 0;0;0
@@ -151,7 +151,7 @@ nodes:
     offsets: 0.5;0.1;0.5
     ticks: -1
     on_create:
-    - create: spawn_announcement
+      - create: spawn_announcement
   particles_activated:
     type: particle:animation
     animation: mystic-activated
@@ -226,37 +226,37 @@ nodes:
   start_actions:
     type: default:commands
     on_run:
-    - if: '{args:rarity_selected} == 0'
-      do:
-      - weights:
-          '30':
-          - set_arg: air_type <hover:show_text:'<dark_gray>[<#AAAAAA>★<gray>★★★★<dark_gray>]'><#AAAAAA>Обычный</hover>
-          - set_arg: loot_count 20
-          '20':
-          - set_arg: air_type <hover:show_text:'<dark_gray>[<#EB996A>★★<gray>★★★<dark_gray>]'><#EB996A>Солидный</hover>
-          - set_arg: loot_count 30
-          '17':
-          - set_arg: air_type <hover:show_text:'<dark_gray>[<#E65400>★★★<gray>★★<dark_gray>]'><#E65400>Богатый</hover>
-          - set_arg: loot_count 50
-          '12':
-          - set_arg: air_type <hover:show_text:'<dark_gray>[<#FB0000>★★★★<gray>★<dark_gray>]'><#FB0000>Элитный</hover>
-          - set_arg: loot_count 70
-          '11':
-          - set_arg: air_type <hover:show_text:'<dark_gray>[<#FFFF00>★★★★★<dark_gray>]'><gradient:#ADFF00:#FF7400>Легендарный</gradient></hover>
-          - set_arg: loot_count 100
-    - create: region
+      - if: '{args:rarity_selected} == 0'
+        do:
+          - weights:
+              '30':
+                - set_arg: air_type <hover:show_text:'<dark_gray>[<#AAAAAA>★<gray>★★★★<dark_gray>]'><#AAAAAA>Обычный</hover>
+                - set_arg: loot_count 20
+              '20':
+                - set_arg: air_type <hover:show_text:'<dark_gray>[<#EB996A>★★<gray>★★★<dark_gray>]'><#EB996A>Солидный</hover>
+                - set_arg: loot_count 30
+              '17':
+                - set_arg: air_type <hover:show_text:'<dark_gray>[<#E65400>★★★<gray>★★<dark_gray>]'><#E65400>Богатый</hover>
+                - set_arg: loot_count 50
+              '12':
+                - set_arg: air_type <hover:show_text:'<dark_gray>[<#FB0000>★★★★<gray>★<dark_gray>]'><#FB0000>Элитный</hover>
+                - set_arg: loot_count 70
+              '11':
+                - set_arg: air_type <hover:show_text:'<dark_gray>[<#FFFF00>★★★★★<dark_gray>]'><gradient:#ADFF00:#FF7400>Легендарный</gradient></hover>
+                - set_arg: loot_count 100
+      - create: region
   spawn_announcement:
     type: default:commands
     on_run:
-    - bc: |-
-        <gradient:#6C00C5:#FB00B4:#6C00C5> ╔══╦══╦══╦══╦══╦══╦══╦══╗</gradient>
-        <#6C00C5> ║
-        <#6C00C5> ║<#FFFFE6>     <#e026e6><obfuscated>|||</obfuscated><#e026e6>  [Мистический сундук]   <#e026e6><obfuscated>|||</obfuscated>
-        <#6C00C5> ║<#FFFFE6>   Уровень лута: {args:air_type}
-        <#6C00C5> ║<#FFFFE6>   Появился на координатах <white><hover:show_text:'<green>Поставить GPS'><click:run_command:'/gps {ctx:gps.gps_id}'><white>[{x} {y} {z}]</white></click></hover>
-        <#6C00C5> ║
-        <gradient:#6C00C5:#FB00B4:#6C00C5> ╚══╩══╩══╩══╩══╩══╩══╩══╝</gradient>
-    - create: started
+      - bc: |-
+          <gradient:#6C00C5:#FB00B4:#6C00C5> ╔══╦══╦══╦══╦══╦══╦══╦══╗</gradient>
+          <#6C00C5> ║
+          <#6C00C5> ║<#FFFFE6>     <#e026e6><obfuscated>|||</obfuscated><#e026e6>  [Мистический сундук]   <#e026e6><obfuscated>|||</obfuscated>
+          <#6C00C5> ║<#FFFFE6>   Уровень лута: {args:air_type}
+          <#6C00C5> ║<#FFFFE6>   Появился на координатах <white><hover:show_text:'<green>Поставить GPS'><click:run_command:'/gps {ctx:gps.gps_id}'><white>[{x} {y} {z}]</white></click></hover>
+          <#6C00C5> ║
+          <gradient:#6C00C5:#FB00B4:#6C00C5> ╚══╩══╩══╩══╩══╩══╩══╩══╝</gradient>
+      - create: started
 
   fireworks:
     type: ft:firework

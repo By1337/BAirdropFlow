@@ -13,6 +13,7 @@ import java.util.function.Consumer;
 
 public final class WorkflowRepository {
     private record Publisher(WorkflowRepository repository, String key) {}
+
     private dev.by1337.baf.launch.LaunchRegistry launches;
     private final WorkflowFiles files;
     private final YamlDecoder<Workflow> decoder;
@@ -53,7 +54,8 @@ public final class WorkflowRepository {
             errors.put(doc.key(), result.error());
             logger.accept(doc.key() + ": " + result.error());
         } else {
-            if (launches != null) launches.publish(new Publisher(this, doc.key()), result.result().id(), result.result());
+            if (launches != null)
+                launches.publish(new Publisher(this, doc.key()), result.result().id(), result.result());
             workflows.put(doc.key(), result.result());
             errors.remove(doc.key());
         }

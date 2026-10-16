@@ -4,9 +4,9 @@ import dev.by1337.baf.AirdropManager;
 import dev.by1337.baf.BAF;
 import dev.by1337.baf.Workflow;
 import dev.by1337.baf.launch.LaunchRegistry;
+import dev.by1337.baf.vote.VoteMenu;
 import dev.by1337.baf.vote.VoteSpawner;
 import dev.by1337.baf.vote.VotingService;
-import dev.by1337.baf.vote.VoteMenu;
 import dev.by1337.bmenu.BMenu;
 import dev.by1337.item.registry.GlobalItemRegistry;
 import dev.by1337.item.registry.ItemRegistry;
@@ -34,7 +34,11 @@ public final class GlobalSpawners implements Listener, AutoCloseable {
     private LaunchRegistry launches;
     private VotingService voting;
     private final List<Object> publishers = new ArrayList<>();
-    public VotingService voting() { return voting; }
+
+    public VotingService voting() {
+        return voting;
+    }
+
     private AirdropManager manager;
 
     public ItemRegistry<ByItemSpawner.SpawnItem> items() {
@@ -106,7 +110,9 @@ public final class GlobalSpawners implements Listener, AutoCloseable {
                         publishers.add(owner);
                     }
                     loaded.add(new Loaded(file, spawner, owner));
-                } catch (Exception e) { logger.accept(file + ": " + e.getMessage()); }
+                } catch (Exception e) {
+                    logger.accept(file + ": " + e.getMessage());
+                }
             }
         }
         // Remove invalid definitions and their dependents before enabling any schedules.
@@ -117,11 +123,14 @@ public final class GlobalSpawners implements Listener, AutoCloseable {
             while (iterator.hasNext()) {
                 var entry = iterator.next();
                 if (!(entry.spawner instanceof VoteSpawner vote)) continue;
-                try { launches.validate(vote.id()); }
-                catch (IllegalArgumentException error) {
+                try {
+                    launches.validate(vote.id());
+                } catch (IllegalArgumentException error) {
                     logger.accept(entry.file + ": " + error.getMessage());
-                    launches.unpublish(entry.owner); publishers.remove(entry.owner);
-                    iterator.remove(); changed = true;
+                    launches.unpublish(entry.owner);
+                    publishers.remove(entry.owner);
+                    iterator.remove();
+                    changed = true;
                 }
             }
         } while (changed);
@@ -137,7 +146,9 @@ public final class GlobalSpawners implements Listener, AutoCloseable {
                 }
                 spawners.add(entry.spawner);
                 manager.addTicking(entry.spawner);
-            } catch (Exception e) { logger.accept(entry.file + ": " + e.getMessage()); }
+            } catch (Exception e) {
+                logger.accept(entry.file + ": " + e.getMessage());
+            }
         }
     }
 

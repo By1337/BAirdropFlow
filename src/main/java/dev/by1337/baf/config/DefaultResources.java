@@ -13,7 +13,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-/** Installs each default folder only when that folder is absent. */
+/**
+ * Installs each default folder only when that folder is absent.
+ */
 public final class DefaultResources {
     private record Index(Map<String, List<String>> folders, List<String> files) {
         private static final YamlDecoder<Index> DECODER = RecordYamlDecoder.mapOf(
@@ -23,7 +25,8 @@ public final class DefaultResources {
         );
     }
 
-    private DefaultResources() {}
+    private DefaultResources() {
+    }
 
     public static void save(Plugin plugin) {
         Index index;

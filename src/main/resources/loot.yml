@@ -1,62 +1,62 @@
 mystic:
   items:
-  - item: H4sIAAAAAAAC/+NiYOBgYMpMYeDLzcxLTS5KTCuxSsksKmFmYE3OL80rYWBgYGQAAEySJ6slAAAA
-    weight: 100
+    - item: H4sIAAAAAAAC/+NiYOBgYMpMYeDLzcxLTS5KTCuxSsksKmFmYE3OL80rYWBgYGQAAEySJ6slAAAA
+      weight: 100
 deathchest:
   items:
-  - item: H4sIAAAAAAAC/+NiYOBgYMpMYeDLzcxLTS5KTCuxSsksKmFmYE3OL80rYWBgYGQAAEySJ6slAAAA
-    weight: 100
+    - item: H4sIAAAAAAAC/+NiYOBgYMpMYeDLzcxLTS5KTCuxSsksKmFmYE3OL80rYWBgYGQAAEySJ6slAAAA
+      weight: 100
 altar:
   items:
-  - item: H4sIAAAAAAAC/+NiYOBgYMpMYeDLzcxLTS5KTCuxSsksKmFmYE3OL80rYWBgYGQAAEySJ6slAAAA
-    weight: 100
+    - item: H4sIAAAAAAAC/+NiYOBgYMpMYeDLzcxLTS5KTCuxSsksKmFmYE3OL80rYWBgYGQAAEySJ6slAAAA
+      weight: 100
 beacon:
   items:
-  - item: H4sIAAAAAAAC/+NiYOBgYMpMYeDLzcxLTS5KTCuxSsksKmFmYE3OL80rYWBgYGQAAEySJ6slAAAA
-    weight: 100
+    - item: H4sIAAAAAAAC/+NiYOBgYMpMYeDLzcxLTS5KTCuxSsksKmFmYE3OL80rYWBgYGQAAEySJ6slAAAA
+      weight: 100
 volcano:
   items:
-  - item: H4sIAAAAAAAC/+NiYOBgYMpMYeDLzcxLTS5KTCuxSsksKmFmYE3OL80rYWBgYGQAAEySJ6slAAAA
-    weight: 100
+    - item: H4sIAAAAAAAC/+NiYOBgYMpMYeDLzcxLTS5KTCuxSsksKmFmYE3OL80rYWBgYGQAAEySJ6slAAAA
+      weight: 100
 geyser:
-  items: []
+  items: [ ]
 meteorite:
-  items: []
+  items: [ ]
 airdrop:
   items:
-  - item: H4sIAAAAAAAC/+NiYOBgYMpMYRDMzcxLTS5KTCuxSslMzM3PS2FmYE3OL80rYWBgYGYAAD3hz4soAAAA
-    weight: 100
-    min: 1
-    max: 3
-  - item: H4sIAAAAAAAC/+NiYOBgYMpMYRDJzcxLTS5KTCuxSs/PSYnPzEvPL2FmYE3OL80rYWBgYGUAAIpv/fMrAAAA
-    weight: 100
-    min: 1
-    max: 5
-  - item: H4sIAAAAAAAC/+NiYOBgYMpMYRDJzcxLTS5KTCuxyizKz4vPzEvPL2FmYE3OL80rYQCpAgDHmRbcKwAAAA==
-    weight: 150
-    min: 1
-    max: 8
-  - item: H4sIAAAAAAAC/+NiYOBgYMpMYRDNzcxLTS5KTCuxSs1LSS2KL0hNLMphZmBNzi/NK2FgYGBiAACtVQyzLAAAAA==
-    weight: 60
-    min: 1
-    max: 2
-  - item: H4sIAAAAAAAC/+NiYOBgYMpMYRDLzcxLTS5KTCuxSs/PSUnNi08sKMhJZWZgTc4vzSthYGBgYgAAL4vlVS0AAAA=
-    weight: 40
-    min: 1
-    max: 2
-  - item: H4sIAAAAAAAC/+NiYOBgYMpMYeDNzcxLTS5KTCuxKskrYWZgTc4vzSthYGBgYQAAAsbgASQAAAA=
-    weight: 70
-    min: 1
-    max: 4
-  - item: H4sIAAAAAAAC/+NiYOBgYMpMYRDKzcxLTS5KTCuxyk8qzkzJTMxjZmBNzi/NK2FgYGBjAAB15OebKQAAAA==
-    weight: 70
-    min: 1
-    max: 6
-  - item: H4sIAAAAAAAC/+NiYOBgYMpMYZDOzcxLTS5KTCuxSq0oSC3KTM1LTo1Pyi8pyUllZmBNzi/NK2FgYGBhAADtGiRlMgAAAA==
-    weight: 80
-    min: 1
-    max: 4
-  - item: H4sIAAAAAAAC/+NiYOBgYMpMYZDIzcxLTS5KTCuxSsxLzkzNK4lPSU0qyixmZmBNzi/NK2FgYGBkAABFwmQxLwAAAA==
-    weight: 10
-    min: 1
-    max: 1
+    - item: H4sIAAAAAAAC/+NiYOBgYMpMYRDMzcxLTS5KTCuxSslMzM3PS2FmYE3OL80rYWBgYGYAAD3hz4soAAAA
+      weight: 100
+      min: 1
+      max: 3
+    - item: H4sIAAAAAAAC/+NiYOBgYMpMYRDJzcxLTS5KTCuxSs/PSYnPzEvPL2FmYE3OL80rYWBgYGUAAIpv/fMrAAAA
+      weight: 100
+      min: 1
+      max: 5
+    - item: H4sIAAAAAAAC/+NiYOBgYMpMYRDJzcxLTS5KTCuxyizKz4vPzEvPL2FmYE3OL80rYQCpAgDHmRbcKwAAAA==
+      weight: 150
+      min: 1
+      max: 8
+    - item: H4sIAAAAAAAC/+NiYOBgYMpMYRDNzcxLTS5KTCuxSs1LSS2KL0hNLMphZmBNzi/NK2FgYGBiAACtVQyzLAAAAA==
+      weight: 60
+      min: 1
+      max: 2
+    - item: H4sIAAAAAAAC/+NiYOBgYMpMYRDLzcxLTS5KTCuxSs/PSUnNi08sKMhJZWZgTc4vzSthYGBgYgAAL4vlVS0AAAA=
+      weight: 40
+      min: 1
+      max: 2
+    - item: H4sIAAAAAAAC/+NiYOBgYMpMYeDNzcxLTS5KTCuxKskrYWZgTc4vzSthYGBgYQAAAsbgASQAAAA=
+      weight: 70
+      min: 1
+      max: 4
+    - item: H4sIAAAAAAAC/+NiYOBgYMpMYRDKzcxLTS5KTCuxyk8qzkzJTMxjZmBNzi/NK2FgYGBjAAB15OebKQAAAA==
+      weight: 70
+      min: 1
+      max: 6
+    - item: H4sIAAAAAAAC/+NiYOBgYMpMYZDOzcxLTS5KTCuxSq0oSC3KTM1LTo1Pyi8pyUllZmBNzi/NK2FgYGBhAADtGiRlMgAAAA==
+      weight: 80
+      min: 1
+      max: 4
+    - item: H4sIAAAAAAAC/+NiYOBgYMpMYZDIzcxLTS5KTCuxSsxLzkzNK4lPSU0qyixmZmBNzi/NK2FgYGBkAABFwmQxLwAAAA==
+      weight: 10
+      min: 1
+      max: 1

@@ -8,46 +8,46 @@ generator:
 spawner:
   type: spawner:timer
   time: 1s
-  when: {}
+  when: { }
   on_timer_end:
-  - make: {}
+    - make: { }
 nodes:
   __init__:
     type: __init__
     on_init:
-    - create: region
+      - create: region
   __destroy__:
     type: __destroy__
     on_destroy:
-    - remove: summon
-    - remove: activation
-    - remove: active
-    - remove: rewards
-    - remove: activation_holo
-    - remove: active_holo
-    - remove: structure
+      - remove: summon
+      - remove: activation
+      - remove: active
+      - remove: rewards
+      - remove: activation_holo
+      - remove: active_holo
+      - remove: structure
   region:
     type: wg:region
     size: 5;5;5
     flags:
-    - block-break deny
-    - block-place deny
-    - tnt deny
-    - creeper-explosion deny
-    - other-explosion deny
+      - block-break deny
+      - block-place deny
+      - tnt deny
+      - creeper-explosion deny
+      - other-explosion deny
     on_create:
-    - create: gps
+      - create: gps
   gps:
     type: default:gps
     publish_location: true
     gps_line: '<gold>Загадочный маяк <gray>[{world} {x}/{y}/{z}]'
     on_create:
-    - create: announce
+      - create: announce
   announce:
     type: default:commands
     on_run:
-    - bc: '<gold>[Загадочный маяк] <white>Призван на координатах <yellow>{x} {y} {z}'
-    - create: summon
+      - bc: '<gold>[Загадочный маяк] <white>Призван на координатах <yellow>{x} {y} {z}'
+      - create: summon
   summon:
     type: ft:strange_beacon
     offsets: 0.5;0;0.5
@@ -66,26 +66,26 @@ nodes:
       offset: -0.3
       vertical_step: 0.3
     stages:
-    - material: fire_coral_block
-      ticks: 40
-    - material: horn_coral_block
-      ticks: 3
-    - material: fire_coral_block
-      ticks: 40
-    - material: black_concrete_powder
-      ticks: 12
+      - material: fire_coral_block
+        ticks: 40
+      - material: horn_coral_block
+        ticks: 3
+      - material: fire_coral_block
+        ticks: 40
+      - material: black_concrete_powder
+        ticks: 12
     build_start_tick: 81
     on_build_start:
-    - create: structure
+      - create: structure
   structure:
     type: schematic:paster
     path: ../BAirdropFlow/schematics/strange-beacon.schem
     no_place:
-    - air
-    - cave_air
-    - void_air
+      - air
+      - cave_air
+      - void_air
     no_replace:
-    - bedrock
+      - bedrock
     animation:
       interval_ticks: 2
       blocks_per_step: 1
@@ -94,13 +94,13 @@ nodes:
       volume: 0.8
       pitch: 1.2
     on_complete:
-    - create: built
+      - create: built
   built:
     type: default:commands
     on_run:
-    - sound_all: block.note_block.pling 2 1
-    - sound_all: block.beacon.activate 2 1
-    - create: activation
+      - sound_all: block.note_block.pling 2 1
+      - sound_all: block.beacon.activate 2 1
+      - create: activation
   activation:
     type: tick:timer
     timer: 60
@@ -116,9 +116,9 @@ nodes:
     type: default:hologram
     offsets: 0.5;4;0.5
     lines:
-    - '<#FFFFE6>До открытия: <#f2913c>{ctx:activation.timer} сек'
-    - '<#e026e6><obf>1</obf> <#FFFFE6>Идёт активация. <#e026e6><obf>1</obf>'
-    - '<#e026e6>[Загадочный маяк]'
+      - '<#FFFFE6>До открытия: <#f2913c>{ctx:activation.timer} сек'
+      - '<#e026e6><obf>1</obf> <#FFFFE6>Идёт активация. <#e026e6><obf>1</obf>'
+      - '<#e026e6>[Загадочный маяк]'
   active:
     type: tick:timer
     timer: 180
@@ -148,10 +148,10 @@ nodes:
     min_reward: 10000
     max_reward: 90000
     on_reward:
-    - create: payout
+      - create: payout
   payout:
     type: default:commands
     on_run:
-    - console: eco give {target:player_name} {ctx:rewards.amount}
-    - message: '<dark_green>[$] <white>Вы получили <#FF6700>${ctx:rewards.amount} <white>от <aqua>Загадочного маяка'
+      - console: eco give {target:player_name} {ctx:rewards.amount}
+      - message: '<dark_green>[$] <white>Вы получили <#FF6700>${ctx:rewards.amount} <white>от <aqua>Загадочного маяка'
 $web_meta: '{"version":3,"nodes":{"__init__":{"x":0,"y":0,"width":400,"height":420,"title":"Запуск события"},"region":{"x":520,"y":0,"width":400,"height":520,"title":"Защита территории"},"gps":{"x":1040,"y":0,"width":400,"height":420,"title":"Метка GPS"},"announce":{"x":1560,"y":0,"width":620,"height":340,"title":"Объявление о призыве"},"summon":{"x":2300,"y":0,"width":400,"height":420,"title":"Лучи и смена блоков"},"structure":{"x":2820,"y":0,"width":400,"height":620,"title":"Постройка схемы"},"built":{"x":3340,"y":0,"width":620,"height":340,"title":"Звуки окончания постройки"},"activation":{"x":1600,"y":1100,"width":480,"height":640,"title":"Ожидание открытия"},"activation_holo":{"x":2200,"y":1100,"width":440,"height":480,"title":"Голограмма до открытия"},"active":{"x":1600,"y":2300,"width":480,"height":640,"title":"Время открытого события"},"active_holo":{"x":2200,"y":2300,"width":440,"height":480,"title":"Голограмма после открытия"},"rewards":{"x":2760,"y":2300,"width":400,"height":420,"title":"Выплаты по расстоянию"},"payout":{"x":3280,"y":2300,"width":620,"height":340,"title":"Монеты и уведомление"},"__destroy__":{"x":1600,"y":3400,"width":400,"height":420,"title":"Удаление события"}},"webNodes":{"note_setup":{"type":"web:note","x":0,"y":-380,"width":850,"height":260,"title":"1. Призыв и постройка","text":"Лучи начинают постройку на 81-м тике. Следующая фаза запускается только после on_complete схемы."},"note_wait":{"type":"web:note","x":0,"y":700,"width":850,"height":260,"title":"2. Активация","text":"60 секунд до открытия. Голограмма обновляется таймером напрямую."},"note_active":{"type":"web:note","x":0,"y":1900,"width":850,"height":260,"title":"3. Выплаты","text":"180 секунд выплат. Радиус видимости и радиус наград задаются отдельно."}},"defaultsNode":{"x":1000,"y":-380,"width":400,"height":310},"viewport":{"x":60,"y":180,"zoom":0.5}}'

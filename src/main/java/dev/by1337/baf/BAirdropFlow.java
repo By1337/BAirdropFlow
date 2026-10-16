@@ -1,5 +1,6 @@
 package dev.by1337.baf;
 
+import dev.by1337.baf.addon.AddonLoader;
 import dev.by1337.baf.command.AirdropCommands;
 import dev.by1337.baf.command.LootCommands;
 import dev.by1337.baf.component.AirdropComponents;
@@ -53,9 +54,23 @@ public class BAirdropFlow extends BasePlugin {
     GlobalSpawners globalSpawners;
     MenuSubLoader menus;
     private boolean isReloading;
+    private AddonLoader addons;
+
+    public AddonLoader addons() {
+        return addons;
+    }
 
     @Override
     public void onLoad() {
+        try {
+            load();
+        } catch (RuntimeException | LinkageError error) {
+            super.onDisable();
+            throw error;
+        }
+    }
+
+    private void load() {
         BAF.plugin = this;
         super.onLoad();
         getDataFolder().mkdirs();
@@ -64,6 +79,18 @@ public class BAirdropFlow extends BasePlugin {
         Generators.boot();
         AirdropSpawnerBoot.boot();
         AirdropComponents.boot();
+
+        addons = new AddonLoader(this, getDataFolder().toPath().resolve("addons"));
+        // Registered first: BasePlugin closes hooks in reverse order, keeping addon
+        // classes/resources alive until events, timers, menus and services are cleaned up.
+        addCloseHook(addons);
+        try {
+            addons.findAddons();
+            addons.registerAll();
+        } catch (java.io.IOException | RuntimeException | LinkageError error) {
+            addons.close();
+            throw new IllegalStateException("Не удалось загрузить аддоны", error);
+        }
 
         config = safeDecode(Config.DECODER, "config.yml", this);
         messages.setCommands(AirdropCommands.getCommands());
@@ -93,20 +120,32 @@ public class BAirdropFlow extends BasePlugin {
             Workflow workflow = workflows.get(key);
             if (workflow != null) id = workflow.id();
         }
-        try { launches.start(id); }
-        catch (IllegalArgumentException | IllegalStateException error) { throw new CommandMsgError(error.getMessage()); }
+        try {
+            launches.start(id);
+        } catch (IllegalArgumentException | IllegalStateException error) {
+            throw new CommandMsgError(error.getMessage());
+        }
     }
 
     @Override
     public void onDisable() {
         super.onDisable();
-        if (!isReloading) {
+        if (!isReloading && web != null) {
             web.close();
         }
     }
 
     @Override
     public void onEnable() {
+        try {
+            enable();
+        } catch (RuntimeException | LinkageError error) {
+            onDisable();
+            throw error;
+        }
+    }
+
+    private void enable() {
         super.onEnable();
         try {
             workflows.load();
@@ -142,6 +181,8 @@ public class BAirdropFlow extends BasePlugin {
         } else {
             web.reload(workflows, action -> Bukkit.getScheduler().runTask(this, action));
         }
+
+        addons.enableAll();
 
         registerCommand(new Command<CommandSender>("vote").executor(sender -> {
             if (!(sender instanceof Player player)) throw new CommandMsgError("Команда доступна игроку");

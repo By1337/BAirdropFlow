@@ -66,10 +66,14 @@ public class Workflow implements dev.by1337.baf.launch.Startable {
     }
 
     @Override
-    public void start() { BAF.manager().addTicking(createSpawner()); }
+    public void start() {
+        BAF.manager().addTicking(createSpawner());
+    }
 
     @Override
-    public boolean isGpsPublish() { return spawner.isGpsPublish(); }
+    public boolean isGpsPublish() {
+        return spawner.isGpsPublish();
+    }
 
     public TickableEntity createSpawner() {
         return spawner.create(this);

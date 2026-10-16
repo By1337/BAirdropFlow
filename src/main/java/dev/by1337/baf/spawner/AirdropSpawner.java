@@ -2,10 +2,10 @@ package dev.by1337.baf.spawner;
 
 import dev.by1337.baf.Workflow;
 import dev.by1337.baf.entity.TickableEntity;
-import dev.by1337.baf.registry.DecoderRegistry;
+import dev.by1337.baf.registry.SchemaRegistry;
 
 public interface AirdropSpawner {
-    DecoderRegistry<AirdropSpawner> REGISTRY = new DecoderRegistry<>();
+    SchemaRegistry<AirdropSpawner> REGISTRY = new SchemaRegistry<>();
 
     TickableEntity create(Workflow workflow);
 

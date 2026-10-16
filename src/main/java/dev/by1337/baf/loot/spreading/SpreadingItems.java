@@ -72,7 +72,9 @@ public final class SpreadingItems implements Listener, AutoCloseable {
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
-    /** Distribute all stacks over exactly this many tick calls; zero preserves interval mode. */
+    /**
+     * Distribute all stacks over exactly this many tick calls; zero preserves interval mode.
+     */
     public SpreadingItems spreadOver(int ticks) {
         if (ticks < 0 || tick != 0) throw new IllegalArgumentException("Set spread duration before ticking");
         spreadDuration = ticks;

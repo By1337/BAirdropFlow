@@ -6,9 +6,9 @@ items:
       material: REDSTONE_TORCH
       name: <gradient:#FF1515:#FF9800>[★] Аи</gradient><#FFA50E>р<gradient:#FFB21D:#FFDA48>дроп</gradient>
       lore:
-      - <#FF9800>➥ Установите<#FFFFE6>, чтобы отправить
-      - <#FFFFE6>сигнал в воздух для
-      - <#FFFFE6>призыва <#FFDA48>Аирдропа
+        - <#FF9800>➥ Установите<#FFFFE6>, чтобы отправить
+        - <#FFFFE6>сигнал в воздух для
+        - <#FFFFE6>призыва <#FFDA48>Аирдропа
     workflow: ft:airdrop
     consume: true
     requirements:
@@ -23,7 +23,7 @@ items:
       material: BEACON
       name: <gold>Загадочный маяк
       lore:
-      - <gray>ПКМ по ровной площадке 5×5 для призыва.
+        - <gray>ПКМ по ровной площадке 5×5 для призыва.
     workflow: ft:strange_beacon
     consume: true
     requirements:

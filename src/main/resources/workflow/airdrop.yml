@@ -11,10 +11,10 @@ args:
 spawner:
   type: spawner:timer
   time: 1s
-  on_create: []
-  when: {}
+  on_create: [ ]
+  when: { }
   on_timer_end:
-    - make: {}
+    - make: { }
 nodes:
   __init__:
     type: __init__
@@ -22,7 +22,7 @@ nodes:
       - create: start_actions
   __destroy__:
     type: __destroy__
-    on_destroy: []
+    on_destroy: [ ]
   region:
     type: wg:region
     size: 5;5;5
@@ -35,7 +35,7 @@ nodes:
     type: schematic:paster
     path: ../BAirdropFlow/schematics/block-redstone_torch.schem
     offsets: 0;0;0
-    no_replace: []
+    no_replace: [ ]
     no_place:
       - air
       - cave_air
@@ -48,7 +48,7 @@ nodes:
     type: schematic:paster
     path: ../BAirdropFlow/schematics/block-barrel.schem
     offsets: 0;0;0
-    no_replace: []
+    no_replace: [ ]
     no_place:
       - air
       - cave_air

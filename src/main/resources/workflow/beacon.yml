@@ -48,7 +48,7 @@ spawner:
         <#830000> ║<#FFFFE6>   Появится уже через<#FFCC00> 3 минуты!
         <#981300> ║
         <gradient:#AC2600:#FF9D00:#830000> ╚═══╩═╩══╩═╩══╩══╩══╩══╝</gradient>
-  when: {}
+  when: { }
   on_timer_end:
     - make:
         loot_count: "{value:loot_count}"
@@ -61,7 +61,7 @@ nodes:
       - create: "start_actions"
   __destroy__:
     type: "__destroy__"
-    on_destroy: []
+    on_destroy: [ ]
   region:
     type: "wg:region"
     size: "20;200;20"
@@ -290,7 +290,7 @@ nodes:
       - create: "active_bar"
     on_tick:
       - create: "active_tick"
-    on_timer_end: []
+    on_timer_end: [ ]
     on_remove:
       - remove: "active_bar"
   started_money:
