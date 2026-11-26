@@ -4,6 +4,7 @@ import dev.by1337.baf.Airdrop;
 import dev.by1337.baf.component.ComponentFactory;
 import dev.by1337.edsl.context.EventContext;
 import org.bukkit.Location;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mockbukkit.mockbukkit.MockBukkit;
 
@@ -13,6 +14,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TimerComponentTest {
+    @BeforeAll
+    static void initializeContextWithoutPlaceholderApi() {
+        try (var ignored = new EventContext(false)) {
+        }
+    }
+
     @Test
     void secondsStartAfterTwentyTicksAndCancellationStopsCallbacks() {
         MockBukkit.mock();
@@ -21,9 +28,9 @@ class TimerComponentTest {
             var ended = new AtomicInteger();
             var config = new TimerComponent.Config(2, ComponentFactory.EMPTY_HANDLER, ComponentFactory.EMPTY_HANDLER,
                     ComponentFactory.EMPTY_HANDLER, c -> {
-                ended.incrementAndGet();
-                return true;
-            });
+                        ended.incrementAndGet();
+                        return true;
+                    });
             var timer = (TimerComponent) config.create(air, "timer");
             air.components().add(timer, ctx);
             for (int i = 0; i < 19; i++) timer.onSyncTick(ctx);
