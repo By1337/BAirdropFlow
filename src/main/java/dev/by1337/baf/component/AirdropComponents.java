@@ -3,7 +3,6 @@ package dev.by1337.baf.component;
 import dev.by1337.baf.component.impl.*;
 import dev.by1337.baf.component.impl.block.BreakBlockComponent;
 import dev.by1337.baf.component.impl.block.ClickBlockComponent;
-import dev.by1337.baf.component.impl.dh.DHHologramComponent;
 import dev.by1337.baf.component.impl.ft.*;
 import dev.by1337.baf.component.impl.holo.HologramComponent;
 import dev.by1337.baf.component.impl.loot.LooterComponent;
@@ -39,18 +38,6 @@ public class AirdropComponents {
         AirdropComponent.REGISTRY.register("ft:items", ItemsComponent.Config.DECODER, ItemsComponent.Config.WEB_SCHEMA);
         AirdropComponent.REGISTRY.register("ft:proximity_reward", ProximityRewardComponent.Config.DECODER, ProximityRewardComponent.Config.WEB_SCHEMA);
         AirdropComponent.REGISTRY.register("ft:beacon_pulse", BeaconPulseComponent.Config.DECODER, BeaconPulseComponent.Config.WEB_SCHEMA);
-        if (hasClass("eu.decentsoftware.holograms.api.DHAPI")) {
-            AirdropComponent.REGISTRY.register("dh:hologram", DHHologramComponent.Config.DECODER, DHHologramComponent.Config.WEB_SCHEMA);
-        }
         AirdropComponent.REGISTRY.register("wg:region", WgRegionComponent.Config.DECODER, WgRegionComponent.Config.WEB_SCHEMA);
-    }
-
-    private static boolean hasClass(String name) {
-        try {
-            Class.forName(name);
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
-        return true;
     }
 }

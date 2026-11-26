@@ -9,7 +9,6 @@ depend:
 
 softdepend:
   - WorldGuard
-  - DecentHolograms
 
 permissions:
   baf.loot.admin:

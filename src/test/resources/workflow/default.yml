@@ -138,7 +138,7 @@ nodes:
     replace:
       barrier: air
   tto_holo:
-    type: dh:hologram
+    type: default:hologram
     offsets: 0.5;1.8;0.5
     lines:
       - '&cAirdrop'
@@ -160,7 +160,7 @@ nodes:
       - remove: tte_holo
       - destroy: ''
   tte_holo:
-    type: dh:hologram
+    type: default:hologram
     offsets: 0.5;1.8;0.5
     lines:
       - '&aAirdrop'
@@ -288,7 +288,7 @@ nodes:
     on_remove:
       - remove: hologram
   hologram:
-    type: dh:hologram
+    type: default:hologram
     offsets: 0.5;1.8;0.5
     lines:
       - '&cAirdrop'

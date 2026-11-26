@@ -51,7 +51,7 @@ public final class EditorDevServer implements AutoCloseable {
                 on_remove:
                   - remove: hologram
               hologram:
-                type: dh:hologram
+                type: default:hologram
                 offsets: '0.5;1.8;0.5'
                 lines:
                   - 'До открытия: {ctx:opening.timer}'

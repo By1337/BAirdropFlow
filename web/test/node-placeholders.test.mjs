@@ -21,7 +21,7 @@ test('renaming updates the whole local document, saved payload and YAML export t
     nodes:{
       tto:{type:'tick:timer',timer:20,on_tick:[{console:'{ctx:tto.timer}'}]},
       init:{type:'__init__',on_init:[{create:'tto'}]},
-      hologram:{type:'dh:hologram',lines:['Осталось {ctx:tto.timer}', '{ctx:tto2.timer}']},
+      hologram:{type:'default:hologram',lines:['Осталось {ctx:tto.timer}', '{ctx:tto2.timer}']},
       commands:{type:'default:commands',on_run:[{weights:{20:[{console:'{ctx:tto.timer}'}]}}]}
     }
   }};
